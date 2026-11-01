@@ -2,11 +2,9 @@ import { Router } from 'express';
 import bodyParser from 'body-parser';
 import { authenticate } from '../auth';
 import {
-  castItemVote,
   deleteExpenseForSource,
   deleteLodging,
   ensureUserInTrip,
-  getItemVoteSummaries,
   getLodgingById,
   insertLodging,
   listLodgings,
@@ -16,8 +14,10 @@ import {
 import { getGooglePlaceImage } from '../image-service';
 import { normalizeItineraryStatus, shouldRelaxRequiredFields } from '../utils/itineraryStatus';
 import { applyVoteSummary } from '../services/itemVoteService';
+import { rateItem } from '../services/itemRatingService';
+import { itemRatingDto } from './itemRatingDto';
 import { readDto } from '../utils/dtoParse';
-import { createLodgingDto, updateLodgingDto, voteOrRatingDto } from './lodgingDtos';
+import { createLodgingDto, updateLodgingDto } from './lodgingDtos';
 
 // Lodgings API: CRUD for lodgings scoped to the authenticated user / their group trips.
 const router = Router();
@@ -309,9 +309,8 @@ router.post('/:id/vote', (_req, res) => {
 
 router.post('/:id/rating', async (req, res) => {
   const userId = (req as any).user.userId as string;
-  const dto = readDto(voteOrRatingDto, req.body, res);
-  if (!dto) return;
-  const value = dto.value;
+  const stars = readDto(itemRatingDto, req.body, res);
+  if (!stars) return;
   const lodging = await getLodgingById(req.params.id);
   if (!lodging) {
     res.status(404).json({ error: 'Lodging not found' });
@@ -332,13 +331,7 @@ router.post('/:id/rating', async (req, res) => {
     res.status(400).json({ error: 'Rating is only allowed for Completed items' });
     return;
   }
-  await castItemVote(userId, tripId, 'lodging', req.params.id, value, 'rating');
-  const summary = await getItemVoteSummaries(userId, tripId, 'lodging', [req.params.id], 'rating');
-  res.json({
-    itemId: req.params.id,
-    netRating: summary[req.params.id]?.netVotes ?? 0,
-    userRating: summary[req.params.id]?.userVote ?? value,
-  });
+  res.json(await rateItem(userId, tripId, 'lodging', lodging as any, stars));
 });
 
 export default router;

@@ -16,7 +16,7 @@ describe('All trips page', () => {
         styles={{}} onSelectTrip={jest.fn()} onSelectFollowedTrip={jest.fn()} onBack={jest.fn()} />);
       await waitFor(() => expect(screen.getByText('Dates not set · 5 day(s)')).toBeTruthy());
       const unscheduled = within(screen.getByTestId('all-trips-unscheduled'));
-      expect(unscheduled.getByText('One the Trip')).toBeTruthy();
+      expect(unscheduled.getByText('On the Trip')).toBeTruthy();
       expect(unscheduled.getByText('Following')).toBeTruthy();
       expect(unscheduled.getByText('Someday')).toBeTruthy();
       expect(unscheduled.getByText('Dates not set · 7 day(s)')).toBeTruthy();
@@ -39,10 +39,10 @@ describe('All trips page', () => {
       expect(within(screen.getByTestId('all-trips-upcoming')).getByText('Future adventure')).toBeTruthy();
       expect(screen.getAllByText('Future adventure')).toHaveLength(1);
       expect(screen.queryByTestId('all-trips-current')).toBeNull();
-      expect(screen.getAllByText('One the Trip')).toHaveLength(1);
+      expect(screen.getAllByText('On the Trip')).toHaveLength(1);
       expect(screen.getAllByText('Following')).toHaveLength(1);
       expect(within(screen.getByTestId('all-trips-upcoming')).queryByText('Following')).toBeNull();
-      expect(within(screen.getByTestId('all-trips-past')).queryByText('One the Trip')).toBeNull();
+      expect(within(screen.getByTestId('all-trips-past')).queryByText('On the Trip')).toBeNull();
       fireEvent.press(screen.getByTestId('all-trips-create-button'));
       expect(onNavigate).toHaveBeenCalledWith('create-trip');
       expect(screen.getByTestId('all-trips-follow-button')).toBeTruthy();
@@ -67,5 +67,38 @@ describe('All trips page', () => {
       expect(onDeleteTrip).toHaveBeenCalledWith({ id: 'mine', name: 'Mine' });
       expect(onSelectTrip).not.toHaveBeenCalled();
     } finally { global.fetch = originalFetch; }
+  });
+  describe('Unfollow', () => {
+    const renderFollowed = async (onUnfollowTrip: jest.Mock) => {
+      const onSelectFollowedTrip = jest.fn();
+      const screen = render(<AllTripsTab backendUrl="http://localhost" headers={{}} trips={[{ id: 'mine', groupId: 'g', name: 'Mine', createdAt: '', startDate: '2099-01-01', endDate: '2099-01-02' }]}
+        followedTrips={[{ tripId: 'followed', tripName: 'Theirs', todayDetails: [] }]} activeTripId={null} styles={{}} onSelectTrip={jest.fn()}
+        onSelectFollowedTrip={onSelectFollowedTrip} onUnfollowTrip={onUnfollowTrip} onBack={jest.fn()} />);
+      await waitFor(() => expect(screen.getByText('Theirs')).toBeTruthy());
+      return { screen, onSelectFollowedTrip };
+    };
+    const originalFetch = global.fetch;
+    beforeEach(() => { global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ id: 'followed', startDate: '2000-01-01', endDate: '2000-01-02' }) }); });
+    afterEach(() => { global.fetch = originalFetch; });
+
+    it('offers Unfollow only on followed trips and asks first, without selecting the trip', async () => {
+      const onUnfollowTrip = jest.fn().mockResolvedValue(null);
+      const { screen, onSelectFollowedTrip } = await renderFollowed(onUnfollowTrip);
+      expect(screen.queryByTestId('all-trips-row-unfollow-mine')).toBeNull();
+      fireEvent.press(screen.getByTestId('all-trips-row-unfollow-followed'));
+      expect(onUnfollowTrip).not.toHaveBeenCalled();
+      expect(onSelectFollowedTrip).not.toHaveBeenCalled();
+      fireEvent.press(within(screen.getByTestId('all-trips-unfollow-dialog')).getByText('Unfollow'));
+      await waitFor(() => expect(onUnfollowTrip).toHaveBeenCalledWith('followed'));
+      await waitFor(() => expect(screen.queryByTestId('all-trips-unfollow-dialog')).toBeNull(), { timeout: 5000 });
+    });
+
+    it('keeps the dialog open with the reason when unfollowing fails', async () => {
+      const { screen } = await renderFollowed(jest.fn().mockResolvedValue('Unable to unfollow trip'));
+      fireEvent.press(screen.getByTestId('all-trips-row-unfollow-followed'));
+      fireEvent.press(within(screen.getByTestId('all-trips-unfollow-dialog')).getByText('Unfollow'));
+      await waitFor(() => expect(screen.getByText('Unable to unfollow trip')).toBeTruthy());
+      expect(screen.getByTestId('all-trips-unfollow-dialog')).toBeTruthy();
+    });
   });
 });

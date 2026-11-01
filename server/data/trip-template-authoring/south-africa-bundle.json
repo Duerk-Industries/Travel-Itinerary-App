@@ -2106,7 +2106,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/66/Backplate_%E2%80%93_Table_Mountain_1_%28Greg_Zaal_and_Rico_Cilliers_via_Poly_Haven%29_IMG_0944_%28edited%29.jpg/960px-Backplate_%E2%80%93_Table_Mountain_1_%28Greg_Zaal_and_Rico_Cilliers_via_Poly_Haven%29_IMG_0944_%28edited%29.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Backplate – Table Mountain 1 (Greg Zaal and Rico Cilliers via Poly Haven) IMG 0944 (edited).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Backplate_%E2%80%93_Table_Mountain_1_(Greg_Zaal_and_Rico_Cilliers_via_Poly_Haven)_IMG_0944_(edited).jpg",
+          "license": "CC0",
+          "author": "Greg Zaal (Panorama) Rico Cilliers (Backplates)",
+          "selection": "ai"
+        }
       },
       "south-africa/robben-island": {
         "name": "Robben Island",
@@ -2130,7 +2139,16 @@
           "food"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/98/Bo-Kaap%2C_Cape_Town_-_BoKaap3893.jpg/960px-Bo-Kaap%2C_Cape_Town_-_BoKaap3893.jpg",
+          "width": 960,
+          "height": 589,
+          "title": "File:Bo-Kaap, Cape Town - BoKaap3893.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Bo-Kaap,_Cape_Town_-_BoKaap3893.jpg",
+          "license": "CC0",
+          "author": "lumoplank",
+          "selection": "ai"
+        }
       },
       "south-africa/camps-bay-sunset": {
         "name": "Camps Bay sunset",
@@ -2154,7 +2172,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0c/Kirstenbosch_botanical_garden_-_fynbos_-_cape_town.jpg/960px-Kirstenbosch_botanical_garden_-_fynbos_-_cape_town.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Kirstenbosch botanical garden - fynbos - cape town.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Kirstenbosch_botanical_garden_-_fynbos_-_cape_town.jpg",
+          "license": "CC0",
+          "author": "Abu Shawka",
+          "selection": "ai"
+        }
       },
       "south-africa/lions-head": {
         "name": "Lion's Head hike",
@@ -2166,7 +2193,16 @@
           "photography"
         ],
         "mobility": "H",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/65/Table_Mountain_%26_Lion%27s_Head_-_TableLion3916.jpg/960px-Table_Mountain_%26_Lion%27s_Head_-_TableLion3916.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Table Mountain & Lion's Head - TableLion3916.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Table_Mountain_%26_Lion%27s_Head_-_TableLion3916.jpg",
+          "license": "CC0",
+          "author": "lumoplank",
+          "selection": "ai"
+        }
       },
       "south-africa/cape-point": {
         "name": "Cape Point and the Cape of Good Hope",
@@ -2178,7 +2214,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ea/Cape_Town_-_Cape_of_Good_Hope_seen_from_lighthouse.jpg/960px-Cape_Town_-_Cape_of_Good_Hope_seen_from_lighthouse.jpg",
+          "width": 960,
+          "height": 540,
+          "title": "File:Cape Town - Cape of Good Hope seen from lighthouse.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Cape_Town_-_Cape_of_Good_Hope_seen_from_lighthouse.jpg",
+          "license": "CC0",
+          "author": "Romaine",
+          "selection": "ai"
+        }
       },
       "south-africa/boulders-penguins": {
         "name": "Boulders Beach penguins",
@@ -2190,7 +2235,16 @@
           "relax"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ec/Penguins_on_boulders_beach.jpg/960px-Penguins_on_boulders_beach.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Penguins on boulders beach.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Penguins_on_boulders_beach.jpg",
+          "license": "Public domain",
+          "author": "No machine-readable author provided. Daemonic Kangaroo assumed (based on copyright claims).",
+          "selection": "ai"
+        }
       },
       "south-africa/stellenbosch-wine-estates": {
         "name": "Stellenbosch wine estates",
@@ -2334,7 +2388,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3c/Elephant_addo_park.jpg/960px-Elephant_addo_park.jpg",
+          "width": 960,
+          "height": 638,
+          "title": "File:Elephant addo park.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Elephant_addo_park.jpg",
+          "license": "Public domain",
+          "author": "Amada44",
+          "selection": "ai"
+        }
       },
       "south-africa/kruger-morning-drive": {
         "name": "Dawn game drive in the Kruger area",
@@ -2383,7 +2446,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/13/Blyde_River_Canyon%2C_Sydafrika_%28Unsplash%29.jpg/960px-Blyde_River_Canyon%2C_Sydafrika_%28Unsplash%29.jpg",
+          "width": 960,
+          "height": 641,
+          "title": "File:Blyde River Canyon, Sydafrika (Unsplash).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Blyde_River_Canyon,_Sydafrika_(Unsplash).jpg",
+          "license": "CC0",
+          "author": "Elin Jonsson elinjonsson",
+          "selection": "ai"
+        }
       },
       "south-africa/gods-window": {
         "name": "God's Window and Lisbon Falls",
@@ -2435,17 +2507,50 @@
       "south-africa": {
         "name": "South Africa",
         "description": "A country of Big Five safaris, vineyards, dramatic coasts and the city of Cape Town beneath Table Mountain.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/36/Rhinoceros_in_South_Africa_adjusted.jpg/960px-Rhinoceros_in_South_Africa_adjusted.jpg",
+            "width": 960,
+            "height": 738,
+            "title": "File:Rhinoceros in South Africa adjusted.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Rhinoceros_in_South_Africa_adjusted.jpg",
+            "license": "Public domain",
+            "author": "Komencanto, modified by ArtMechanic",
+            "selection": "ai"
+          }
+        ]
       },
       "south-africa/western-cape": {
         "name": "Western Cape",
         "description": "The south-western province that holds Cape Town, the Winelands, Hermanus and the Garden Route.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/dd/South_Africa%27s_Western_Cape_%28MODIS_2024-08-21%29.jpg/960px-South_Africa%27s_Western_Cape_%28MODIS_2024-08-21%29.jpg",
+            "width": 960,
+            "height": 762,
+            "title": "File:South Africa's Western Cape (MODIS 2024-08-21).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:South_Africa%27s_Western_Cape_(MODIS_2024-08-21).jpg",
+            "license": "Public domain",
+            "author": "MODIS Land Rapid Response Team, NASA GSFC",
+            "selection": "ai"
+          }
+        ]
       },
       "south-africa/cape-town": {
         "name": "Cape Town",
         "description": "A harbour city beneath Table Mountain, with beaches, vineyards, a penguin colony and the Cape Peninsula close by.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0c/Cape-town-port-boats.jpg/960px-Cape-town-port-boats.jpg",
+            "width": 960,
+            "height": 540,
+            "title": "File:Cape-town-port-boats.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Cape-town-port-boats.jpg",
+            "license": "CC0",
+            "author": "HPBotha",
+            "selection": "ai"
+          }
+        ]
       },
       "south-africa/cape-point": {
         "name": "Cape Point",
@@ -2455,12 +2560,34 @@
       "south-africa/stellenbosch": {
         "name": "Stellenbosch",
         "description": "The Cape's oldest wine town, with oak-lined streets, Cape Dutch houses and many wine estates close by.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/28/Stellenbosch-region.JPG/960px-Stellenbosch-region.JPG",
+            "width": 960,
+            "height": 720,
+            "title": "File:Stellenbosch-region.JPG",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Stellenbosch-region.JPG",
+            "license": "Public domain",
+            "author": "Unknown",
+            "selection": "ai"
+          }
+        ]
       },
       "south-africa/franschhoek": {
         "name": "Franschhoek",
         "description": "A valley village settled by French Huguenots, known for its restaurants and wine estates.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1a/Franschhoek_Valley.jpg/960px-Franschhoek_Valley.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Franschhoek Valley.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Franschhoek_Valley.jpg",
+            "license": "Public domain",
+            "author": "User:Da_Legend",
+            "selection": "ai"
+          }
+        ]
       },
       "south-africa/hermanus": {
         "name": "Hermanus",
@@ -2470,7 +2597,18 @@
       "south-africa/oudtshoorn": {
         "name": "Oudtshoorn",
         "description": "The ostrich capital of the Little Karoo, close to the Cango Caves and reached by Route 62.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/79/Oudtshoorn_Meerkat.jpg/960px-Oudtshoorn_Meerkat.jpg",
+            "width": 960,
+            "height": 738,
+            "title": "File:Oudtshoorn Meerkat.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Oudtshoorn_Meerkat.jpg",
+            "license": "Public domain",
+            "author": "User:Mumpel2000",
+            "selection": "ai"
+          }
+        ]
       },
       "south-africa/knysna": {
         "name": "Knysna",
@@ -2495,7 +2633,18 @@
       "south-africa/addo": {
         "name": "Addo",
         "description": "The area around Addo Elephant National Park, a malaria-free safari destination near Port Elizabeth.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fe/Water_hole_addo_elephant_park.jpg/960px-Water_hole_addo_elephant_park.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Water hole addo elephant park.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Water_hole_addo_elephant_park.jpg",
+            "license": "Public domain",
+            "author": "No machine-readable author provided. David Earley~commonswiki assumed (based on copyright claims).",
+            "selection": "ai"
+          }
+        ]
       },
       "south-africa/mpumalanga": {
         "name": "Mpumalanga",
@@ -2505,7 +2654,18 @@
       "south-africa/kruger-national-park": {
         "name": "Kruger National Park",
         "description": "South Africa's flagship safari park, home to the Big Five and best seen in the dry winter months.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fd/Kruger_National_Park%2C_Part_I_-_Kruger3662.jpg/960px-Kruger_National_Park%2C_Part_I_-_Kruger3662.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Kruger National Park, Part I - Kruger3662.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Kruger_National_Park,_Part_I_-_Kruger3662.jpg",
+            "license": "CC0",
+            "author": "lumoplank",
+            "selection": "ai"
+          }
+        ]
       },
       "south-africa/graskop": {
         "name": "Graskop",
@@ -2520,7 +2680,18 @@
       "south-africa/johannesburg": {
         "name": "Johannesburg",
         "description": "South Africa's largest city and main international gateway, with powerful apartheid-era history and the township of Soweto.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/42/Johannesburg-bridge.jpg/960px-Johannesburg-bridge.jpg",
+            "width": 960,
+            "height": 643,
+            "title": "File:Johannesburg-bridge.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Johannesburg-bridge.jpg",
+            "license": "CC0",
+            "author": "123web",
+            "selection": "ai"
+          }
+        ]
       }
     }
   }

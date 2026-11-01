@@ -1043,7 +1043,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/60/Main_%27BLUE_DOME%27_market_of_Chorsu_Bazaar..JPG/960px-Main_%27BLUE_DOME%27_market_of_Chorsu_Bazaar..JPG",
+          "width": 960,
+          "height": 720,
+          "title": "File:Main 'BLUE DOME' market of Chorsu Bazaar..JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Main_%27BLUE_DOME%27_market_of_Chorsu_Bazaar..JPG",
+          "license": "CC0",
+          "author": "Rudolph.A.furtado",
+          "selection": "ai"
+        }
       },
       "uzbekistan/samarkand-registan": {
         "name": "Samarkand Registan and Gur-e-Amir",
@@ -1055,7 +1064,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/61/Registan_02.jpg/960px-Registan_02.jpg",
+          "width": 960,
+          "height": 550,
+          "title": "File:Registan 02.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Registan_02.jpg",
+          "license": "CC0",
+          "author": "Bgag",
+          "selection": "ai"
+        }
       },
       "uzbekistan/samarkand-siab-ulugbek": {
         "name": "Siab Bazaar and Ulugh Beg Observatory",
@@ -1092,7 +1110,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/40/Samanid_Mausoleum_2023.9.jpg/960px-Samanid_Mausoleum_2023.9.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Samanid Mausoleum 2023.9.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Samanid_Mausoleum_2023.9.jpg",
+          "license": "CC0",
+          "author": "ほっきー",
+          "selection": "ai"
+        }
       },
       "uzbekistan/khiva-itchan-kala": {
         "name": "Khiva Itchan Kala",
@@ -1104,7 +1131,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/95/Palvan_Darvoza_02.jpg/960px-Palvan_Darvoza_02.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Palvan Darvoza 02.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Palvan_Darvoza_02.jpg",
+          "license": "CC0",
+          "author": "Bgag",
+          "selection": "ai"
+        }
       },
       "uzbekistan/yurt-camp-nurata": {
         "name": "Nurata yurt camp and Aydarkul Lake",
@@ -1149,7 +1185,18 @@
       "uzbekistan/khiva": {
         "name": "Khiva",
         "description": "A walled desert city.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d9/Khiva_Uzbekistan_2023.jpg/960px-Khiva_Uzbekistan_2023.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Khiva Uzbekistan 2023.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Khiva_Uzbekistan_2023.jpg",
+            "license": "CC0",
+            "author": "Yoshi fmfan",
+            "selection": "ai"
+          }
+        ]
       }
     }
   }

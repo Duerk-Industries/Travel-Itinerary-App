@@ -1155,7 +1155,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fe/Pail%C3%B3n_del_Diablo%2C_cerca_a_Ba%C3%B1os%2C_Ecuador_%283258%29.jpg/960px-Pail%C3%B3n_del_Diablo%2C_cerca_a_Ba%C3%B1os%2C_Ecuador_%283258%29.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Pailón del Diablo, cerca a Baños, Ecuador (3258).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Pail%C3%B3n_del_Diablo,_cerca_a_Ba%C3%B1os,_Ecuador_(3258).jpg",
+          "license": "CC0",
+          "author": "Sebastian Reategui",
+          "selection": "ai"
+        }
       },
       "ecuador/cuenca-old-town": {
         "name": "Cuenca historic centre",
@@ -1192,7 +1201,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/61/Galapagos_Land_Iguana.jpg/960px-Galapagos_Land_Iguana.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Galapagos Land Iguana.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Galapagos_Land_Iguana.jpg",
+          "license": "CC0",
+          "author": "Balon Greyjoy",
+          "selection": "ai"
+        }
       },
       "ecuador/tortoise-highlands": {
         "name": "Santa Cruz highlands tortoises and lava tunnels",
@@ -1241,7 +1259,18 @@
       "ecuador/pichincha": {
         "name": "Pichincha",
         "description": "The province of Quito and the equator.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/bc/Volcano_pichincha_rucu_quito_ecuador.jpg/960px-Volcano_pichincha_rucu_quito_ecuador.jpg",
+            "width": 960,
+            "height": 520,
+            "title": "File:Volcano pichincha rucu quito ecuador.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Volcano_pichincha_rucu_quito_ecuador.jpg",
+            "license": "Public domain",
+            "author": "Annom",
+            "selection": "ai"
+          }
+        ]
       },
       "ecuador/quito": {
         "name": "Quito",
@@ -1251,17 +1280,50 @@
       "ecuador/cotopaxi": {
         "name": "Cotopaxi",
         "description": "The province and volcano south of Quito.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/00/Cotopaxi_blue_sky_2007.jpg/960px-Cotopaxi_blue_sky_2007.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Cotopaxi blue sky 2007.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Cotopaxi_blue_sky_2007.jpg",
+            "license": "Public domain",
+            "author": "Lion Hirth (User:Prissantenbär)",
+            "selection": "ai"
+          }
+        ]
       },
       "ecuador/tungurahua": {
         "name": "Tungurahua",
         "description": "The province that includes Banos.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fe/Tungurahua_Volcano_in_Ecuador.jpg/960px-Tungurahua_Volcano_in_Ecuador.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Tungurahua Volcano in Ecuador.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Tungurahua_Volcano_in_Ecuador.jpg",
+            "license": "Public domain",
+            "author": "NASA",
+            "selection": "ai"
+          }
+        ]
       },
       "ecuador/banos": {
         "name": "Banos",
         "description": "An adventure town in a valley of waterfalls and hot springs.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fe/Pail%C3%B3n_del_Diablo%2C_cerca_a_Ba%C3%B1os%2C_Ecuador_%283258%29.jpg/960px-Pail%C3%B3n_del_Diablo%2C_cerca_a_Ba%C3%B1os%2C_Ecuador_%283258%29.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:Pailón del Diablo, cerca a Baños, Ecuador (3258).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Pail%C3%B3n_del_Diablo,_cerca_a_Ba%C3%B1os,_Ecuador_(3258).jpg",
+            "license": "CC0",
+            "author": "Sebastian Reategui",
+            "selection": "ai"
+          }
+        ]
       },
       "ecuador/azuay": {
         "name": "Azuay",
@@ -1276,7 +1338,18 @@
       "ecuador/galapagos": {
         "name": "Galapagos",
         "description": "The island province where evolution can be seen in giant tortoises and sea lions.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f0/Islas_Gal%C3%A1pagos%2C_Ecuador_%28Unsplash%29.jpg/960px-Islas_Gal%C3%A1pagos%2C_Ecuador_%28Unsplash%29.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:Islas Galápagos, Ecuador (Unsplash).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Islas_Gal%C3%A1pagos,_Ecuador_(Unsplash).jpg",
+            "license": "CC0",
+            "author": "Andrés Medina andydjpsyco",
+            "selection": "ai"
+          }
+        ]
       },
       "ecuador/puerto-ayora": {
         "name": "Puerto Ayora",

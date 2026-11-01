@@ -1197,7 +1197,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/47/Vista_de_Plaza_Botero%2C_Palacio_de_la_Cultura%2C_Medellin%2C_Colombia%2C_2017-04-11.jpg/960px-Vista_de_Plaza_Botero%2C_Palacio_de_la_Cultura%2C_Medellin%2C_Colombia%2C_2017-04-11.jpg",
+          "width": 960,
+          "height": 655,
+          "title": "File:Vista de Plaza Botero, Palacio de la Cultura, Medellin, Colombia, 2017-04-11.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Vista_de_Plaza_Botero,_Palacio_de_la_Cultura,_Medellin,_Colombia,_2017-04-11.jpg",
+          "license": "CC0",
+          "author": "Sebastian Reategui",
+          "selection": "ai"
+        }
       },
       "colombia/guatape": {
         "name": "Guatape and El Penol rock",
@@ -1221,7 +1230,16 @@
           "adventure"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3f/Valle_del_cocora_3.jpg/960px-Valle_del_cocora_3.jpg",
+          "width": 960,
+          "height": 638,
+          "title": "File:Valle del cocora 3.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Valle_del_cocora_3.jpg",
+          "license": "CC0",
+          "author": "Fotochampion",
+          "selection": "ai"
+        }
       },
       "colombia/coffee-farm": {
         "name": "Coffee farm tour",
@@ -1233,7 +1251,16 @@
           "culture"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a9/Europe_only_coffee_farm_in_La_Herradura.jpg/960px-Europe_only_coffee_farm_in_La_Herradura.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Europe only coffee farm in La Herradura.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Europe_only_coffee_farm_in_La_Herradura.jpg",
+          "license": "CC0",
+          "author": "CarlosPZR",
+          "selection": "ai"
+        }
       },
       "colombia/cartagena-old-city": {
         "name": "Cartagena walled city",
@@ -1271,7 +1298,16 @@
           "relax"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b5/Playa_de_las_7_olas%2C_Parque_Tayrona.jpg/960px-Playa_de_las_7_olas%2C_Parque_Tayrona.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Playa de las 7 olas, Parque Tayrona.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Playa_de_las_7_olas,_Parque_Tayrona.jpg",
+          "license": "CC0",
+          "author": "Petruss",
+          "selection": "ai"
+        }
       }
     },
     "destinations": {
@@ -1298,7 +1334,18 @@
       "colombia/quindio": {
         "name": "Quindio",
         "description": "The heart of the Coffee Axis, with Salento and the Cocora Valley.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0a/Nevado_del_quindio_-_servicio_geologico_de_colombia.jpg/960px-Nevado_del_quindio_-_servicio_geologico_de_colombia.jpg",
+            "width": 960,
+            "height": 638,
+            "title": "File:Nevado del quindio - servicio geologico de colombia.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Nevado_del_quindio_-_servicio_geologico_de_colombia.jpg",
+            "license": "CC0",
+            "author": "Servicio Geológico Colombiano",
+            "selection": "ai"
+          }
+        ]
       },
       "colombia/salento": {
         "name": "Salento",
@@ -1323,7 +1370,18 @@
       "colombia/santa-marta": {
         "name": "Santa Marta",
         "description": "A coastal city and gateway to Tayrona National Park.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ea/Taganga%2C_Santa_Marta%2C_Colombia.jpg/960px-Taganga%2C_Santa_Marta%2C_Colombia.jpg",
+            "width": 960,
+            "height": 540,
+            "title": "File:Taganga, Santa Marta, Colombia.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Taganga,_Santa_Marta,_Colombia.jpg",
+            "license": "CC0",
+            "author": "Henrr Pomares",
+            "selection": "ai"
+          }
+        ]
       }
     }
   }

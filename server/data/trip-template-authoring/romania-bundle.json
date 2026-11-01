@@ -1165,7 +1165,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7b/View_of_Pele%C8%99_Castle_across_the_lawn_from_the_southwest%2C_Sinaia%2C_2017.jpg/960px-View_of_Pele%C8%99_Castle_across_the_lawn_from_the_southwest%2C_Sinaia%2C_2017.jpg",
+          "width": 960,
+          "height": 638,
+          "title": "File:View of Peleș Castle across the lawn from the southwest, Sinaia, 2017.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:View_of_Pele%C8%99_Castle_across_the_lawn_from_the_southwest,_Sinaia,_2017.jpg",
+          "license": "CC0",
+          "author": "DimiTalen",
+          "selection": "ai"
+        }
       },
       "romania/brasov-old-town": {
         "name": "Brasov Black Church and Council Square",
@@ -1178,7 +1187,16 @@
           "food"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d2/Brasov_Black_Church_Viewed_from_Mountain.jpg/960px-Brasov_Black_Church_Viewed_from_Mountain.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Brasov Black Church Viewed from Mountain.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Brasov_Black_Church_Viewed_from_Mountain.jpg",
+          "license": "CC0",
+          "author": "Gary Todd",
+          "selection": "ai"
+        }
       },
       "romania/bran-rasnov": {
         "name": "Bran Castle and Rasnov Fortress",
@@ -1190,7 +1208,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c4/Bran_Castle_-_Castelul_Bran.JPG/960px-Bran_Castle_-_Castelul_Bran.JPG",
+          "width": 960,
+          "height": 720,
+          "title": "File:Bran Castle - Castelul Bran.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Bran_Castle_-_Castelul_Bran.JPG",
+          "license": "CC0",
+          "author": "Calatorinlume",
+          "selection": "ai"
+        }
       },
       "romania/sighisoara": {
         "name": "Sighisoara citadel",
@@ -1214,7 +1241,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4f/Chiesa_fortificata_di_viscri.JPG/960px-Chiesa_fortificata_di_viscri.JPG",
+          "width": 960,
+          "height": 720,
+          "title": "File:Chiesa fortificata di viscri.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Chiesa_fortificata_di_viscri.JPG",
+          "license": "CC0",
+          "author": "The original uploader was Enzopost at Italian Wikipedia.",
+          "selection": "ai"
+        }
       },
       "romania/sibiu": {
         "name": "Sibiu Large Square and Transfagarasan",
@@ -1253,7 +1289,16 @@
           "authentic_local"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/78/CJROCluj-Napoca_19.jpg/960px-CJROCluj-Napoca_19.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:CJROCluj-Napoca 19.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:CJROCluj-Napoca_19.jpg",
+          "license": "Public domain",
+          "author": "Alexmandru",
+          "selection": "ai"
+        }
       }
     },
     "destinations": {
@@ -1280,12 +1325,34 @@
       "romania/sighisoara": {
         "name": "Sighisoara",
         "description": "A UNESCO citadel on a hill.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/00/Sighi%C8%99oara%2C_Romania_%28Unsplash%29.jpg/960px-Sighi%C8%99oara%2C_Romania_%28Unsplash%29.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:Sighișoara, Romania (Unsplash).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Sighi%C8%99oara,_Romania_(Unsplash).jpg",
+            "license": "CC0",
+            "author": "Alisa Anton alisaanton",
+            "selection": "ai"
+          }
+        ]
       },
       "romania/sibiu": {
         "name": "Sibiu",
         "description": "A graceful Saxon city of squares.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/54/Sibiu_Romania.jpg/960px-Sibiu_Romania.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Sibiu Romania.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Sibiu_Romania.jpg",
+            "license": "CC0",
+            "author": "Salwa Farwaneh",
+            "selection": "ai"
+          }
+        ]
       },
       "romania/maramures": {
         "name": "Maramures",
@@ -1295,7 +1362,18 @@
       "romania/sapanta": {
         "name": "Sapanta",
         "description": "A village famous for the Merry Cemetery.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8e/Merry_Cemetery%2C_S%C4%83p%C3%A2n%C8%9Ba%2C_2017.jpg/960px-Merry_Cemetery%2C_S%C4%83p%C3%A2n%C8%9Ba%2C_2017.jpg",
+            "width": 960,
+            "height": 637,
+            "title": "File:Merry Cemetery, Săpânța, 2017.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Merry_Cemetery,_S%C4%83p%C3%A2n%C8%9Ba,_2017.jpg",
+            "license": "CC0",
+            "author": "DimiTalen",
+            "selection": "ai"
+          }
+        ]
       },
       "romania/cluj-napoca": {
         "name": "Cluj-Napoca",

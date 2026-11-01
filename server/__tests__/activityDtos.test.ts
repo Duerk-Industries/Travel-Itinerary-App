@@ -5,7 +5,6 @@ import {
   createActivityDto,
   updateActivityDto,
   bulkActivitiesDto,
-  voteOrRatingDto,
 } from '../src/routes/activityDtos';
 
 const expectValidationError = (fn: () => unknown, regex?: RegExp) => {
@@ -74,20 +73,6 @@ describe('updateActivityDto', () => {
 
   it('rejects a number in a string-only field', () => {
     expectValidationError(() => parseDto(updateActivityDto, { name: 42 }));
-  });
-});
-
-describe('voteOrRatingDto', () => {
-  it('accepts 1 and -1 as numbers and strings', () => {
-    expect(parseDto(voteOrRatingDto, { value: 1 }).value).toBe(1);
-    expect(parseDto(voteOrRatingDto, { value: -1 }).value).toBe(-1);
-    expect(parseDto(voteOrRatingDto, { value: '1' }).value).toBe(1);
-    expect(parseDto(voteOrRatingDto, { value: '-1' }).value).toBe(-1);
-  });
-
-  it('rejects 0, 2, and non-literal numbers', () => {
-    expectValidationError(() => parseDto(voteOrRatingDto, { value: 0 }));
-    expectValidationError(() => parseDto(voteOrRatingDto, { value: 2 }));
   });
 });
 

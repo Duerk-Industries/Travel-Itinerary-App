@@ -1781,7 +1781,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8b/Pre-Columbian_Gold_%2810437530364%29.jpg/960px-Pre-Columbian_Gold_%2810437530364%29.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Pre-Columbian Gold (10437530364).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Pre-Columbian_Gold_(10437530364).jpg",
+          "license": "CC0",
+          "author": "Gary Todd from Xinzheng, China",
+          "selection": "ai"
+        }
       },
       "costa-rica/san-jose-central-market": {
         "name": "San José Central Market",
@@ -1805,7 +1814,16 @@
           "iconic_landmarks"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/64/Arenal_Volcano_02.jpg/960px-Arenal_Volcano_02.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Arenal Volcano 02.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Arenal_Volcano_02.jpg",
+          "license": "CC0",
+          "author": "Bernard Gagnon",
+          "selection": "ai"
+        }
       },
       "costa-rica/arenal-hanging-bridges": {
         "name": "Arenal hanging bridges",
@@ -1829,7 +1847,16 @@
           "photography"
         ],
         "mobility": "H",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1e/La_Fortuna_Waterfall%2C_La_Fortuna_de_San_Carlos%2C_Costa_Rica_%28Unsplash%29.jpg/960px-La_Fortuna_Waterfall%2C_La_Fortuna_de_San_Carlos%2C_Costa_Rica_%28Unsplash%29.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:La Fortuna Waterfall, La Fortuna de San Carlos, Costa Rica (Unsplash).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:La_Fortuna_Waterfall,_La_Fortuna_de_San_Carlos,_Costa_Rica_(Unsplash).jpg",
+          "license": "CC0",
+          "author": "Isabella Jusková bellaskova",
+          "selection": "ai"
+        }
       },
       "costa-rica/arenal-hot-springs": {
         "name": "Arenal hot springs",
@@ -1840,7 +1867,16 @@
           "authentic_local"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/10/Tabac%C3%B3n_Hot_Springs%2C_Costa_Rica.jpg/960px-Tabac%C3%B3n_Hot_Springs%2C_Costa_Rica.jpg",
+          "width": 960,
+          "height": 694,
+          "title": "File:Tabacón Hot Springs, Costa Rica.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Tabac%C3%B3n_Hot_Springs,_Costa_Rica.jpg",
+          "license": "Public domain",
+          "author": "Central Intelligence Agency",
+          "selection": "ai"
+        }
       },
       "costa-rica/la-fortuna-chocolate-tour": {
         "name": "Cacao and chocolate tour",
@@ -1924,7 +1960,16 @@
           "relax"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/43/Parque_Nacional_Manuel_Antonio_02.jpg/960px-Parque_Nacional_Manuel_Antonio_02.jpg",
+          "width": 960,
+          "height": 603,
+          "title": "File:Parque Nacional Manuel Antonio 02.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Parque_Nacional_Manuel_Antonio_02.jpg",
+          "license": "CC0",
+          "author": "Bernard Gagnon",
+          "selection": "ai"
+        }
       },
       "costa-rica/manuel-antonio-beaches": {
         "name": "Manuel Antonio beach day",
@@ -1935,7 +1980,16 @@
           "outdoors"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/43/Parque_Nacional_Manuel_Antonio_02.jpg/960px-Parque_Nacional_Manuel_Antonio_02.jpg",
+          "width": 960,
+          "height": 603,
+          "title": "File:Parque Nacional Manuel Antonio 02.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Parque_Nacional_Manuel_Antonio_02.jpg",
+          "license": "CC0",
+          "author": "Bernard Gagnon",
+          "selection": "ai"
+        }
       },
       "costa-rica/manuel-antonio-catamaran": {
         "name": "Sunset catamaran cruise",
@@ -1971,7 +2025,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/03/Tortuguero_boat_trip.JPG/960px-Tortuguero_boat_trip.JPG",
+          "width": 960,
+          "height": 643,
+          "title": "File:Tortuguero boat trip.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Tortuguero_boat_trip.JPG",
+          "license": "Public domain",
+          "author": "Lars0001",
+          "selection": "ai"
+        }
       },
       "costa-rica/tortuguero-turtle-nesting": {
         "name": "Turtle nesting night tour",
@@ -1995,7 +2058,16 @@
           "outdoors"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/00/Tortuguero_walkway.jpg/960px-Tortuguero_walkway.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Tortuguero walkway.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Tortuguero_walkway.jpg",
+          "license": "Public domain",
+          "author": "Greg Frediani",
+          "selection": "ai"
+        }
       },
       "costa-rica/rio-celeste": {
         "name": "Rio Celeste waterfall hike",
@@ -2089,7 +2161,18 @@
       "costa-rica/san-jose": {
         "name": "San José",
         "description": "Costa Rica's capital in the central valley, used mostly as a gateway, with a gold museum and a busy central market.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e2/Downtown_San_Jos%C3%A9_City_%28Costa_Rica%29.jpg/960px-Downtown_San_Jos%C3%A9_City_%28Costa_Rica%29.jpg",
+            "width": 960,
+            "height": 692,
+            "title": "File:Downtown San José City (Costa Rica).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Downtown_San_Jos%C3%A9_City_(Costa_Rica).jpg",
+            "license": "CC0",
+            "author": "Unknown authorUnknown author",
+            "selection": "ai"
+          }
+        ]
       },
       "costa-rica/alajuela": {
         "name": "Alajuela",
@@ -2099,7 +2182,18 @@
       "costa-rica/la-fortuna": {
         "name": "La Fortuna",
         "description": "The town beneath Arenal volcano, a base for waterfalls, hot springs, rafting and canopy walks.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1e/La_Fortuna_Waterfall%2C_La_Fortuna_de_San_Carlos%2C_Costa_Rica_%28Unsplash%29.jpg/960px-La_Fortuna_Waterfall%2C_La_Fortuna_de_San_Carlos%2C_Costa_Rica_%28Unsplash%29.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:La Fortuna Waterfall, La Fortuna de San Carlos, Costa Rica (Unsplash).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:La_Fortuna_Waterfall,_La_Fortuna_de_San_Carlos,_Costa_Rica_(Unsplash).jpg",
+            "license": "CC0",
+            "author": "Isabella Jusková bellaskova",
+            "selection": "ai"
+          }
+        ]
       },
       "costa-rica/rio-celeste": {
         "name": "Rio Celeste",
@@ -2114,17 +2208,50 @@
       "costa-rica/monteverde": {
         "name": "Monteverde",
         "description": "A mountain community beside a misty cloud forest reserve, known for birdlife, hanging bridges and zip-lines.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/ce/Monteverde_hanging_bridges.jpg/960px-Monteverde_hanging_bridges.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Monteverde hanging bridges.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Monteverde_hanging_bridges.jpg",
+            "license": "CC0",
+            "author": "Unidancom",
+            "selection": "ai"
+          }
+        ]
       },
       "costa-rica/manuel-antonio": {
         "name": "Manuel Antonio",
         "description": "A Pacific coast resort area beside a small national park with sloths, monkeys and sandy beaches.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8e/Quepos-manuel-antonio-costa-rica-first-beach.jpg/960px-Quepos-manuel-antonio-costa-rica-first-beach.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Quepos-manuel-antonio-costa-rica-first-beach.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Quepos-manuel-antonio-costa-rica-first-beach.jpg",
+            "license": "Public domain",
+            "author": "User:Tarrazu",
+            "selection": "ai"
+          }
+        ]
       },
       "costa-rica/drake-bay": {
         "name": "Drake Bay",
         "description": "A remote village on the Osa Peninsula reached by boat, the launch point for Corcovado and Caño Island.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b8/2020-03-15_16-36-33_Costa_Rica_-_Drake_Bay_K70_JH.jpg/960px-2020-03-15_16-36-33_Costa_Rica_-_Drake_Bay_K70_JH.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:2020-03-15 16-36-33 Costa Rica - Drake Bay K70 JH.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:2020-03-15_16-36-33_Costa_Rica_-_Drake_Bay_K70_JH.jpg",
+            "license": "CC0",
+            "author": "Jan Helebrant",
+            "selection": "ai"
+          }
+        ]
       },
       "costa-rica/limon": {
         "name": "Limón",
@@ -2134,7 +2261,18 @@
       "costa-rica/tortuguero": {
         "name": "Tortuguero",
         "description": "A canal-laced Caribbean national park reached only by boat or light plane, famous for turtle nesting.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/03/Tortuguero_boat_trip.JPG/960px-Tortuguero_boat_trip.JPG",
+            "width": 960,
+            "height": 643,
+            "title": "File:Tortuguero boat trip.JPG",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Tortuguero_boat_trip.JPG",
+            "license": "Public domain",
+            "author": "Lars0001",
+            "selection": "ai"
+          }
+        ]
       },
       "costa-rica/guanacaste": {
         "name": "Guanacaste",
@@ -2144,7 +2282,18 @@
       "costa-rica/tamarindo": {
         "name": "Tamarindo",
         "description": "A surf town on the Guanacaste coast with a long beach, restaurants and sunset sails.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0d/Tamarindo.JPG/960px-Tamarindo.JPG",
+            "width": 960,
+            "height": 720,
+            "title": "File:Tamarindo.JPG",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Tamarindo.JPG",
+            "license": "Public domain",
+            "author": "Tizianok",
+            "selection": "ai"
+          }
+        ]
       }
     }
   }

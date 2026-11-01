@@ -1073,7 +1073,16 @@
           "iconic_landmarks"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/77/Plitvice_Lakes_National_Park_in_Croatia.jpg/960px-Plitvice_Lakes_National_Park_in_Croatia.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Plitvice Lakes National Park in Croatia.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Plitvice_Lakes_National_Park_in_Croatia.jpg",
+          "license": "CC0",
+          "author": "MarioMagdic",
+          "selection": "ai"
+        }
       },
       "croatia/rovinj": {
         "name": "Rovinj old town",
@@ -1086,7 +1095,16 @@
           "relax"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/39/Rovinj_%2835366293692%29.jpg/960px-Rovinj_%2835366293692%29.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Rovinj (35366293692).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Rovinj_(35366293692).jpg",
+          "license": "CC0",
+          "author": "Davor Cengija",
+          "selection": "ai"
+        }
       },
       "croatia/split-palace": {
         "name": "Diocletian Palace, Split",
@@ -1098,7 +1116,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/59/Visitors_walking_through_the_Peristyle_of_Diocletian%E2%80%99s_Palace_in_Split_-_October_2026.jpg/960px-Visitors_walking_through_the_Peristyle_of_Diocletian%E2%80%99s_Palace_in_Split_-_October_2026.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Visitors walking through the Peristyle of Diocletian’s Palace in Split - October 2026.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Visitors_walking_through_the_Peristyle_of_Diocletian%E2%80%99s_Palace_in_Split_-_October_2026.jpg",
+          "license": "CC0",
+          "author": "Jazzmaster1997",
+          "selection": "ai"
+        }
       },
       "croatia/krka-trogir": {
         "name": "Krka waterfalls and Trogir",
@@ -1110,7 +1137,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/18/Krka_Wasserf%C3%A4lle_2.png/960px-Krka_Wasserf%C3%A4lle_2.png",
+          "width": 960,
+          "height": 682,
+          "title": "File:Krka Wasserfälle 2.png",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Krka_Wasserf%C3%A4lle_2.png",
+          "license": "CC0",
+          "author": "Edelmauswaldgeist",
+          "selection": "ai"
+        }
       },
       "croatia/hvar-town": {
         "name": "Hvar Town and Spanjola fortress",
@@ -1146,7 +1182,16 @@
           "culture"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c4/Dubrovnik_from_city_walls.jpg/960px-Dubrovnik_from_city_walls.jpg",
+          "width": 960,
+          "height": 630,
+          "title": "File:Dubrovnik from city walls.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Dubrovnik_from_city_walls.jpg",
+          "license": "Public domain",
+          "author": "Tlusťa",
+          "selection": "ai"
+        }
       },
       "croatia/dubrovnik-cable-kayak": {
         "name": "Srd cable car and sea kayaking",
@@ -1177,7 +1222,18 @@
       "croatia": {
         "name": "Croatia",
         "description": "A coastal country of Roman palaces, walled towns, islands and waterfall parks.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1c/Vara%C5%BEdin_Croatia_Korzo_2025.jpg/960px-Vara%C5%BEdin_Croatia_Korzo_2025.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Varaždin Croatia Korzo 2025.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Vara%C5%BEdin_Croatia_Korzo_2025.jpg",
+            "license": "CC0",
+            "author": "Ptrnc7965",
+            "selection": "ai"
+          }
+        ]
       },
       "croatia/zagreb": {
         "name": "Zagreb",
@@ -1187,7 +1243,18 @@
       "croatia/plitvice-lakes": {
         "name": "Plitvice Lakes",
         "description": "A national park of terraced turquoise lakes and waterfalls.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fc/Plitvice_Lakes_%28225492887%29.jpeg/960px-Plitvice_Lakes_%28225492887%29.jpeg",
+            "width": 960,
+            "height": 640,
+            "title": "File:Plitvice Lakes (225492887).jpeg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Plitvice_Lakes_(225492887).jpeg",
+            "license": "CC0",
+            "author": "Artem Kavalerov",
+            "selection": "ai"
+          }
+        ]
       },
       "croatia/istria": {
         "name": "Istria",
@@ -1197,7 +1264,18 @@
       "croatia/rovinj": {
         "name": "Rovinj",
         "description": "A Venetian-style port town on the Istrian coast.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8b/Croatia_-_Rovinj.jpg/960px-Croatia_-_Rovinj.jpg",
+            "width": 960,
+            "height": 540,
+            "title": "File:Croatia - Rovinj.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Croatia_-_Rovinj.jpg",
+            "license": "CC0",
+            "author": "Mussi Katz from Israel",
+            "selection": "ai"
+          }
+        ]
       },
       "croatia/dalmatia": {
         "name": "Dalmatia",
@@ -1217,7 +1295,18 @@
       "croatia/dubrovnik": {
         "name": "Dubrovnik",
         "description": "A walled city on the Adriatic, a UNESCO site.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c8/Dubrovnik_City_Dubrovnik_Croatia_Travel.jpg/960px-Dubrovnik_City_Dubrovnik_Croatia_Travel.jpg",
+            "width": 960,
+            "height": 540,
+            "title": "File:Dubrovnik City Dubrovnik Croatia Travel.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Dubrovnik_City_Dubrovnik_Croatia_Travel.jpg",
+            "license": "CC0",
+            "author": "ivanbagic",
+            "selection": "ai"
+          }
+        ]
       }
     }
   }

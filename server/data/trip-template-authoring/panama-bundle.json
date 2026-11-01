@@ -1146,7 +1146,16 @@
           "culture"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b4/Touring_the_Panama_Canal_Miraflores_Locks_in_Ancon%2C_Panama%2C_April_10%2C_2015.jpg/960px-Touring_the_Panama_Canal_Miraflores_Locks_in_Ancon%2C_Panama%2C_April_10%2C_2015.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Touring the Panama Canal Miraflores Locks in Ancon, Panama, April 10, 2015.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Touring_the_Panama_Canal_Miraflores_Locks_in_Ancon,_Panama,_April_10,_2015.jpg",
+          "license": "Public domain",
+          "author": "Pete Souza",
+          "selection": "ai"
+        }
       },
       "panama/casco-viejo": {
         "name": "Casco Viejo and Panama City skyline",
@@ -1171,7 +1180,16 @@
           "adventure"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/81/Soberania.JPG/960px-Soberania.JPG",
+          "width": 960,
+          "height": 720,
+          "title": "File:Soberania.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Soberania.JPG",
+          "license": "CC0",
+          "author": "Margaux1900",
+          "selection": "ai"
+        }
       },
       "panama/san-blas-guna-yala": {
         "name": "San Blas (Guna Yala) islands",
@@ -1184,7 +1202,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7e/San_Blas_Islands%2C_Panama_%28Unsplash%29.jpg/960px-San_Blas_Islands%2C_Panama_%28Unsplash%29.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:San Blas Islands, Panama (Unsplash).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:San_Blas_Islands,_Panama_(Unsplash).jpg",
+          "license": "CC0",
+          "author": "Tom Mussak tom_mu",
+          "selection": "ai"
+        }
       },
       "panama/el-valle": {
         "name": "El Valle de Anton",
@@ -1222,7 +1249,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/eb/Casa_en_Bocas_del_Toro%2C_Panama.jpg/960px-Casa_en_Bocas_del_Toro%2C_Panama.jpg",
+          "width": 960,
+          "height": 721,
+          "title": "File:Casa en Bocas del Toro, Panama.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Casa_en_Bocas_del_Toro,_Panama.jpg",
+          "license": "CC0",
+          "author": "Tim Cook",
+          "selection": "ai"
+        }
       }
     },
     "destinations": {
@@ -1239,12 +1275,34 @@
       "panama/guna-yala": {
         "name": "Guna Yala",
         "description": "The autonomous Guna territory of the San Blas islands.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7e/San_Blas_Islands%2C_Panama_%28Unsplash%29.jpg/960px-San_Blas_Islands%2C_Panama_%28Unsplash%29.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:San Blas Islands, Panama (Unsplash).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:San_Blas_Islands,_Panama_(Unsplash).jpg",
+            "license": "CC0",
+            "author": "Tom Mussak tom_mu",
+            "selection": "ai"
+          }
+        ]
       },
       "panama/san-blas-islands": {
         "name": "San Blas Islands",
         "description": "An archipelago of tiny palm islands.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7e/San_Blas_Islands%2C_Panama_%28Unsplash%29.jpg/960px-San_Blas_Islands%2C_Panama_%28Unsplash%29.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:San Blas Islands, Panama (Unsplash).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:San_Blas_Islands,_Panama_(Unsplash).jpg",
+            "license": "CC0",
+            "author": "Tom Mussak tom_mu",
+            "selection": "ai"
+          }
+        ]
       },
       "panama/el-valle-de-anton": {
         "name": "El Valle de Anton",
@@ -1264,7 +1322,18 @@
       "panama/bocas-del-toro": {
         "name": "Bocas del Toro",
         "description": "A Caribbean island archipelago.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b0/Bocas_del_Toro%2C_Panama_%28Unsplash%29.jpg/960px-Bocas_del_Toro%2C_Panama_%28Unsplash%29.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:Bocas del Toro, Panama (Unsplash).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Bocas_del_Toro,_Panama_(Unsplash).jpg",
+            "license": "CC0",
+            "author": "Evan Kirby evankirby2",
+            "selection": "ai"
+          }
+        ]
       }
     }
   }

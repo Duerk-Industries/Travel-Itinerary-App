@@ -2443,7 +2443,16 @@
           "food"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1c/Galata_tower_view.jpg/960px-Galata_tower_view.jpg",
+          "width": 960,
+          "height": 636,
+          "title": "File:Galata tower view.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Galata_tower_view.jpg",
+          "license": "CC0",
+          "author": "xxoktayxx",
+          "selection": "ai"
+        }
       },
       "turkey/hagia-sophia": {
         "name": "Hagia Sophia",
@@ -2455,7 +2464,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f5/Hagia_Sophia%2C_Constantinople%2C_Turkey%2C_ca._1897.jpg/960px-Hagia_Sophia%2C_Constantinople%2C_Turkey%2C_ca._1897.jpg",
+          "width": 960,
+          "height": 699,
+          "title": "File:Hagia Sophia, Constantinople, Turkey, ca. 1897.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Hagia_Sophia,_Constantinople,_Turkey,_ca._1897.jpg",
+          "license": "Public domain",
+          "author": "Unknown authorUnknown author",
+          "selection": "ai"
+        }
       },
       "turkey/blue-mosque": {
         "name": "Blue Mosque",
@@ -2478,7 +2496,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/82/Basilica_Cistern%2C_Constantinople.jpg/960px-Basilica_Cistern%2C_Constantinople.jpg",
+          "width": 960,
+          "height": 705,
+          "title": "File:Basilica Cistern, Constantinople.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Basilica_Cistern,_Constantinople.jpg",
+          "license": "Public domain",
+          "author": "Gun Powder Ma",
+          "selection": "ai"
+        }
       },
       "turkey/topkapi-palace": {
         "name": "Topkapı Palace",
@@ -2502,7 +2529,16 @@
           "food"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/80/Grand_Bazaar_%28Istanbul%29.jpg/960px-Grand_Bazaar_%28Istanbul%29.jpg",
+          "width": 960,
+          "height": 641,
+          "title": "File:Grand Bazaar (Istanbul).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Grand_Bazaar_(Istanbul).jpg",
+          "license": "CC0",
+          "author": "Nicolas Vigier",
+          "selection": "ai"
+        }
       },
       "turkey/spice-bazaar": {
         "name": "Spice Bazaar",
@@ -2514,7 +2550,16 @@
           "culture"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/87/Spice_Bazaar_in_Istanbul.jpg/960px-Spice_Bazaar_in_Istanbul.jpg",
+          "width": 960,
+          "height": 721,
+          "title": "File:Spice Bazaar in Istanbul.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Spice_Bazaar_in_Istanbul.jpg",
+          "license": "CC0",
+          "author": "Deckkohl",
+          "selection": "ai"
+        }
       },
       "turkey/bosphorus-cruise": {
         "name": "Bosphorus cruise",
@@ -2526,7 +2571,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b3/BosphorusCruiseShip.jpg/960px-BosphorusCruiseShip.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:BosphorusCruiseShip.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:BosphorusCruiseShip.jpg",
+          "license": "Public domain",
+          "author": "Jorge1767",
+          "selection": "ai"
+        }
       },
       "turkey/hammam-experience": {
         "name": "Turkish bath (hammam)",
@@ -2550,7 +2604,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/99/G%C3%B6reme_A%C3%A7%C4%B1k_Hava_M%C3%BCzesi_%28%C3%BCstten%29.JPG/960px-G%C3%B6reme_A%C3%A7%C4%B1k_Hava_M%C3%BCzesi_%28%C3%BCstten%29.JPG",
+          "width": 960,
+          "height": 720,
+          "title": "File:Göreme Açık Hava Müzesi (üstten).JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:G%C3%B6reme_A%C3%A7%C4%B1k_Hava_M%C3%BCzesi_(%C3%BCstten).JPG",
+          "license": "CC0",
+          "author": "Cobija",
+          "selection": "ai"
+        }
       },
       "turkey/hot-air-balloon": {
         "name": "Hot-air balloon at sunrise",
@@ -2586,7 +2649,16 @@
           "outdoors"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/dd/U%C3%A7hisar_Kalesi_%282%29.jpg/960px-U%C3%A7hisar_Kalesi_%282%29.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Uçhisar Kalesi (2).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:U%C3%A7hisar_Kalesi_(2).jpg",
+          "license": "CC0",
+          "author": "Cobija",
+          "selection": "ai"
+        }
       },
       "turkey/red-rose-valley": {
         "name": "Red and Rose Valley hike",
@@ -2622,7 +2694,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9b/Ihlara.jpg/960px-Ihlara.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Ihlara.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Ihlara.jpg",
+          "license": "Public domain",
+          "author": "The original uploader was Morphosis at Turkish Wikipedia.",
+          "selection": "ai"
+        }
       },
       "turkey/ephesus": {
         "name": "Ephesus",
@@ -2634,7 +2715,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/15/Ephesus_Hadrianus_Temple%2C_September_2013.jpg/960px-Ephesus_Hadrianus_Temple%2C_September_2013.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Ephesus Hadrianus Temple, September 2013.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Ephesus_Hadrianus_Temple,_September_2013.jpg",
+          "license": "CC0",
+          "author": "992829",
+          "selection": "ai"
+        }
       },
       "turkey/ephesus-terrace-houses": {
         "name": "Terrace Houses of Ephesus",
@@ -2670,7 +2760,16 @@
           "culture"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/be/Pamukkale_Travertenlerinden_bir_foto%C4%9Fraf.jpg/960px-Pamukkale_Travertenlerinden_bir_foto%C4%9Fraf.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Pamukkale Travertenlerinden bir fotoğraf.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Pamukkale_Travertenlerinden_bir_foto%C4%9Fraf.jpg",
+          "license": "CC0",
+          "author": "LoggaWiggler",
+          "selection": "ai"
+        }
       },
       "turkey/antalya-kaleici": {
         "name": "Kaleiçi old town, Antalya",
@@ -2683,7 +2782,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1f/Kalei%C3%A7i_g%C3%B6r%C3%BCn%C3%BCm%C3%BC_%282%29.JPG/960px-Kalei%C3%A7i_g%C3%B6r%C3%BCn%C3%BCm%C3%BC_%282%29.JPG",
+          "width": 960,
+          "height": 720,
+          "title": "File:Kaleiçi görünümü (2).JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Kalei%C3%A7i_g%C3%B6r%C3%BCn%C3%BCm%C3%BC_(2).JPG",
+          "license": "CC0",
+          "author": "Cobija",
+          "selection": "ai"
+        }
       },
       "turkey/aspendos": {
         "name": "Aspendos",
@@ -2695,7 +2803,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/11/Aspendos_Turkey.JPG/960px-Aspendos_Turkey.JPG",
+          "width": 960,
+          "height": 720,
+          "title": "File:Aspendos Turkey.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Aspendos_Turkey.JPG",
+          "license": "Public domain",
+          "author": "NoFight",
+          "selection": "ai"
+        }
       }
     },
     "destinations": {
@@ -2707,17 +2824,50 @@
       "turkey/istanbul": {
         "name": "Istanbul",
         "description": "The city on two continents, with Byzantine and Ottoman monuments, bazaars and the Bosphorus.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/65/Istanbul_-_Landscapes_of_Turkey_-_Geography_of_Turkey_01.jpg/960px-Istanbul_-_Landscapes_of_Turkey_-_Geography_of_Turkey_01.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:Istanbul - Landscapes of Turkey - Geography of Turkey 01.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Istanbul_-_Landscapes_of_Turkey_-_Geography_of_Turkey_01.jpg",
+            "license": "CC0",
+            "author": "Mostafameraji",
+            "selection": "ai"
+          }
+        ]
       },
       "turkey/nevsehir": {
         "name": "Nevşehir",
         "description": "The central Anatolian province that holds Göreme and the heart of Cappadocia.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/02/Nev%C5%9Fehir%2C_Turkey_%28Unsplash_FLCanAhTWvI%29.jpg/960px-Nev%C5%9Fehir%2C_Turkey_%28Unsplash_FLCanAhTWvI%29.jpg",
+            "width": 960,
+            "height": 540,
+            "title": "File:Nevşehir, Turkey (Unsplash FLCanAhTWvI).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Nev%C5%9Fehir,_Turkey_(Unsplash_FLCanAhTWvI).jpg",
+            "license": "CC0",
+            "author": "Randy Tarampi randytarampi",
+            "selection": "ai"
+          }
+        ]
       },
       "turkey/goreme": {
         "name": "Göreme",
         "description": "The main village of Cappadocia, surrounded by fairy chimneys, cave hotels and balloon flights.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ef/G%C3%B6reme_is_a_town_in_Cappadocia.jpg/960px-G%C3%B6reme_is_a_town_in_Cappadocia.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Göreme is a town in Cappadocia.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:G%C3%B6reme_is_a_town_in_Cappadocia.jpg",
+            "license": "CC0",
+            "author": "Hans",
+            "selection": "ai"
+          }
+        ]
       },
       "turkey/izmir": {
         "name": "İzmir",
@@ -2732,17 +2882,50 @@
       "turkey/denizli": {
         "name": "Denizli",
         "description": "The inland province that includes Pamukkale and the ancient city of Hierapolis.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/42/Hierapolis%2C_Denizli_3.jpg/960px-Hierapolis%2C_Denizli_3.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Hierapolis, Denizli 3.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Hierapolis,_Denizli_3.jpg",
+            "license": "CC0",
+            "author": "Lemon tart",
+            "selection": "ai"
+          }
+        ]
       },
       "turkey/pamukkale": {
         "name": "Pamukkale",
         "description": "A village at the foot of white mineral terraces and the ruins of ancient Hierapolis.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b2/Pamukkale_travertenleri_%284%29.jpg/960px-Pamukkale_travertenleri_%284%29.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Pamukkale travertenleri (4).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Pamukkale_travertenleri_(4).jpg",
+            "license": "CC0",
+            "author": "Cobija",
+            "selection": "ai"
+          }
+        ]
       },
       "turkey/antalya": {
         "name": "Antalya",
         "description": "A Mediterranean resort city with a restored old town and Roman ruins close by.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/46/II._Attalos_Heykeli_ve_Antalya_Saat_Kulesi.JPG/960px-II._Attalos_Heykeli_ve_Antalya_Saat_Kulesi.JPG",
+            "width": 960,
+            "height": 720,
+            "title": "File:II. Attalos Heykeli ve Antalya Saat Kulesi.JPG",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:II._Attalos_Heykeli_ve_Antalya_Saat_Kulesi.JPG",
+            "license": "CC0",
+            "author": "Cobija",
+            "selection": "ai"
+          }
+        ]
       }
     }
   }

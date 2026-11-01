@@ -992,7 +992,16 @@
           "relax"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d0/Nyhavn_9_%28Copenhagen%29_02.jpg/960px-Nyhavn_9_%28Copenhagen%29_02.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Nyhavn 9 (Copenhagen) 02.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Nyhavn_9_(Copenhagen)_02.jpg",
+          "license": "CC0",
+          "author": "Ramblersen2",
+          "selection": "ai"
+        }
       },
       "denmark/tivoli-rosenborg": {
         "name": "Tivoli Gardens and Rosenborg Castle",
@@ -1004,7 +1013,16 @@
           "relax"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/07/Carousel_-_Tivoli_Gardens_%28Copenhagen%29_-_DSC08378.JPG/960px-Carousel_-_Tivoli_Gardens_%28Copenhagen%29_-_DSC08378.JPG",
+          "width": 960,
+          "height": 720,
+          "title": "File:Carousel - Tivoli Gardens (Copenhagen) - DSC08378.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Carousel_-_Tivoli_Gardens_(Copenhagen)_-_DSC08378.JPG",
+          "license": "CC0",
+          "author": "Daderot",
+          "selection": "ai"
+        }
       },
       "denmark/copenhagen-food-design": {
         "name": "Copenhagen food halls and design",
@@ -1028,7 +1046,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fc/Helsingoer_Kronborg_Castle.jpg/960px-Helsingoer_Kronborg_Castle.jpg",
+          "width": 960,
+          "height": 616,
+          "title": "File:Helsingoer Kronborg Castle.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Helsingoer_Kronborg_Castle.jpg",
+          "license": "Public domain",
+          "author": "Fiskfisk",
+          "selection": "ai"
+        }
       },
       "denmark/roskilde-vikings": {
         "name": "Roskilde Viking Ship Museum and cathedral",
@@ -1039,7 +1066,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f2/Bridge-to-the-Viking-Ship-Museum-Roskilde-island.jpg/960px-Bridge-to-the-Viking-Ship-Museum-Roskilde-island.jpg",
+          "width": 960,
+          "height": 583,
+          "title": "File:Bridge-to-the-Viking-Ship-Museum-Roskilde-island.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Bridge-to-the-Viking-Ship-Museum-Roskilde-island.jpg",
+          "license": "CC0",
+          "author": "Christoffer G. Thomsen",
+          "selection": "ai"
+        }
       },
       "denmark/odense-andersen": {
         "name": "Odense and Hans Christian Andersen",
@@ -1051,7 +1087,16 @@
           "authentic_local"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/54/Hans_Christian_Andersens_house_in_Odense.jpg/960px-Hans_Christian_Andersens_house_in_Odense.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Hans Christian Andersens house in Odense.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Hans_Christian_Andersens_house_in_Odense.jpg",
+          "license": "CC0",
+          "author": "Bo Jessen",
+          "selection": "ai"
+        }
       },
       "denmark/aarhus-aros": {
         "name": "ARoS and the Rainbow Panorama",
@@ -1063,7 +1108,16 @@
           "food"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/74/ARoS_Aarhus_Art_Museum_photographed_from_air.jpg/960px-ARoS_Aarhus_Art_Museum_photographed_from_air.jpg",
+          "width": 960,
+          "height": 540,
+          "title": "File:ARoS Aarhus Art Museum photographed from air.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:ARoS_Aarhus_Art_Museum_photographed_from_air.jpg",
+          "license": "CC0",
+          "author": "SmartDrones Aarhus",
+          "selection": "ai"
+        }
       },
       "denmark/den-gamle-by": {
         "name": "Den Gamle By open-air museum",
@@ -1074,7 +1128,16 @@
           "relax"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/ce/Algade_i_Den_gamle_By_2024.jpg/960px-Algade_i_Den_gamle_By_2024.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Algade i Den gamle By 2024.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Algade_i_Den_gamle_By_2024.jpg",
+          "license": "CC0",
+          "author": "JakobHosp",
+          "selection": "ai"
+        }
       },
       "denmark/legoland-billund": {
         "name": "Legoland, Billund",
@@ -1098,7 +1161,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8f/Grenen_2015-07-28-11.jpg/960px-Grenen_2015-07-28-11.jpg",
+          "width": 960,
+          "height": 607,
+          "title": "File:Grenen 2015-07-28-11.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Grenen_2015-07-28-11.jpg",
+          "license": "CC0",
+          "author": "Szilas",
+          "selection": "ai"
+        }
       },
       "denmark/ribe-wadden": {
         "name": "Ribe and the Wadden Sea",
@@ -1122,7 +1194,18 @@
       "denmark/copenhagen": {
         "name": "Copenhagen",
         "description": "A harbour capital of canals, design and exceptional food.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/db/Nyhavn_facades_Copenhagen_Denmark.jpg/960px-Nyhavn_facades_Copenhagen_Denmark.jpg",
+            "width": 960,
+            "height": 660,
+            "title": "File:Nyhavn facades Copenhagen Denmark.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Nyhavn_facades_Copenhagen_Denmark.jpg",
+            "license": "CC0",
+            "author": "Jebulon",
+            "selection": "ai"
+          }
+        ]
       },
       "denmark/zealand": {
         "name": "Zealand",
@@ -1137,7 +1220,18 @@
       "denmark/odense": {
         "name": "Odense",
         "description": "A fairytale city on Funen.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/48/Sankt_Knud_cathedral_side_view_Odense_Denmark.jpg/960px-Sankt_Knud_cathedral_side_view_Odense_Denmark.jpg",
+            "width": 960,
+            "height": 600,
+            "title": "File:Sankt Knud cathedral side view Odense Denmark.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Sankt_Knud_cathedral_side_view_Odense_Denmark.jpg",
+            "license": "CC0",
+            "author": "Jebulon",
+            "selection": "ai"
+          }
+        ]
       },
       "denmark/jutland": {
         "name": "Jutland",
@@ -1147,7 +1241,18 @@
       "denmark/aarhus": {
         "name": "Aarhus",
         "description": "Denmark second city, a student town with museums and cafes.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/05/Drone_photo_of_Dokk1_in_Aarhus%2C_Denmark.jpg/960px-Drone_photo_of_Dokk1_in_Aarhus%2C_Denmark.jpg",
+            "width": 960,
+            "height": 686,
+            "title": "File:Drone photo of Dokk1 in Aarhus, Denmark.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Drone_photo_of_Dokk1_in_Aarhus,_Denmark.jpg",
+            "license": "CC0",
+            "author": "SmartDrones Aarhus",
+            "selection": "ai"
+          }
+        ]
       },
       "denmark/skagen": {
         "name": "Skagen",

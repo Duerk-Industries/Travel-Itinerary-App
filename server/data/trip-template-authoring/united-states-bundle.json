@@ -1439,7 +1439,16 @@
           "adventure"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/89/Golden_Gate_Bridge_at_Purple_sunset.jpg/960px-Golden_Gate_Bridge_at_Purple_sunset.jpg",
+          "width": 960,
+          "height": 671,
+          "title": "File:Golden Gate Bridge at Purple sunset.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Golden_Gate_Bridge_at_Purple_sunset.jpg",
+          "license": "CC0",
+          "author": "Umer Sayyam",
+          "selection": "ai"
+        }
       },
       "united-states/yosemite": {
         "name": "Yosemite Valley and Glacier Point",
@@ -1452,7 +1461,16 @@
           "iconic_landmarks"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b0/Glacier_Point%2C_Yosemite_Valley%2C_United_States_%28Unsplash_N2u-VbYMnmU%29.jpg/960px-Glacier_Point%2C_Yosemite_Valley%2C_United_States_%28Unsplash_N2u-VbYMnmU%29.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Glacier Point, Yosemite Valley, United States (Unsplash N2u-VbYMnmU).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Glacier_Point,_Yosemite_Valley,_United_States_(Unsplash_N2u-VbYMnmU).jpg",
+          "license": "CC0",
+          "author": "John Gibbons johngibbons",
+          "selection": "ai"
+        }
       },
       "united-states/la-hollywood-santa-monica": {
         "name": "Hollywood, Griffith Observatory and Santa Monica pier",
@@ -1465,7 +1483,16 @@
           "relax"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2f/Griffith_Observatory_Views%2C_Mount_Hollywood_-_54084316005.jpg/960px-Griffith_Observatory_Views%2C_Mount_Hollywood_-_54084316005.jpg",
+          "width": 960,
+          "height": 638,
+          "title": "File:Griffith Observatory Views, Mount Hollywood - 54084316005.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Griffith_Observatory_Views,_Mount_Hollywood_-_54084316005.jpg",
+          "license": "CC0",
+          "author": "The Fun Chronicles",
+          "selection": "ai"
+        }
       },
       "united-states/las-vegas-strip": {
         "name": "Las Vegas Strip and Fremont Street",
@@ -1477,7 +1504,16 @@
           "culture"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a2/2019.10.11_Las_Vegas_-_48955602012.jpg/960px-2019.10.11_Las_Vegas_-_48955602012.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:2019.10.11 Las Vegas - 48955602012.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:2019.10.11_Las_Vegas_-_48955602012.jpg",
+          "license": "CC0",
+          "author": "Max Richard",
+          "selection": "ai"
+        }
       },
       "united-states/grand-canyon": {
         "name": "Grand Canyon South Rim",
@@ -1490,7 +1526,16 @@
           "adventure"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/50/Rain_over_Grand_Canyon.jpg/960px-Rain_over_Grand_Canyon.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Rain over Grand Canyon.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Rain_over_Grand_Canyon.jpg",
+          "license": "CC0",
+          "author": "Romain Guy from San Francisco, USA",
+          "selection": "ai"
+        }
       },
       "united-states/new-orleans-french-quarter": {
         "name": "New Orleans French Quarter and live jazz",
@@ -1510,17 +1555,50 @@
       "united-states": {
         "name": "United States",
         "description": "A continent-sized country of big cities, national parks and deserts.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/18/City_Lights_of_the_United_States_2012.jpg/960px-City_Lights_of_the_United_States_2012.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:City Lights of the United States 2012.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:City_Lights_of_the_United_States_2012.jpg",
+            "license": "Public domain",
+            "author": "NASA Earth Observatory",
+            "selection": "ai"
+          }
+        ]
       },
       "united-states/new-york-city": {
         "name": "New York City",
         "description": "The skyline city of museums, food and theatres.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fe/New_York_Public_Library_1908c.jpg/960px-New_York_Public_Library_1908c.jpg",
+            "width": 960,
+            "height": 546,
+            "title": "File:New York Public Library 1908c.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:New_York_Public_Library_1908c.jpg",
+            "license": "Public domain",
+            "author": "Detroit Publishing Company",
+            "selection": "ai"
+          }
+        ]
       },
       "united-states/washington": {
         "name": "Washington DC",
         "description": "The capital of memorials and free museums.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e5/United_States_Capitol%2C_Washington_DC_at_cloudy_evening.jpg/960px-United_States_Capitol%2C_Washington_DC_at_cloudy_evening.jpg",
+            "width": 960,
+            "height": 540,
+            "title": "File:United States Capitol, Washington DC at cloudy evening.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:United_States_Capitol,_Washington_DC_at_cloudy_evening.jpg",
+            "license": "CC0",
+            "author": "Pierre Blaché",
+            "selection": "ai"
+          }
+        ]
       },
       "united-states/louisiana": {
         "name": "Louisiana",
@@ -1535,17 +1613,50 @@
       "united-states/california": {
         "name": "California",
         "description": "The Pacific state of coast, mountains and cities.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/55/California_State_Capitol_%28top%29%2C_NW_view_up.jpg/960px-California_State_Capitol_%28top%29%2C_NW_view_up.jpg",
+            "width": 960,
+            "height": 600,
+            "title": "File:California State Capitol (top), NW view up.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:California_State_Capitol_(top),_NW_view_up.jpg",
+            "license": "Public domain",
+            "author": "Photograph: Radomianin",
+            "selection": "ai"
+          }
+        ]
       },
       "united-states/san-francisco": {
         "name": "San Francisco",
         "description": "The hilly bay city.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1b/Skyline_of_San_Francisco_from_Hill.jpg/960px-Skyline_of_San_Francisco_from_Hill.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Skyline of San Francisco from Hill.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Skyline_of_San_Francisco_from_Hill.jpg",
+            "license": "CC0",
+            "author": "Yourusernamewillbepublic2",
+            "selection": "ai"
+          }
+        ]
       },
       "united-states/yosemite": {
         "name": "Yosemite",
         "description": "A national park of granite cliffs and waterfalls.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3a/Yosemite_by_Carol_M._Highsmith.jpg/960px-Yosemite_by_Carol_M._Highsmith.jpg",
+            "width": 960,
+            "height": 721,
+            "title": "File:Yosemite by Carol M. Highsmith.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Yosemite_by_Carol_M._Highsmith.jpg",
+            "license": "Public domain",
+            "author": "Carol M. Highsmith",
+            "selection": "ai"
+          }
+        ]
       },
       "united-states/los-angeles": {
         "name": "Los Angeles",
@@ -1560,7 +1671,18 @@
       "united-states/las-vegas": {
         "name": "Las Vegas",
         "description": "The neon entertainment city.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/be/A_USAF_F-16_pilot_breaking_right_on_final_approach_over_northern_Las_Vegas.jpg/960px-A_USAF_F-16_pilot_breaking_right_on_final_approach_over_northern_Las_Vegas.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:A USAF F-16 pilot breaking right on final approach over northern Las Vegas.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:A_USAF_F-16_pilot_breaking_right_on_final_approach_over_northern_Las_Vegas.jpg",
+            "license": "Public domain",
+            "author": "Master Sgt. Benjamin Bloker",
+            "selection": "ai"
+          }
+        ]
       },
       "united-states/arizona": {
         "name": "Arizona",
@@ -1570,7 +1692,18 @@
       "united-states/grand-canyon": {
         "name": "Grand Canyon",
         "description": "A mile-deep canyon in northern Arizona.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/50/Rain_over_Grand_Canyon.jpg/960px-Rain_over_Grand_Canyon.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Rain over Grand Canyon.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Rain_over_Grand_Canyon.jpg",
+            "license": "CC0",
+            "author": "Romain Guy from San Francisco, USA",
+            "selection": "ai"
+          }
+        ]
       }
     }
   }

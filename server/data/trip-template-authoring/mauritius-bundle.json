@@ -935,7 +935,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9a/Victoria_cruziana_pond_at_Sir_Seewoosagur_Ramgoolam_Botanical_Garden%2C_March_2020_%287%29.jpg/960px-Victoria_cruziana_pond_at_Sir_Seewoosagur_Ramgoolam_Botanical_Garden%2C_March_2020_%287%29.jpg",
+          "width": 960,
+          "height": 605,
+          "title": "File:Victoria cruziana pond at Sir Seewoosagur Ramgoolam Botanical Garden, March 2020 (7).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Victoria_cruziana_pond_at_Sir_Seewoosagur_Ramgoolam_Botanical_Garden,_March_2020_(7).jpg",
+          "license": "CC0",
+          "author": "Benoît Prieur",
+          "selection": "ai"
+        }
       },
       "mauritius/grand-baie-water": {
         "name": "Grand Baie and northern islands",
@@ -960,7 +969,16 @@
           "adventure"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/61/ILE_AUX_CERF-ISLAND.JPG/960px-ILE_AUX_CERF-ISLAND.JPG",
+          "width": 960,
+          "height": 720,
+          "title": "File:ILE AUX CERF-ISLAND.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:ILE_AUX_CERF-ISLAND.JPG",
+          "license": "Public domain",
+          "author": "Unknown",
+          "selection": "ai"
+        }
       },
       "mauritius/chamarel": {
         "name": "Chamarel Seven Coloured Earths and waterfall",
@@ -973,7 +991,16 @@
           "food"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/47/Seven_Coloured_Earths%2C_Chamarel%2C_March_2020_%285%29.jpg/960px-Seven_Coloured_Earths%2C_Chamarel%2C_March_2020_%285%29.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Seven Coloured Earths, Chamarel, March 2020 (5).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Seven_Coloured_Earths,_Chamarel,_March_2020_(5).jpg",
+          "license": "CC0",
+          "author": "Benoît Prieur",
+          "selection": "ai"
+        }
       },
       "mauritius/black-river-gorges": {
         "name": "Black River Gorges National Park",
@@ -998,7 +1025,16 @@
           "photography"
         ],
         "mobility": "H",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a7/Le_Morne_Brabant%2C_Maurizio.jpg/960px-Le_Morne_Brabant%2C_Maurizio.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Le Morne Brabant, Maurizio.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Le_Morne_Brabant,_Maurizio.jpg",
+          "license": "CC0",
+          "author": "Jolaus",
+          "selection": "ai"
+        }
       },
       "mauritius/tamarin-dolphins": {
         "name": "Tamarin dolphins and salt pans",
@@ -1022,14 +1058,34 @@
           "outdoors"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4f/Blue_Bay_Beach_Mahebourg%2C_Mauritius.jpg/960px-Blue_Bay_Beach_Mahebourg%2C_Mauritius.jpg",
+          "width": 960,
+          "height": 506,
+          "title": "File:Blue Bay Beach Mahebourg, Mauritius.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Blue_Bay_Beach_Mahebourg,_Mauritius.jpg",
+          "license": "CC0",
+          "author": "Guallendra",
+          "selection": "ai"
+        }
       }
     },
     "destinations": {
       "mauritius": {
         "name": "Mauritius",
         "description": "An Indian Ocean island of lagoon beaches, mountains and a blend of cultures.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b5/Mauritius_beach1.jpg/960px-Mauritius_beach1.jpg",
+            "width": 960,
+            "height": 540,
+            "title": "File:Mauritius beach1.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Mauritius_beach1.jpg",
+            "license": "CC0",
+            "author": "Dennis Sylvester Hurd",
+            "selection": "ai"
+          }
+        ]
       },
       "mauritius/belle-mare": {
         "name": "Belle Mare",
@@ -1039,12 +1095,34 @@
       "mauritius/le-morne": {
         "name": "Le Morne",
         "description": "A peninsula under a UNESCO mountain, famed for kitesurfing.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b0/Le_Morne%2C_Mauritius2.JPG/960px-Le_Morne%2C_Mauritius2.JPG",
+            "width": 960,
+            "height": 636,
+            "title": "File:Le Morne, Mauritius2.JPG",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Le_Morne,_Mauritius2.JPG",
+            "license": "CC0",
+            "author": "Máth Dávid - Mdavid89",
+            "selection": "ai"
+          }
+        ]
       },
       "mauritius/flic-en-flac": {
         "name": "Flic en Flac",
         "description": "A west-coast beach town with sunsets and dolphin trips.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e1/A_Sunday_Sunset_-_Flic-en-Flac.jpg/960px-A_Sunday_Sunset_-_Flic-en-Flac.jpg",
+            "width": 960,
+            "height": 581,
+            "title": "File:A Sunday Sunset - Flic-en-Flac.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:A_Sunday_Sunset_-_Flic-en-Flac.jpg",
+            "license": "CC0",
+            "author": "Dennis Sylvester Hurd",
+            "selection": "ai"
+          }
+        ]
       },
       "mauritius/grand-baie": {
         "name": "Grand Baie",

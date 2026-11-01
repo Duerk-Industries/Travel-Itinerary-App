@@ -240,6 +240,24 @@ export const castItemVote = async (...args: Parameters<ReturnType<typeof adapter
   adapter().castItemVote(...args);
 export const getItemVoteSummaries = async (...args: Parameters<ReturnType<typeof adapter>['getItemVoteSummaries']>) =>
   adapter().getItemVoteSummaries(...args);
+export const castStarRating = async (...args: Parameters<ReturnType<typeof adapter>['castStarRating']>) =>
+  adapter().castStarRating(...args);
+export const getStarRatingSummaries = async (...args: Parameters<ReturnType<typeof adapter>['getStarRatingSummaries']>) =>
+  adapter().getStarRatingSummaries(...args);
+export const getActivityImageCache = async (...args: Parameters<ReturnType<typeof adapter>['getActivityImageCache']>) =>
+  adapter().getActivityImageCache(...args);
+export const saveActivityImageCache = async (...args: Parameters<ReturnType<typeof adapter>['saveActivityImageCache']>) =>
+  adapter().saveActivityImageCache(...args);
+export const listLegacyThumbRatings =async (...args: Parameters<ReturnType<typeof adapter>['listLegacyThumbRatings']>) =>
+  adapter().listLegacyThumbRatings(...args);
+export const hasStarRating = async (...args: Parameters<ReturnType<typeof adapter>['hasStarRating']>) =>
+  adapter().hasStarRating(...args);
+export const deleteLegacyThumbRatings = async (...args: Parameters<ReturnType<typeof adapter>['deleteLegacyThumbRatings']>) =>
+  adapter().deleteLegacyThumbRatings(...args);
+export const listLegacyItemRatings = async (...args: Parameters<ReturnType<typeof adapter>['listLegacyItemRatings']>) =>
+  adapter().listLegacyItemRatings(...args);
+export const deleteLegacyItemRating = async (...args: Parameters<ReturnType<typeof adapter>['deleteLegacyItemRating']>) =>
+  adapter().deleteLegacyItemRating(...args);
 export const getItineraryDetailContext = async (
   ...args: Parameters<ReturnType<typeof adapter>['getItineraryDetailContext']>
 ) => adapter().getItineraryDetailContext(...args);
@@ -825,6 +843,8 @@ export const deleteAnalyticsEventsForSubjects = async (...args: Parameters<Retur
   adapter().deleteAnalyticsEventsForSubjects(...args);
 export const deleteExpiredAnalyticsEvents = async (...args: Parameters<ReturnType<typeof adapter>['deleteExpiredAnalyticsEvents']>) =>
   adapter().deleteExpiredAnalyticsEvents(...args);
+export const completeEndedItineraryItems = async (...args: Parameters<ReturnType<typeof adapter>['completeEndedItineraryItems']>) =>
+  adapter().completeEndedItineraryItems(...args);
 export const listAnalyticsEventsBetween = async (...args: Parameters<ReturnType<typeof adapter>['listAnalyticsEventsBetween']>) =>
   adapter().listAnalyticsEventsBetween(...args);
 export const getAnalyticsSubjectTimezone = async (...args: Parameters<ReturnType<typeof adapter>['getAnalyticsSubjectTimezone']>) =>
@@ -855,6 +875,12 @@ export const claimApiSpendReservation = async (...args: Parameters<ReturnType<ty
 export const listLegacyBlogMapArtifacts = async (...args: Parameters<ReturnType<typeof adapter>['listLegacyBlogMapArtifacts']>) => adapter().listLegacyBlogMapArtifacts(...args);
 export const deleteLegacyBlogMapArtifact = async (...args: Parameters<ReturnType<typeof adapter>['deleteLegacyBlogMapArtifact']>) => adapter().deleteLegacyBlogMapArtifact(...args);
 
+export type { GetYourGuideTourRecord } from './db.postgres';
+export const upsertGetYourGuideTour = async (...args: Parameters<ReturnType<typeof adapter>['upsertGetYourGuideTour']>) =>
+  adapter().upsertGetYourGuideTour(...args);
+export const listGetYourGuideTours = async () => adapter().listGetYourGuideTours();
+export const deleteGetYourGuideTour = async (...args: Parameters<ReturnType<typeof adapter>['deleteGetYourGuideTour']>) =>
+  adapter().deleteGetYourGuideTour(...args);
 export type { TripTemplateRecord } from './db.postgres';
 export const upsertTripTemplate = async (...args: Parameters<ReturnType<typeof adapter>['upsertTripTemplate']>) =>
   adapter().upsertTripTemplate(...args);

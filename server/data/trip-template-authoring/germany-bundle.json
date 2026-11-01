@@ -1073,7 +1073,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b0/Berlin_Brandenburg_Gate_%2828150532233%29.jpg/960px-Berlin_Brandenburg_Gate_%2828150532233%29.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Berlin Brandenburg Gate (28150532233).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Berlin_Brandenburg_Gate_(28150532233).jpg",
+          "license": "CC0",
+          "author": "Gary Todd from Xinzheng, China",
+          "selection": "ai"
+        }
       },
       "germany/berlin-wall": {
         "name": "Berlin Wall Memorial and East Side Gallery",
@@ -1085,7 +1094,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/30/BERLIN_WALL_%28TOPOGRAPHIE_DES_TERRORS%29.jpg/960px-BERLIN_WALL_%28TOPOGRAPHIE_DES_TERRORS%29.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:BERLIN WALL (TOPOGRAPHIE DES TERRORS).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:BERLIN_WALL_(TOPOGRAPHIE_DES_TERRORS).jpg",
+          "license": "CC0",
+          "author": "Vedha242424",
+          "selection": "ai"
+        }
       },
       "germany/museum-island": {
         "name": "Museum Island and Pergamon",
@@ -1108,7 +1126,16 @@
           "food"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/21/Cologne_Cathedral_-_Cologne%2C_Germany_-_DSC00447.jpg/960px-Cologne_Cathedral_-_Cologne%2C_Germany_-_DSC00447.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Cologne Cathedral - Cologne, Germany - DSC00447.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Cologne_Cathedral_-_Cologne,_Germany_-_DSC00447.jpg",
+          "license": "CC0",
+          "author": "Daderot",
+          "selection": "ai"
+        }
       },
       "germany/rhine-valley": {
         "name": "Rhine Valley cruise and castles",
@@ -1133,7 +1160,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/18/Heidelberg_Castle_%289813191073%29.jpg/960px-Heidelberg_Castle_%289813191073%29.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Heidelberg Castle (9813191073).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Heidelberg_Castle_(9813191073).jpg",
+          "license": "CC0",
+          "author": "Gary Todd from Xinzheng, China",
+          "selection": "ai"
+        }
       },
       "germany/rothenburg": {
         "name": "Rothenburg ob der Tauber",
@@ -1146,7 +1182,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0f/Rothenburg_ob_der_Tauber%2C_Germany.jpg/960px-Rothenburg_ob_der_Tauber%2C_Germany.jpg",
+          "width": 960,
+          "height": 641,
+          "title": "File:Rothenburg ob der Tauber, Germany.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Rothenburg_ob_der_Tauber,_Germany.jpg",
+          "license": "CC0",
+          "author": "Roman Kraft",
+          "selection": "ai"
+        }
       },
       "germany/munich-marienplatz": {
         "name": "Munich Marienplatz and beer gardens",
@@ -1159,7 +1204,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3f/Munich_Marienplatz_with_New_Town_Hall_%289813049186%29.jpg/960px-Munich_Marienplatz_with_New_Town_Hall_%289813049186%29.jpg",
+          "width": 960,
+          "height": 699,
+          "title": "File:Munich Marienplatz with New Town Hall (9813049186).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Munich_Marienplatz_with_New_Town_Hall_(9813049186).jpg",
+          "license": "CC0",
+          "author": "Gary Todd from Xinzheng, China",
+          "selection": "ai"
+        }
       },
       "germany/neuschwanstein": {
         "name": "Neuschwanstein and Hohenschwangau",
@@ -1171,7 +1225,16 @@
           "culture"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3c/Neuschwanstein_Castle_2024-02.jpg/960px-Neuschwanstein_Castle_2024-02.jpg",
+          "width": 960,
+          "height": 654,
+          "title": "File:Neuschwanstein Castle 2024-02.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Neuschwanstein_Castle_2024-02.jpg",
+          "license": "CC0",
+          "author": "Wilfredor",
+          "selection": "ai"
+        }
       },
       "germany/dachau-nymphenburg": {
         "name": "Dachau Memorial or Nymphenburg Palace",
@@ -1182,7 +1245,16 @@
           "authentic_local"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e4/Dachau_concentration_camp_memorial_buildings_and_location_17.jpg/960px-Dachau_concentration_camp_memorial_buildings_and_location_17.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Dachau concentration camp memorial buildings and location 17.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Dachau_concentration_camp_memorial_buildings_and_location_17.jpg",
+          "license": "CC0",
+          "author": "Netha Hussain",
+          "selection": "ai"
+        }
       }
     },
     "destinations": {
@@ -1199,12 +1271,34 @@
       "germany/north-rhine-westphalia": {
         "name": "North Rhine-Westphalia",
         "description": "The western state of Cologne and the lower Rhine.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1e/Nature_in_north_Rhine-Westphalia%2C_Germany.jpg/960px-Nature_in_north_Rhine-Westphalia%2C_Germany.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Nature in north Rhine-Westphalia, Germany.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Nature_in_north_Rhine-Westphalia,_Germany.jpg",
+            "license": "CC0",
+            "author": "ReimannLukas",
+            "selection": "ai"
+          }
+        ]
       },
       "germany/cologne": {
         "name": "Cologne",
         "description": "A Rhine city dominated by its Gothic cathedral.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/21/Cologne_Cathedral_-_Cologne%2C_Germany_-_DSC00447.jpg/960px-Cologne_Cathedral_-_Cologne%2C_Germany_-_DSC00447.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:Cologne Cathedral - Cologne, Germany - DSC00447.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Cologne_Cathedral_-_Cologne,_Germany_-_DSC00447.jpg",
+            "license": "CC0",
+            "author": "Daderot",
+            "selection": "ai"
+          }
+        ]
       },
       "germany/baden-wurttemberg": {
         "name": "Baden-Wurttemberg",
@@ -1219,12 +1313,34 @@
       "germany/bavaria": {
         "name": "Bavaria",
         "description": "The southern state of Munich, medieval towns and the Alps.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f8/Dorfstrasse_20%2C_Oberammergau%2C_Bavaria%2C_Germany.jpg/960px-Dorfstrasse_20%2C_Oberammergau%2C_Bavaria%2C_Germany.jpg",
+            "width": 960,
+            "height": 719,
+            "title": "File:Dorfstrasse 20, Oberammergau, Bavaria, Germany.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Dorfstrasse_20,_Oberammergau,_Bavaria,_Germany.jpg",
+            "license": "CC0",
+            "author": "Jebulon",
+            "selection": "ai"
+          }
+        ]
       },
       "germany/rothenburg-ob-der-tauber": {
         "name": "Rothenburg ob der Tauber",
         "description": "A perfectly preserved medieval town on the Romantic Road.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0f/Rothenburg_ob_der_Tauber%2C_Germany.jpg/960px-Rothenburg_ob_der_Tauber%2C_Germany.jpg",
+            "width": 960,
+            "height": 641,
+            "title": "File:Rothenburg ob der Tauber, Germany.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Rothenburg_ob_der_Tauber,_Germany.jpg",
+            "license": "CC0",
+            "author": "Roman Kraft",
+            "selection": "ai"
+          }
+        ]
       },
       "germany/munich": {
         "name": "Munich",

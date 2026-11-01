@@ -664,7 +664,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1a/Qal%27at_al-Bahrain_2.jpg/960px-Qal%27at_al-Bahrain_2.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Qal'at al-Bahrain 2.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Qal%27at_al-Bahrain_2.jpg",
+          "license": "CC0",
+          "author": "Beireke1",
+          "selection": "ai"
+        }
       },
       "bahrain/national-museum": {
         "name": "Bahrain National Museum",
@@ -699,7 +708,16 @@
           "culture"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a2/Bahrain_Souk_Sweets1.JPG/960px-Bahrain_Souk_Sweets1.JPG",
+          "width": 960,
+          "height": 720,
+          "title": "File:Bahrain Souk Sweets1.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Bahrain_Souk_Sweets1.JPG",
+          "license": "Public domain",
+          "author": "Beni-Sakur-Six",
+          "selection": "ai"
+        }
       },
       "bahrain/pearling-path": {
         "name": "Muharraq and the Pearling Path",
@@ -724,7 +742,16 @@
           "outdoors"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/68/Tree_of_Life_in_Bahrain.JPG/960px-Tree_of_Life_in_Bahrain.JPG",
+          "width": 960,
+          "height": 720,
+          "title": "File:Tree of Life in Bahrain.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Tree_of_Life_in_Bahrain.JPG",
+          "license": "Public domain",
+          "author": "CIA World Factbook",
+          "selection": "ai"
+        }
       },
       "bahrain/al-areen-wildlife": {
         "name": "Al Areen Wildlife Park",
@@ -767,7 +794,16 @@
           "outdoors"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/80/Burial_Mounds_in_Bahrain_1918.jpg/960px-Burial_Mounds_in_Bahrain_1918.jpg",
+          "width": 960,
+          "height": 701,
+          "title": "File:Burial Mounds in Bahrain 1918.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Burial_Mounds_in_Bahrain_1918.jpg",
+          "license": "Public domain",
+          "author": "Storrs-Fox, Edwin Aubrey",
+          "selection": "ai"
+        }
       }
     },
     "destinations": {

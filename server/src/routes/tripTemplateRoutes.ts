@@ -20,11 +20,15 @@ import {
   templateHeroImage,
 } from '../services/tripTemplateService';
 import { listTripTemplates } from '../db';
+import { activityImageKey, resolveActivityImages } from '../services/activityImageService';
 import { logError, logInfo } from '../logger';
 
 // Itinerary templates: a worked example for a destination the traveler already chose, which they
 // can turn into a trip and then change like any other. Free for every tier; only the
 // `trip_templates` flag (on by default) can switch it off.
+// Searches made before a template preview answers; each is one provider request, the rest wait for the next view.
+const PREVIEW_PHOTO_LOOKUPS = 8;
+
 const router = Router();
 router.use(bodyParser.json());
 router.use(authenticate);
@@ -116,12 +120,20 @@ router.get('/:id', async (req, res) => {
     res.status(404).json({ error: 'Template not found.' });
     return;
   }
+  const preview = buildTemplatePreview(seed);
+  // Stops the template has no photo for get one by name; the first time a template opens, a handful are searched for
+  // before answering and the rest fill in over the next views.
+  const unpictured = preview.flatMap((day) => day.items.filter((item) => item.kind === 'activity' && !item.image).map((item) => ({ item, place: day.base })));
+  if (unpictured.length) {
+    const images = await resolveActivityImages(unpictured.map(({ item, place }) => ({ name: item.title, place })), { awaitLookups: PREVIEW_PHOTO_LOOKUPS });
+    unpictured.forEach(({ item }) => { item.image = images.get(activityImageKey(item.title)) ?? null; });
+  }
   res.json({
     id: seed.id, title: seed.title, summary: seed.summary, days: seed.days, route: seed.route, arrive: seed.arrive, depart: seed.depart,
     cities: seed.cities, highlights: seed.highlights, imageQuery: seed.imageQuery, heroImage: templateHeroImage(seed),
     destinations: templateDestinations(seed),
     stays: seed.stays.map((stay) => ({ base: stay.base, hotel: stay.hotel, nights: stay.nights, area: stay.area })),
-    preview: buildTemplatePreview(seed),
+    preview,
   });
 });
 

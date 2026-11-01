@@ -1421,7 +1421,16 @@
           "adventure"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3e/The_Okavango_Delta.jpg/960px-The_Okavango_Delta.jpg",
+          "width": 960,
+          "height": 540,
+          "title": "File:The Okavango Delta.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:The_Okavango_Delta.jpg",
+          "license": "CC0",
+          "author": "Priscilla Moatlhodi",
+          "selection": "ai"
+        }
       },
       "botswana/mokoro-delta": {
         "name": "Mokoro and walking safari in the Delta",
@@ -1434,7 +1443,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b0/Mokoro_-_Okavango-Delta.jpg/960px-Mokoro_-_Okavango-Delta.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Mokoro - Okavango-Delta.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Mokoro_-_Okavango-Delta.jpg",
+          "license": "Public domain",
+          "author": "Magalex",
+          "selection": "ai"
+        }
       },
       "botswana/delta-game-drive": {
         "name": "Delta island game drive and night drive",
@@ -1537,7 +1555,18 @@
       "botswana/okavango-delta": {
         "name": "Okavango Delta",
         "description": "A vast inland delta of channels and islands, best explored by mokoro and walking safari.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c0/Okavango-delta-sunrise-april-2025.jpg/960px-Okavango-delta-sunrise-april-2025.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:Okavango-delta-sunrise-april-2025.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Okavango-delta-sunrise-april-2025.jpg",
+            "license": "CC0",
+            "author": "Richardk85",
+            "selection": "ai"
+          }
+        ]
       },
       "botswana/moremi-game-reserve": {
         "name": "Moremi Game Reserve",
@@ -1557,7 +1586,18 @@
       "botswana/chobe": {
         "name": "Chobe National Park",
         "description": "Botswana elephant stronghold on the river border with Namibia.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/45/Gnus_zebras_chobe_national_park.jpg/960px-Gnus_zebras_chobe_national_park.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Gnus zebras chobe national park.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Gnus_zebras_chobe_national_park.jpg",
+            "license": "Public domain",
+            "author": "Gorgo",
+            "selection": "ai"
+          }
+        ]
       }
     }
   }

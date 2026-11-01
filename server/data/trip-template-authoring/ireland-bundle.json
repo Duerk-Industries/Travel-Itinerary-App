@@ -1110,7 +1110,16 @@
           "authentic_local"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/66/Guinness_BreweryGate_ThomasSt_Dublin_225_IMG_20250805_0812.jpg/960px-Guinness_BreweryGate_ThomasSt_Dublin_225_IMG_20250805_0812.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Guinness BreweryGate ThomasSt Dublin 225 IMG 20250805 0812.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Guinness_BreweryGate_ThomasSt_Dublin_225_IMG_20250805_0812.jpg",
+          "license": "CC0",
+          "author": "Karlunun",
+          "selection": "ai"
+        }
       },
       "ireland/kilmainham-gaol": {
         "name": "Kilmainham Gaol and Phoenix Park",
@@ -1133,7 +1142,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/21/Glendalough_UpperLake_E_260_IMG_20250805_1033.jpg/960px-Glendalough_UpperLake_E_260_IMG_20250805_1033.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Glendalough UpperLake E 260 IMG 20250805 1033.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Glendalough_UpperLake_E_260_IMG_20250805_1033.jpg",
+          "license": "CC0",
+          "author": "Karlunun",
+          "selection": "ai"
+        }
       },
       "ireland/newgrange": {
         "name": "Newgrange passage tomb",
@@ -1144,7 +1162,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8d/Newgrange_011.jpg/960px-Newgrange_011.jpg",
+          "width": 960,
+          "height": 597,
+          "title": "File:Newgrange 011.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Newgrange_011.jpg",
+          "license": "CC0",
+          "author": "Gobbolino the witch's cat",
+          "selection": "ai"
+        }
       },
       "ireland/cliffs-of-moher-burren": {
         "name": "Cliffs of Moher and the Burren",
@@ -1156,7 +1183,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/74/Cliffs_of_Moher%2C_Irland.jpg/960px-Cliffs_of_Moher%2C_Irland.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Cliffs of Moher, Irland.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Cliffs_of_Moher,_Irland.jpg",
+          "license": "Public domain",
+          "author": "Almbauer",
+          "selection": "ai"
+        }
       },
       "ireland/aran-islands": {
         "name": "Aran Islands",
@@ -1182,7 +1218,16 @@
           "food"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/87/Galway_the_long_walk.jpg/960px-Galway_the_long_walk.jpg",
+          "width": 960,
+          "height": 639,
+          "title": "File:Galway the long walk.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Galway_the_long_walk.jpg",
+          "license": "CC0",
+          "author": "Bananenfalter",
+          "selection": "ai"
+        }
       },
       "ireland/ring-of-kerry": {
         "name": "Ring of Kerry",
@@ -1194,7 +1239,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d0/Ring_of_Kerry%2C_Ireland_%289815979493%29.jpg/960px-Ring_of_Kerry%2C_Ireland_%289815979493%29.jpg",
+          "width": 960,
+          "height": 643,
+          "title": "File:Ring of Kerry, Ireland (9815979493).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Ring_of_Kerry,_Ireland_(9815979493).jpg",
+          "license": "CC0",
+          "author": "Gary Todd from Xinzheng, China",
+          "selection": "ai"
+        }
       },
       "ireland/dingle-peninsula": {
         "name": "Dingle Peninsula and Slea Head Drive",
@@ -1248,12 +1302,34 @@
       "ireland/dublin": {
         "name": "Dublin",
         "description": "The capital, with a famous university, literature and music pubs.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/91/Grattan_bridge_on_the_River_Liffey_and_the_Ormond_Quay_Presbyterian_Church_Dublin_Ireland_circa_1898.jpg/960px-Grattan_bridge_on_the_River_Liffey_and_the_Ormond_Quay_Presbyterian_Church_Dublin_Ireland_circa_1898.jpg",
+            "width": 960,
+            "height": 707,
+            "title": "File:Grattan bridge on the River Liffey and the Ormond Quay Presbyterian Church Dublin Ireland circa 1898.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Grattan_bridge_on_the_River_Liffey_and_the_Ormond_Quay_Presbyterian_Church_Dublin_Ireland_circa_1898.jpg",
+            "license": "CC0",
+            "author": "L'Estrange, Robert Augustus Henry",
+            "selection": "ai"
+          }
+        ]
       },
       "ireland/connacht": {
         "name": "Connacht",
         "description": "The western province of Galway and Connemara.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/49/Kyllary_Harbour_-_BenGorm_from_Leenaun.JPG/960px-Kyllary_Harbour_-_BenGorm_from_Leenaun.JPG",
+            "width": 960,
+            "height": 720,
+            "title": "File:Kyllary Harbour - BenGorm from Leenaun.JPG",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Kyllary_Harbour_-_BenGorm_from_Leenaun.JPG",
+            "license": "Public domain",
+            "author": "Patrice78500",
+            "selection": "ai"
+          }
+        ]
       },
       "ireland/galway": {
         "name": "Galway",
@@ -1273,7 +1349,18 @@
       "ireland/dingle": {
         "name": "Dingle",
         "description": "A fishing town on a western peninsula with live music pubs.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0c/Dingle_cliff_%28Unsplash%29.jpg/960px-Dingle_cliff_%28Unsplash%29.jpg",
+            "width": 960,
+            "height": 641,
+            "title": "File:Dingle cliff (Unsplash).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Dingle_cliff_(Unsplash).jpg",
+            "license": "CC0",
+            "author": "Ian Schneider goian",
+            "selection": "ai"
+          }
+        ]
       },
       "ireland/cork": {
         "name": "Cork",

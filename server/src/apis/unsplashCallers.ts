@@ -7,6 +7,7 @@ import { ApiLimitExceededError } from './usageLimiter';
 const UNSPLASH_CALLER_IMAGE_SERVICE_LOCATION = 'IMAGE_SERVICE_LOCATION_IMAGE';
 const UNSPLASH_CALLER_IMAGE_SERVICE_ITINERARY = 'IMAGE_SERVICE_ITINERARY_IMAGE';
 const UNSPLASH_CALLER_IMAGE_SERVICE_GOOGLE_PLACE_FALLBACK = 'IMAGE_SERVICE_GOOGLE_PLACE_FALLBACK';
+const UNSPLASH_CALLER_ACTIVITY_PHOTO = 'ACTIVITY_PHOTO';
 const UNSPLASH_CALLER_HEALTH_CHECK = 'UNSPLASH_HEALTH_CHECK';
 
 export type ItineraryImageVariant = 'culture' | 'food' | 'outdoors';
@@ -183,6 +184,54 @@ export const fetchUnsplashImageForItinerary = async (
     pick: pickMentioning(locationName, true, offset),
     cacheKeySuffix: variant ? `#${variant}` : undefined,
   });
+};
+
+export type UnsplashPhoto = { url: string; credit: string; pageUrl: string };
+
+const ACTIVITY_SEARCH_PAGE_SIZE = 10;
+const MIN_NAME_WORD_LENGTH = 4;
+
+/**
+ * A photo for an activity, with the photographer's credit. Unsplash ranks loosely, so a result only counts when its
+ * description, location or tags share a word with the activity's name (or the place it is in); otherwise a "Dinner"
+ * or "Walk" would get any picture at all. Resolves to null when nothing fits and to undefined when the provider limit
+ * stopped the search, so the caller does not record that as "nothing found".
+ */
+export const fetchUnsplashPhotoForActivity = async (
+  accessKey: string,
+  activityName: string,
+  place = ''
+): Promise<UnsplashPhoto | null | undefined> => {
+  const name = String(activityName ?? '').trim();
+  if (!name) return null;
+  const blockedUntil = blockedCallerUntil.get(UNSPLASH_CALLER_ACTIVITY_PHOTO) ?? 0;
+  if (blockedUntil > Date.now()) return undefined;
+  let data: SearchResults;
+  try {
+    data = await searchUnsplashPhotos({
+      caller: UNSPLASH_CALLER_ACTIVITY_PHOTO,
+      accessKey,
+      query: [name, place].filter(Boolean).join(' '),
+      perPage: ACTIVITY_SEARCH_PAGE_SIZE,
+      orientation: 'landscape',
+    });
+  } catch (error) {
+    if (error instanceof ApiLimitExceededError && error.name === 'ApiLimitExceededError') {
+      blockedCallerUntil.set(UNSPLASH_CALLER_ACTIVITY_PHOTO, Date.now() + BLOCKED_CALLER_COOLDOWN_MS);
+      logInfo('[unsplash] activity photos are temporarily paused after reaching the provider limit');
+      return undefined;
+    }
+    throw error;
+  }
+  const words = foldText(name).split(' ').filter((word) => word.length >= MIN_NAME_WORD_LENGTH);
+  const fits = (result: UnsplashSearchResult): boolean => {
+    const text = ` ${foldText([result.description, result.alt_description, result.location?.name, result.location?.city, ...(result.tags ?? []).map((tag) => tag?.title)].filter(Boolean).join(' '))} `;
+    return words.some((word) => text.includes(` ${word} `));
+  };
+  const match = (data?.results ?? []).find((result) => regularUrl(result) && fits(result));
+  if (!match) return null;
+  const author = String(match.user?.name ?? '').trim();
+  return { url: regularUrl(match) as string, credit: author ? `${author}, Unsplash` : 'Unsplash', pageUrl: String(match.links?.html ?? '') };
 };
 
 export const fetchUnsplashImageForGooglePlaceFallback = async (

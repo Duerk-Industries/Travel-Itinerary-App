@@ -325,6 +325,9 @@ export interface Flight {
   userVote?: -1 | 1 | null;
   netRating?: number;
   userRating?: -1 | 1 | null;
+  averageRating?: number | null;
+  ratingCount?: number;
+  userStars?: number | null;
   passengerName: string;
   passengerIds?: string[];
   departureDate: string;
@@ -642,6 +645,9 @@ export interface Lodging extends PlanningCoordinates {
   userVote?: -1 | 1 | null;
   netRating?: number;
   userRating?: -1 | 1 | null;
+  averageRating?: number | null;
+  ratingCount?: number;
+  userStars?: number | null;
   name: string;
   check_in_date: string;
   check_out_date: string;
@@ -674,6 +680,9 @@ export interface Activity extends PlanningCoordinates {
   userVote?: -1 | 1 | null;
   netRating?: number;
   userRating?: -1 | 1 | null;
+  averageRating?: number | null;
+  ratingCount?: number;
+  userStars?: number | null;
   /** Empty when this is an optional, unscheduled activity. */
   date: string;
   name: string;
@@ -716,6 +725,9 @@ export interface CarRental extends PlanningCoordinates {
   userVote?: -1 | 1 | null;
   netRating?: number;
   userRating?: -1 | 1 | null;
+  averageRating?: number | null;
+  ratingCount?: number;
+  userStars?: number | null;
   pickupLocation: string;
   pickupDate: string;
   dropoffLocation: string;

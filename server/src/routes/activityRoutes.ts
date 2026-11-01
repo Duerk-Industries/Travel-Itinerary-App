@@ -5,11 +5,9 @@ import {
   createCatalogActivity,
   copyPublicActivity,
   undoCatalogActivity,
-  castItemVote,
   deleteExpenseForSource,
   deleteActivity,
   ensureUserInTrip,
-  getItemVoteSummaries,
   getActivityById,
   getLodgingById,
   insertActivity,
@@ -21,9 +19,12 @@ import {
 } from '../db';
 import { normalizeItineraryStatus, shouldRelaxRequiredFields } from '../utils/itineraryStatus';
 import { applyVoteSummary } from '../services/itemVoteService';
+import { attachActivityImages } from '../services/activityImageService';
+import { rateItem } from '../services/itemRatingService';
+import { itemRatingDto } from './itemRatingDto';
 import type { ActivityType } from '../types';
 import { readDto } from '../utils/dtoParse';
-import { createActivityDto, updateActivityDto, voteOrRatingDto, bulkActivitiesDto } from './activityDtos';
+import { createActivityDto, updateActivityDto, bulkActivitiesDto } from './activityDtos';
 import { isFeatureEnabled } from '../services/entitlementService';
 import { ApiLimitExceededError, reserveApiUsageOrThrow } from '../apis/usageLimiter';
 import { HttpRateLimitExceededError, reserveHttpRateLimitOrThrow, reserveActivitiesBulkSaveRateLimit } from '../services/httpRateLimitService';
@@ -118,7 +119,7 @@ router.get('/', async (req, res) => {
   const activities = await listActivities(userId, tripId);
   if (tripId) {
     const withVotes = await applyVoteSummary(userId, tripId, 'activity', activities as any[]);
-    res.json(withVotes);
+    res.json(await attachActivityImages(withVotes));
     return;
   }
   const grouped = new Map<string, any[]>();
@@ -134,7 +135,7 @@ router.get('/', async (req, res) => {
     const withVotes = await applyVoteSummary(userId, tId, 'activity', items);
     merged.push(...withVotes);
   }
-  res.json(merged.length ? merged : activities);
+  res.json(merged.length ? await attachActivityImages(merged) : activities);
 });
 
 const nearLodgingIsValid = async (tripId: string, lodgingId?: string | null): Promise<boolean> => {
@@ -563,9 +564,8 @@ router.post('/:id/vote', (_req, res) => {
 
 router.post('/:id/rating', async (req, res) => {
   const userId = (req as any).user.userId as string;
-  const dto = readDto(voteOrRatingDto, req.body, res);
-  if (!dto) return;
-  const value = dto.value;
+  const stars = readDto(itemRatingDto, req.body, res);
+  if (!stars) return;
   const activity = await getActivityById(req.params.id);
   if (!activity) {
     res.status(404).json({ error: 'Activity not found' });
@@ -586,13 +586,7 @@ router.post('/:id/rating', async (req, res) => {
     res.status(400).json({ error: 'Rating is only allowed for Completed items' });
     return;
   }
-  await castItemVote(userId, tripId, 'activity', req.params.id, value, 'rating');
-  const summary = await getItemVoteSummaries(userId, tripId, 'activity', [req.params.id], 'rating');
-  res.json({
-    itemId: req.params.id,
-    netRating: summary[req.params.id]?.netVotes ?? 0,
-    userRating: summary[req.params.id]?.userVote ?? value,
-  });
+  res.json(await rateItem(userId, tripId, 'activity', activity as any, stars));
 });
 
 export default router;

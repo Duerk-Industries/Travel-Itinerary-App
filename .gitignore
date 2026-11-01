@@ -31,7 +31,7 @@ app/node_modules
 app/logs
 logs
 patches/*
-!patches/react-native-web+0.21.2.patch
+!patches/react-native-web+0.21.4.patch
 build
 coverage
 *.log*

@@ -1390,7 +1390,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/66/Fasilides_Palace_in_Fasil_Ghebbi%2C_Gondat%2C_Ethiopia_%2827120774656%29.jpg/960px-Fasilides_Palace_in_Fasil_Ghebbi%2C_Gondat%2C_Ethiopia_%2827120774656%29.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Fasilides Palace in Fasil Ghebbi, Gondat, Ethiopia (27120774656).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Fasilides_Palace_in_Fasil_Ghebbi,_Gondat,_Ethiopia_(27120774656).jpg",
+          "license": "CC0",
+          "author": "cotterillmike",
+          "selection": "ai"
+        }
       },
       "ethiopia/simien-mountains": {
         "name": "Simien Mountains National Park",
@@ -1414,7 +1423,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b6/AxumObelisk4.jpg/960px-AxumObelisk4.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:AxumObelisk4.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:AxumObelisk4.jpg",
+          "license": "CC0",
+          "author": "O.Mustafin",
+          "selection": "ai"
+        }
       },
       "ethiopia/lalibela-churches": {
         "name": "Lalibela rock-hewn churches",
@@ -1450,7 +1468,18 @@
       "ethiopia/addis-ababa": {
         "name": "Addis Ababa",
         "description": "The high-altitude capital, with museums, markets and cafes.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/00/Addis_Ababa_sky_view.jpg/960px-Addis_Ababa_sky_view.jpg",
+            "width": 960,
+            "height": 539,
+            "title": "File:Addis Ababa sky view.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Addis_Ababa_sky_view.jpg",
+            "license": "Public domain",
+            "author": "PMO Ethiopia",
+            "selection": "ai"
+          }
+        ]
       },
       "ethiopia/amhara": {
         "name": "Amhara",

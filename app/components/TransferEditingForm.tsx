@@ -272,8 +272,8 @@ const TransferEditingForm: React.FC<FlightEditingFormProps> = ({
               <Text style={styles.modalLabelSmall}>Location</Text>
               {ground ? <View style={themeStyle('components_TransferEditingForm_20', {  }, (theme ?? _styleTheme))}>
                 <HotelAddressPicker hotels={lodgings} activities={activities} date={flight.departureDate} styles={styles} testID="ground-departure-hotel"
-                  onSelect={address => setFlight(prev => prev ? { ...prev, departureLocation: address } : prev)} />
-                <TextInput style={[styles.input, themeStyle('components_TransferEditingForm_21', {  }, (theme ?? _styleTheme))]} testID="flight-modal-departure-location"
+                  onSelect={address => setFlight(prev => prev ? { ...prev, departureLocation: address } : prev)} onCustom={() => modalDepLocationRef.current?.focus()} />
+                <TextInput ref={modalDepLocationRef} style={[styles.input, themeStyle('components_TransferEditingForm_21', {  }, (theme ?? _styleTheme))]} testID="flight-modal-departure-location"
                   value={transferLocationFieldLabel(flight.departureLocation, lodgings, flight.departureDate, activities)} placeholder="Location" autoComplete="off"
                   onChangeText={(text: string) => setFlight(prev => prev ? { ...prev, departureLocation: text } : prev)} />
               </View> : backendUrl ? (
@@ -335,8 +335,8 @@ const TransferEditingForm: React.FC<FlightEditingFormProps> = ({
               <Text style={styles.modalLabelSmall}>Location</Text>
               {ground ? <View style={themeStyle('components_TransferEditingForm_23', {  }, (theme ?? _styleTheme))}>
                 <HotelAddressPicker hotels={lodgings} activities={activities} date={flight.arrivalDate || flight.departureDate} styles={styles} testID="ground-arrival-hotel"
-                  onSelect={address => setFlight(prev => prev ? { ...prev, arrivalLocation: address } : prev)} />
-                <TextInput style={[styles.input, themeStyle('components_TransferEditingForm_24', {  }, (theme ?? _styleTheme))]} testID="flight-modal-arrival-location"
+                  onSelect={address => setFlight(prev => prev ? { ...prev, arrivalLocation: address } : prev)} onCustom={() => modalArrLocationRef.current?.focus()} />
+                <TextInput ref={modalArrLocationRef} style={[styles.input, themeStyle('components_TransferEditingForm_24', {  }, (theme ?? _styleTheme))]} testID="flight-modal-arrival-location"
                   value={transferLocationFieldLabel(flight.arrivalLocation, lodgings, flight.arrivalDate || flight.departureDate, activities)} placeholder="Location" autoComplete="off"
                   onChangeText={(text: string) => setFlight(prev => prev ? { ...prev, arrivalLocation: text } : prev)} />
               </View> : backendUrl ? (

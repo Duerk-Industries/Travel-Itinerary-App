@@ -4,7 +4,6 @@ import { parseDto, DtoValidationError } from '../src/utils/dtoParse';
 import {
   createLodgingDto,
   updateLodgingDto,
-  voteOrRatingDto,
 } from '../src/routes/lodgingDtos';
 
 const expectValidationError = (fn: () => unknown, regex?: RegExp) => {
@@ -78,16 +77,3 @@ describe('updateLodgingDto', () => {
   });
 });
 
-describe('voteOrRatingDto', () => {
-  it('accepts 1 and -1 as numbers and strings', () => {
-    expect(parseDto(voteOrRatingDto, { value: 1 }).value).toBe(1);
-    expect(parseDto(voteOrRatingDto, { value: -1 }).value).toBe(-1);
-    expect(parseDto(voteOrRatingDto, { value: '1' }).value).toBe(1);
-    expect(parseDto(voteOrRatingDto, { value: '-1' }).value).toBe(-1);
-  });
-
-  it('rejects 0 and 2', () => {
-    expectValidationError(() => parseDto(voteOrRatingDto, { value: 0 }));
-    expectValidationError(() => parseDto(voteOrRatingDto, { value: 2 }));
-  });
-});

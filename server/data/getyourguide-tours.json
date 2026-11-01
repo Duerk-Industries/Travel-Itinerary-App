@@ -1,0 +1,2128 @@
+{
+  "tours": [
+    {
+      "id": "t770155",
+      "url": "https://www.getyourguide.com/rio-de-janeiro-l9/rio-de-janeiro-christ-the-redeemer-and-sugarloaf-tour-with-t770155/",
+      "title": "Rio de Janeiro: Christ the Redeemer and Sugarloaf Tour with Lunch",
+      "rating": 4.6,
+      "reviewCount": 455,
+      "city": "Rio de Janeiro",
+      "country": "Brazil",
+      "activities": [
+        "Christ the Redeemer",
+        "Sugarloaf Mountain cable car"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t161850",
+      "url": "https://www.getyourguide.com/rio-de-janeiro-l9/christ-the-redeemer-cog-train-ticket-t161850/",
+      "title": "Christ the Redeemer Entry Ticket by Corcovado Train",
+      "rating": 4.4,
+      "reviewCount": 5396,
+      "city": "Rio de Janeiro",
+      "country": "Brazil",
+      "activities": [
+        "Christ the Redeemer"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t289500",
+      "url": "https://www.getyourguide.com/sugarloaf-cable-car-l23318/rio-de-janeiro-sugarloaf-cable-car-official-ticket-t289500/",
+      "title": "Rio de Janeiro: Sugarloaf Cable Car",
+      "rating": 4.6,
+      "reviewCount": 3989,
+      "city": "Rio de Janeiro",
+      "country": "Brazil",
+      "activities": [
+        "Sugarloaf Mountain cable car"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t224712",
+      "url": "https://www.getyourguide.com/foz-do-iguacu-l497/from-foz-do-iguacu-brazilian-side-of-the-falls-with-ticket-t224712/",
+      "title": "From Foz do Iguaçu: Brazilian Side of the Falls with Ticket",
+      "rating": 4.6,
+      "reviewCount": 373,
+      "city": "Foz do Iguaçu",
+      "country": "Brazil",
+      "activities": [
+        "Iguaçu National Park, Brazilian side"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t224745",
+      "url": "https://www.getyourguide.com/foz-do-iguacu-l497/from-foz-do-iguacu-itaipu-dam-tour-with-entrance-ticket-t224745/",
+      "title": "Itaipu Dam Tour with Admission Ticket from Foz do Iguaçu",
+      "rating": 4.3,
+      "reviewCount": 189,
+      "city": "Foz do Iguaçu",
+      "country": "Brazil",
+      "activities": [
+        "Itaipu Dam"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t156135",
+      "url": "https://www.getyourguide.com/edinburgh-l44/edinburgh-castle-history-and-heritage-tour-tickets-incl-t156135/",
+      "title": "Edinburgh: Edinburgh Castle Guided History Tour with Tickets",
+      "rating": 4.8,
+      "reviewCount": 12882,
+      "city": "Edinburgh",
+      "country": "Scotland",
+      "activities": [
+        "Edinburgh Castle"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t407882",
+      "url": "https://www.getyourguide.com/edinburgh-l44/edinburgh-castle-skip-the-line-guided-walking-tour-t407882/",
+      "title": "Edinburgh Castle: Guided Walking Tour with Entry Ticket",
+      "rating": 4.7,
+      "reviewCount": 14500,
+      "city": "Edinburgh",
+      "country": "Scotland",
+      "activities": [
+        "Edinburgh Castle"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t184139",
+      "url": "https://www.getyourguide.com/inverness-l1935/from-inverness-loch-ness-cruise-urquhart-castle-t184139/",
+      "title": "From Inverness: Loch Ness Cruise and Urquhart Castle",
+      "rating": 4.7,
+      "reviewCount": 2616,
+      "city": "Inverness",
+      "country": "Scotland",
+      "activities": [
+        "Urquhart Castle on Loch Ness",
+        "Loch Ness boat cruise"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t45775",
+      "url": "https://www.getyourguide.com/inverness-l1935/loch-ness-inspiration-cruise-t45775/",
+      "title": "Loch Ness: Urquhart Castle Round-Trip Cruise",
+      "rating": 4.4,
+      "reviewCount": 3594,
+      "city": "Inverness",
+      "country": "Scotland",
+      "activities": [
+        "Loch Ness boat cruise"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t1053456",
+      "url": "https://www.getyourguide.com/oban-l457/oban-distillery-tour-with-3-whisky-tastings-t1053456/",
+      "title": "Oban: Distillery Tour with 3 Whisky Tastings",
+      "rating": 4.6,
+      "reviewCount": 217,
+      "city": "Oban",
+      "country": "Scotland",
+      "activities": [
+        "Oban Distillery tour"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t551173",
+      "url": "https://www.getyourguide.com/kyoto-l96826/japanese-garden-and-tea-celemony-45-minute-t551173/",
+      "title": "Kyoto: Tea Ceremony in a Traditional Tea House in Kiyomizu",
+      "rating": 4.9,
+      "reviewCount": 3015,
+      "city": "Kyoto",
+      "country": "Japan",
+      "activities": [
+        "Kyoto tea ceremony",
+        "Tea ceremony experience"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t173031",
+      "url": "https://www.getyourguide.com/tokyo-l193/mt-fuji-day-tour-with-kawaguchiko-lake-and-gotemba-outlets-t173031/",
+      "title": "From Tokyo: Mount Fuji Full-Day Sightseeing Trip",
+      "rating": 4.4,
+      "reviewCount": 5051,
+      "city": "Kawaguchiko",
+      "country": "Japan",
+      "activities": [
+        "Mt Fuji Five Lakes day trip"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t195566",
+      "url": "https://www.getyourguide.com/rome-l33/colosseum-roman-forum-palatine-hill-guided-tour-t195566/",
+      "title": "Colosseum, Roman Forum & Palatine Hill Guided Tour",
+      "rating": 4.8,
+      "reviewCount": 93794,
+      "city": "Rome",
+      "country": "Italy",
+      "activities": [
+        "Colosseum"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t88442",
+      "url": "https://www.getyourguide.com/rome-l33/vatican-vatican-museums-sistine-chapel-skip-the-line-ticket-t88442/",
+      "title": "Rome: Vatican Museums & Sistine Chapel Skip-the-Line Ticket",
+      "rating": 4.2,
+      "reviewCount": 8761,
+      "city": "Rome",
+      "country": "Italy",
+      "activities": [
+        "Vatican Museums and Sistine Chapel"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t415304",
+      "url": "https://www.getyourguide.com/rome-l33/rome-borghese-gallery-entry-ticket-with-escorted-entrance-t415304/",
+      "title": "Rome: Borghese Gallery Skip-the-Line Tickets with Audioguide",
+      "rating": 4.6,
+      "reviewCount": 2600,
+      "city": "Rome",
+      "country": "Italy",
+      "activities": [
+        "Borghese Gallery"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t366445",
+      "url": "https://www.getyourguide.com/florence-l32/timed-entry-ticket-to-the-uffizi-gallery-t366445/",
+      "title": "Uffizi Gallery Reserved Entry Ticket",
+      "rating": 4.4,
+      "reviewCount": 534,
+      "city": "Florence",
+      "country": "Italy",
+      "activities": [
+        "Uffizi Gallery"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t395051",
+      "url": "https://www.getyourguide.com/venice-l35/venice-st-mark-s-basilica-skip-the-line-ticket-audio-app-t395051/",
+      "title": "Venice: St. Mark's Basilica Skip-the-Line Tickets & Tours",
+      "rating": 4.0,
+      "reviewCount": 2066,
+      "city": "Venice",
+      "country": "Italy",
+      "activities": [
+        "St Mark's Basilica"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t451265",
+      "url": "https://www.getyourguide.com/venice-l35/venice-doge-s-palace-reserved-entry-admission-ticket-t451265/",
+      "title": "Venice: Doge's Palace Reserved Entry Ticket",
+      "rating": 4.6,
+      "reviewCount": 45865,
+      "city": "Venice",
+      "country": "Italy",
+      "activities": [
+        "Doge's Palace"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t280467",
+      "url": "https://www.getyourguide.com/milan-l139/milan-the-last-supper-entry-ticket-guided-tour-t280467/",
+      "title": "Milan: The Last Supper Entry Ticket & Guided Tour",
+      "rating": 4.5,
+      "reviewCount": 728,
+      "city": "Milan",
+      "country": "Italy",
+      "activities": [
+        "The Last Supper"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t429972",
+      "url": "https://www.getyourguide.com/pisa-l157/pisa-square-of-miracles-monuments-ticket-with-leaning-tower-t429972/",
+      "title": "Pisa: Square of Miracles Monuments Ticket with Leaning Tower",
+      "rating": 4.6,
+      "reviewCount": 1389,
+      "city": "Pisa",
+      "country": "Italy",
+      "activities": [
+        "Pisa and the Leaning Tower"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t617522",
+      "url": "https://www.getyourguide.com/pompei-campania-l156880/pompeii-skip-the-line-ticket-with-audio-guide-and-map-t617522/",
+      "title": "Pompeii: Skip-the-Line Ticket with Audio Guide and Map",
+      "rating": 4.1,
+      "reviewCount": 448,
+      "city": "Pompeii",
+      "country": "Italy",
+      "activities": [
+        "Pompeii"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t425480",
+      "url": "https://www.getyourguide.com/samana-l145033/samana-los-haitises-national-park-cayo-levantado-island-t425480/",
+      "title": "Samaná: Los Haitises National Park & Cayo Levantado Island",
+      "rating": 4.0,
+      "reviewCount": 246,
+      "city": "Samana",
+      "country": "Dominican Republic",
+      "activities": [
+        "Whale watching or Los Haitises boat trip"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t190895",
+      "url": "https://www.getyourguide.com/auckland-l822/waiheke-island-scenic-island-wine-tour-tasting-local-wines-t190895/",
+      "title": "Auckland: Waiheke Island Scenic Wine Journey 4 Vineyards",
+      "rating": 4.8,
+      "reviewCount": 303,
+      "city": "Auckland",
+      "country": "New Zealand",
+      "activities": [
+        "Waiheke Island wine tour"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t189888",
+      "url": "https://www.getyourguide.com/auckland-l822/waiheke-island-wine-tasting-tour-t189888/",
+      "title": "Waiheke Island: The Essence of Waiheke Wine Tour",
+      "rating": 4.8,
+      "reviewCount": 127,
+      "city": "Auckland",
+      "country": "New Zealand",
+      "activities": [
+        "Waiheke Island wine tour"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t463930",
+      "url": "https://www.getyourguide.com/auckland-l822/waiheke-island-sip-savour-wine-tasting-tour-t463930/",
+      "title": "Waiheke Island: Sip and Savor 3 Vineyards Tour with Lunch",
+      "rating": 4.9,
+      "reviewCount": 114,
+      "city": "Auckland",
+      "country": "New Zealand",
+      "activities": [
+        "Waiheke Island wine tour"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t114922",
+      "url": "https://www.getyourguide.com/hobbiton-movie-set-l46858/hobbiton-movie-set-guided-tour-t114922/",
+      "title": "Matamata: Hobbiton Movie Set Guided Tour Ticket",
+      "rating": 4.9,
+      "reviewCount": 8872,
+      "city": "Matamata",
+      "country": "New Zealand",
+      "activities": [
+        "Hobbiton Movie Set"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t115647",
+      "url": "https://www.getyourguide.com/rotorua-l1398/from-rotorua-maori-village-3-hour-evening-cultural-tour-t115647/",
+      "title": "Mitai Maori Village: Cultural Experience and Dinner Buffet",
+      "rating": 4.7,
+      "reviewCount": 4317,
+      "city": "Rotorua",
+      "country": "New Zealand",
+      "activities": [
+        "Maori cultural evening and hangi"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t427666",
+      "url": "https://www.getyourguide.com/rotorua-l1398/rotorua-te-pa-tu-maori-cultural-experience-with-dinner-t427666/",
+      "title": "Rotorua: Te Pa Tu Māori Cultural Experience with Dinner",
+      "rating": 4.8,
+      "reviewCount": 1394,
+      "city": "Rotorua",
+      "country": "New Zealand",
+      "activities": [
+        "Maori cultural evening and hangi"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t167172",
+      "url": "https://www.getyourguide.com/rotorua-l1398/te-puia-te-po-evening-hangi-buffet-and-cultural-experience-t167172/",
+      "title": "Te Puia: Te Pō Indigenous Evening Experience - Haka + Dinner",
+      "rating": 4.7,
+      "reviewCount": 466,
+      "city": "Rotorua",
+      "country": "New Zealand",
+      "activities": [
+        "Maori cultural evening and hangi"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t122921",
+      "url": "https://www.getyourguide.com/waitomo-l32442/waitomo-glowworm-caves-45-minute-experience-t122921/",
+      "title": "Waitomo: Glowworm Caves Guided Tour by Boat",
+      "rating": 4.5,
+      "reviewCount": 5782,
+      "city": "Waitomo",
+      "country": "New Zealand",
+      "activities": [
+        "Waitomo glowworm caves"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t109951",
+      "url": "https://www.getyourguide.com/queenstown-l498/queenstown-shotover-river-extreme-jet-boat-experience-t109951/",
+      "title": "Queenstown: Shotover River Extreme Jet Boat Experience",
+      "rating": 4.9,
+      "reviewCount": 1715,
+      "city": "Queenstown",
+      "country": "New Zealand",
+      "activities": [
+        "Shotover Jet"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t1053787",
+      "url": "https://www.getyourguide.com/gibbston-l91032/queenstown-kawarau-bridge-bungy-world-s-first-bungy-t1053787/",
+      "title": "Queenstown: Kawarau Bridge Bungy - World's First Bungy!",
+      "rating": 4.9,
+      "reviewCount": 199,
+      "city": "Queenstown",
+      "country": "New Zealand",
+      "activities": [
+        "Kawarau Bridge bungy"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t126038",
+      "url": "https://www.getyourguide.com/te-anau-l937/te-anau-glowworm-caves-tour-t126038/",
+      "title": "Te Anau: Glowworm Caves Guided Tour",
+      "rating": 4.6,
+      "reviewCount": 3157,
+      "city": "Te Anau",
+      "country": "New Zealand",
+      "activities": [
+        "Te Anau Glowworm Caves"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t63241",
+      "url": "https://www.getyourguide.com/milford-sound-l4468/milford-sound-nature-cruise-grand-views-optional-lunch-t63241/",
+      "title": "Milford Sound: Nature Cruise - Grand Views & Optional Lunch",
+      "rating": 4.7,
+      "reviewCount": 819,
+      "city": "Milford Sound",
+      "country": "New Zealand",
+      "activities": [
+        "Milford Sound cruise"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t188550",
+      "url": "https://www.getyourguide.com/milford-sound-l4468/milford-sound-nature-cruise-on-premium-glass-roof-catamaran-t188550/",
+      "title": "Milford Sound: Nature Cruise on a Modern Catamaran",
+      "rating": 4.7,
+      "reviewCount": 1094,
+      "city": "Milford Sound",
+      "country": "New Zealand",
+      "activities": [
+        "Milford Sound cruise"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t117864",
+      "url": "https://www.getyourguide.com/milford-sound-l4468/milford-sound-2-hour-wildlife-nature-cruise-t117864/",
+      "title": "Milford Sound: 2-Hour Wildlife & Nature Cruise",
+      "rating": 4.7,
+      "reviewCount": 576,
+      "city": "Milford Sound",
+      "country": "New Zealand",
+      "activities": [
+        "Milford Sound cruise"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t188556",
+      "url": "https://www.getyourguide.com/queenstown-l498/queenstown-milford-sound-early-bird-coach-cruise-day-trip-t188556/",
+      "title": "Queenstown: Milford Sound Coach & Cruise Full-Day Trip",
+      "rating": 4.7,
+      "reviewCount": 4245,
+      "city": "Queenstown",
+      "country": "New Zealand",
+      "activities": [
+        "Milford Sound coach and cruise"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t163593",
+      "url": "https://www.getyourguide.com/queenstown-l498/from-queenstown-milford-sound-cruise-and-coach-day-tour-t163593/",
+      "title": "From Queenstown: Milford Sound Cruise and Coach Day Tour",
+      "rating": 4.7,
+      "reviewCount": 1950,
+      "city": "Queenstown",
+      "country": "New Zealand",
+      "activities": [
+        "Milford Sound coach and cruise"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t485484",
+      "url": "https://www.getyourguide.com/lake-tekapo-l113317/shared-tour-english-t485484/",
+      "title": "Lake Tekapo: Stargazing Experience",
+      "rating": 4.9,
+      "reviewCount": 712,
+      "city": "Lake Tekapo",
+      "country": "New Zealand",
+      "activities": [
+        "Stargazing at Tekapo"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t227977",
+      "url": "https://www.getyourguide.com/lake-tekapo-l113317/lake-tekapo-stargazing-experience-at-cowan-s-observatory-t227977/",
+      "title": "Lake Tekapo: Crater Stargazing at Cowan's Observatory",
+      "rating": 4.7,
+      "reviewCount": 71,
+      "city": "Lake Tekapo",
+      "country": "New Zealand",
+      "activities": [
+        "Stargazing at Tekapo"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t188016",
+      "url": "https://www.getyourguide.com/franz-josef-town-l45694/franz-josef-25-hour-glacier-hike-with-helicopter-transfer-t188016/",
+      "title": "Franz Josef: 2.5 Hour Glacier Hike with Helicopter Transfer",
+      "rating": 4.7,
+      "reviewCount": 404,
+      "city": "Franz Josef",
+      "country": "New Zealand",
+      "activities": [
+        "Franz Josef Glacier valley walk or heli-hike"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t217170",
+      "url": "https://www.getyourguide.com/la-fortuna-l1904/la-fortuna-balsa-river-class-2-3-whitewater-rafting-t217170/",
+      "title": "La Fortuna: Arenal Rafting Balsa River Class 2 & 3 Rafting",
+      "rating": 4.9,
+      "reviewCount": 755,
+      "city": "La Fortuna",
+      "country": "Costa Rica",
+      "activities": [
+        "White-water rafting on the Balsa River"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t216882",
+      "url": "https://www.getyourguide.com/la-fortuna-l1904/la-fortuna-upper-balsa-class-iii-and-iv-rapids-experience-t216882/",
+      "title": "La Fortuna: Arenal Rafting Upper Balsa Class 3 and 4 Rapids",
+      "rating": 4.9,
+      "reviewCount": 393,
+      "city": "La Fortuna",
+      "country": "Costa Rica",
+      "activities": [
+        "White-water rafting on the Balsa River"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t794743",
+      "url": "https://www.getyourguide.com/manuel-antonio-l142888/manuel-antonio-national-park-guided-tour-with-entrance-fee-included-t794743/",
+      "title": "Manuel Antonio National Park: Guided Tour with ENTRANCE FEE INCLUDED",
+      "rating": 4.8,
+      "reviewCount": 2060,
+      "city": "Manuel Antonio",
+      "country": "Costa Rica",
+      "activities": [
+        "Manuel Antonio National Park"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t579911",
+      "url": "https://www.getyourguide.com/manuel-antonio-l142888/manuel-antonio-national-park-guided-tour-ticket-guaranteed-t579911/",
+      "title": "Manuel Antonio Park: Guided Tour + TICKET INCLUDED option",
+      "rating": 4.8,
+      "reviewCount": 592,
+      "city": "Manuel Antonio",
+      "country": "Costa Rica",
+      "activities": [
+        "Manuel Antonio National Park"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t447356",
+      "url": "https://www.getyourguide.com/monteverde-l2135/monteverde-tropical-forest-night-tour-t447356/",
+      "title": "Monteverde: Tropical Forest Night Tour",
+      "rating": 4.6,
+      "reviewCount": 446,
+      "city": "Monteverde",
+      "country": "Costa Rica",
+      "activities": [
+        "Night walk in Monteverde"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t802272",
+      "url": "https://www.getyourguide.com/santa-elena-costa-rica-l180411/monteverde-oktari-monteverde-night-hike-tour-t802272/",
+      "title": "Monteverde: Night Tour Near Town, Easy Hike, Small Group, Wildlife Spotting",
+      "rating": 4.7,
+      "reviewCount": 122,
+      "city": "Monteverde",
+      "country": "Costa Rica",
+      "activities": [
+        "Night walk in Monteverde"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t756509",
+      "url": "https://www.getyourguide.com/monteverde-l2135/monteverde-thrilling-zip-line-canopy-tour-t756509/",
+      "title": "Monteverde: Thrilling Zip Line Canopy Tour",
+      "rating": 4.8,
+      "reviewCount": 783,
+      "city": "Monteverde",
+      "country": "Costa Rica",
+      "activities": [
+        "Canopy zip-lines in Monteverde"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t771579",
+      "url": "https://www.getyourguide.com/monteverde-l2135/the-original-canopy-tour-monteverde-t771579/",
+      "title": "The Original Canopy Tour Monteverde",
+      "rating": 4.9,
+      "reviewCount": 111,
+      "city": "Monteverde",
+      "country": "Costa Rica",
+      "activities": [
+        "Canopy zip-lines in Monteverde"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t425815",
+      "url": "https://www.getyourguide.com/monteverde-l2135/monteverde-longest-and-highest-extreme-zip-line-experience-t425815/",
+      "title": "Monteverde: Longest & Highest Extreme Zipline with Transport",
+      "rating": 4.7,
+      "reviewCount": 349,
+      "city": "Monteverde",
+      "country": "Costa Rica",
+      "activities": [
+        "Canopy zip-lines in Monteverde"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t631488",
+      "url": "https://www.getyourguide.com/tortuguero-l179461/tortuguero-turtle-nesting-night-tour-t631488/",
+      "title": "Tortuguero: Turtle Nesting Night Tour",
+      "rating": 4.2,
+      "reviewCount": 343,
+      "city": "Tortuguero",
+      "country": "Costa Rica",
+      "activities": [
+        "Turtle nesting night tour"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t754235",
+      "url": "https://www.getyourguide.com/tortuguero-l179461/the-majestic-green-turtle-nesting-tour-t754235/",
+      "title": "Tortuguero: The Majestic Green Turtle Nesting Tour",
+      "rating": 4.8,
+      "reviewCount": 67,
+      "city": "Tortuguero",
+      "country": "Costa Rica",
+      "activities": [
+        "Turtle nesting night tour"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t489734",
+      "url": "https://www.getyourguide.com/puntarenas-l32285/drake-bay-corcovado-national-park-and-sirena-station-tour-t489734/",
+      "title": "Drake Bay: Corcovado National Park and Sirena Station Tour",
+      "rating": 4.6,
+      "reviewCount": 96,
+      "city": "Drake Bay",
+      "country": "Costa Rica",
+      "activities": [
+        "Corcovado National Park"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t52949",
+      "url": "https://www.getyourguide.com/london-l57/tower-of-london-and-tower-bridge-vip-early-access-tour-t52949/",
+      "title": "London: Tower of London Opening Ceremony & Tower Bridge Tour",
+      "rating": 4.8,
+      "reviewCount": 946,
+      "city": "London",
+      "country": "United Kingdom",
+      "activities": [
+        "Tower of London and Tower Bridge"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t850799",
+      "url": "https://www.getyourguide.com/sydney-l200/sydney-harbour-bridgeclimb-summit-twilight-t850799/",
+      "title": "Sydney Harbour BridgeClimb: Summit Twilight",
+      "rating": 4.9,
+      "reviewCount": 183,
+      "city": "Sydney",
+      "country": "Australia",
+      "activities": [
+        "Sydney Harbour Bridge climb"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t850801",
+      "url": "https://www.getyourguide.com/sydney-l200/sydney-bridgeclimb-sydney-harbour-summit-night-t850801/",
+      "title": "Sydney: BridgeClimb Sydney Harbour Summit Night",
+      "rating": 4.8,
+      "reviewCount": 178,
+      "city": "Sydney",
+      "country": "Australia",
+      "activities": [
+        "Sydney Harbour Bridge climb"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t71472",
+      "url": "https://www.getyourguide.com/cairns-l298/kuranda-skyrail-gold-class-trein-vanuit-cairns-t71472/",
+      "title": "Kuranda, Skyrail & Gold Class Train from Cairns",
+      "rating": 4.7,
+      "reviewCount": 193,
+      "city": "Cairns",
+      "country": "Australia",
+      "activities": [
+        "Kuranda Scenic Railway and Skyrail"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t11604",
+      "url": "https://www.getyourguide.com/cairns-l298/great-barrier-reef-snorkel-full-day-tour-t11604/",
+      "title": "Cairns: Outer Great Barrier Reef Full-Day Tour with Lunch",
+      "rating": 4.7,
+      "reviewCount": 1626,
+      "city": "Cairns",
+      "country": "Australia",
+      "activities": [
+        "Great Barrier Reef snorkel or dive day"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t133161",
+      "url": "https://www.getyourguide.com/cairns-l298/cairns-premium-snorkelling-and-diving-gbr-day-trip-t133161/",
+      "title": "Cairns: Premium Snorkelling and Diving Reef Day Trip",
+      "rating": 4.6,
+      "reviewCount": 1614,
+      "city": "Cairns",
+      "country": "Australia",
+      "activities": [
+        "Great Barrier Reef snorkel or dive day"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t186840",
+      "url": "https://www.getyourguide.com/port-douglas-l2075/port-douglas-morning-or-afternoon-low-isles-snorkel-tour-t186840/",
+      "title": "Port Douglas: Low Isles Glass Bottom Boat & Snorkeling Tour",
+      "rating": 4.6,
+      "reviewCount": 551,
+      "city": "Port Douglas",
+      "country": "Australia",
+      "activities": [
+        "Low Isles or outer reef cruise"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t179801",
+      "url": "https://www.getyourguide.com/port-douglas-l2075/port-douglas-reef-low-isles-cruise-on-luxury-catamaran-t179801/",
+      "title": "Port Douglas: Reef & Low Isles Cruise on Luxury Catamaran",
+      "rating": 4.8,
+      "reviewCount": 108,
+      "city": "Port Douglas",
+      "country": "Australia",
+      "activities": [
+        "Low Isles or outer reef cruise"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t68772",
+      "url": "https://www.getyourguide.com/sydney-l200/wine-tour-from-sydney-inc-lunch-cheese-choc-vodka-t68772/",
+      "title": "From Sydney: Full-Day Hunter Valley Tour w/ Tastings & Lunch",
+      "rating": 4.6,
+      "reviewCount": 109,
+      "city": "Sydney",
+      "country": "Australia",
+      "activities": [
+        "Hunter Valley wine day"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t493131",
+      "url": "https://www.getyourguide.com/melbourne-l202/melbourne-yarra-valley-wine-gin-whisky-and-chocolate-tour-t493131/",
+      "title": "Melbourne: Yarra Valley Wine, Gin, Whisky and Chocolate Tour",
+      "rating": 4.9,
+      "reviewCount": 1495,
+      "city": "Melbourne",
+      "country": "Australia",
+      "activities": [
+        "Yarra Valley wine tasting"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t285667",
+      "url": "https://www.getyourguide.com/melbourne-l202/melbourne-yarra-valley-wine-tour-lunch-ginbeer-option-t285667/",
+      "title": "Melbourne: Yarra Valley Wine Tour & Lunch & Gin/Beer Option",
+      "rating": 4.9,
+      "reviewCount": 324,
+      "city": "Melbourne",
+      "country": "Australia",
+      "activities": [
+        "Yarra Valley wine tasting"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t698211",
+      "url": "https://www.getyourguide.com/melbourne-l202/melbourne-yarra-valley-cellar-door-winery-tour-small-group-t698211/",
+      "title": "Melbourne: Yarra Valley Half-Day Small-Group Winery Tour",
+      "rating": 4.7,
+      "reviewCount": 236,
+      "city": "Melbourne",
+      "country": "Australia",
+      "activities": [
+        "Yarra Valley wine tasting"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t171351",
+      "url": "https://www.getyourguide.com/san-ignacio-belize-l32678/san-ignacio-cave-tubing-experience-with-lunch-t171351/",
+      "title": "San Ignacio: Cave Tubing with Lunch & Optional Zipline",
+      "rating": 4.9,
+      "reviewCount": 112,
+      "city": "San Ignacio",
+      "country": "Belize",
+      "activities": [
+        "Cave tubing"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t176307",
+      "url": "https://www.getyourguide.com/san-ignacio-l32678/actun-tunichil-muknal-cave-full-day-tour-t176307/",
+      "title": "San Ignacio: Actun Tunichil Muknal (ATM) Cave Full-Day Tour",
+      "rating": 4.9,
+      "reviewCount": 579,
+      "city": "San Ignacio",
+      "country": "Belize",
+      "activities": [
+        "ATM cave expedition"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t777681",
+      "url": "https://www.getyourguide.com/porto-l151/real-companhia-velha-port-wine-cellar-guided-tour-t777681/",
+      "title": "Porto: Royal Oporto Tour na Real Companhia Velha",
+      "rating": 4.8,
+      "reviewCount": 664,
+      "city": "Porto",
+      "country": "Portugal",
+      "activities": [
+        "Port wine lodges in Vila Nova de Gaia"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t415796",
+      "url": "https://www.getyourguide.com/vila-nova-de-gaia-l91806/vila-nova-de-gaia-portweinkellerbesuch-und-portweinverkostung-t415796/",
+      "title": "Porto: Fonseca Port Wine Cellar Tour & Tasting",
+      "rating": 4.2,
+      "reviewCount": 541,
+      "city": "Porto",
+      "country": "Portugal",
+      "activities": [
+        "Port wine lodges in Vila Nova de Gaia"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t911881",
+      "url": "https://www.getyourguide.com/coimbra-l1629/coimbra-university-private-walking-tour-with-tickets-t911881/",
+      "title": "Complete Coimbra University & Joanina Library Tour + Tickets",
+      "rating": 4.9,
+      "reviewCount": 92,
+      "city": "Coimbra",
+      "country": "Portugal",
+      "activities": [
+        "Coimbra University and Biblioteca Joanina"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t1138628",
+      "url": "https://www.getyourguide.com/coimbra-l1629/coimbrai-egyetem-idegenvezetes-jegyekkel-t1138628/",
+      "title": "University of Coimbra Guided Tour with Tickets",
+      "rating": 4.9,
+      "reviewCount": 95,
+      "city": "Coimbra",
+      "country": "Portugal",
+      "activities": [
+        "Coimbra University and Biblioteca Joanina"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t893709",
+      "url": "https://www.getyourguide.com/coimbra-l1629/coimbra-visite-de-l-universite-par-un-local-coupe-file-t893709/",
+      "title": "Coimbra: A Local's Tour of the University + Skip-the-Line",
+      "rating": 4.9,
+      "reviewCount": 74,
+      "city": "Coimbra",
+      "country": "Portugal",
+      "activities": [
+        "Coimbra University and Biblioteca Joanina"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t432471",
+      "url": "https://www.getyourguide.com/new-york-city-l59/nyc-statue-of-liberty-and-ellis-island-tour-with-ferry-t432471/",
+      "title": "NYC: Statue of Liberty & Ellis Island Guided Tour with Ferry",
+      "rating": 4.6,
+      "reviewCount": 269,
+      "city": "New York",
+      "country": "United States",
+      "activities": [
+        "Statue of Liberty ferry and Lower Manhattan"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t822893",
+      "url": "https://www.getyourguide.com/san-francisco-l61/san-francisco-alcatraz-ticket-fahre-selbstfuhrungs-app-t822893/",
+      "title": "San Francisco: Alcatraz Ticket, Ferry, & Self-Guided App",
+      "rating": 4.5,
+      "reviewCount": 4078,
+      "city": "San Francisco",
+      "country": "United States",
+      "activities": [
+        "Alcatraz tour"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t627184",
+      "url": "https://www.getyourguide.com/san-francisco-l61/san-francisco-alcatraz-island-prison-tour-with-bay-cruise-t627184/",
+      "title": "Alcatraz Island Prison Tour & Bay Cruise Combined Package",
+      "rating": 4.6,
+      "reviewCount": 570,
+      "city": "San Francisco",
+      "country": "United States",
+      "activities": [
+        "Alcatraz tour"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t217227",
+      "url": "https://www.getyourguide.com/el-nido-l974/el-nido-island-hopping-tour-a-lagoons-and-beaches-t217227/",
+      "title": "El Nido: Island Hopping Tour A Lagoons and Beaches",
+      "rating": 4.4,
+      "reviewCount": 1994,
+      "city": "El Nido",
+      "country": "Philippines",
+      "activities": [
+        "El Nido island hopping tour"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t219591",
+      "url": "https://www.getyourguide.com/hidden-beach-l104676/el-nido-island-hopping-tour-c-hidden-beaches-shrine-t219591/",
+      "title": "El Nido Island Hopping Tour C: Hidden Beaches & Shrine",
+      "rating": 4.4,
+      "reviewCount": 775,
+      "city": "El Nido",
+      "country": "Philippines",
+      "activities": [
+        "Second island hopping tour (different route)"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t180785",
+      "url": "https://www.getyourguide.com/puerto-princesa-l1000/from-puerto-princesa-underground-river-full-day-trip-t180785/",
+      "title": "From Puerto Princesa: Underground River Full-Day Trip",
+      "rating": 4.5,
+      "reviewCount": 1737,
+      "city": "Puerto Princesa",
+      "country": "Philippines",
+      "activities": [
+        "Puerto Princesa Underground River"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t619061",
+      "url": "https://www.getyourguide.com/moalboal-l105184/cebu-moalboal-sardines-run-snorkel-kawasan-canyoneering-t619061/",
+      "title": "Cebu: Moalboal Sardines Run Snorkel & Kawasan Canyoneering",
+      "rating": 4.8,
+      "reviewCount": 78,
+      "city": "Moalboal",
+      "country": "Philippines",
+      "activities": [
+        "Kawasan Falls canyoning and Moalboal sardines",
+        "Moalboal sardine snorkel (morning)"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t567424",
+      "url": "https://www.getyourguide.com/chiang-mai-l271/cooking-class-with-organic-farm-in-chiang-mai-at-mama-noi-t567424/",
+      "title": "Chiang Mai: Cooking Class with Organic Farm at Mama Noi",
+      "rating": 4.9,
+      "reviewCount": 1269,
+      "city": "Chiang Mai",
+      "country": "Thailand",
+      "activities": [
+        "Thai cooking class in Chiang Mai"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t752430",
+      "url": "https://www.getyourguide.com/chiang-mai-l271/chiang-mai-elephant-dream-project-sanctuary-half-day-t752430/",
+      "title": "Chiang Mai: Elephant Dream Project Sanctuary - Half-Day",
+      "rating": 4.9,
+      "reviewCount": 732,
+      "city": "Chiang Mai",
+      "country": "Thailand",
+      "activities": [
+        "Ethical elephant sanctuary visit"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t895033",
+      "url": "https://www.getyourguide.com/chiang-mai-l271/chiang-mai-ethical-half-day-elephant-sanctuary-waterfall-t895033/",
+      "title": "Chiang Mai: Ethical Half Day Elephant Sanctuary & Waterfall",
+      "rating": 4.9,
+      "reviewCount": 756,
+      "city": "Chiang Mai",
+      "country": "Thailand",
+      "activities": [
+        "Ethical elephant sanctuary visit"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t798610",
+      "url": "https://www.getyourguide.com/phuket-l32123/phuket-james-bond-island-sea-canoeing-by-speedboat-2-meals-t798610/",
+      "title": "Phuket: James Bond Island Sea Canoeing by Speedboat+ 2 Meals",
+      "rating": 4.8,
+      "reviewCount": 960,
+      "city": "Phuket",
+      "country": "Thailand",
+      "activities": [
+        "Phang Nga Bay boat tour"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t517192",
+      "url": "https://www.getyourguide.com/phuket-l32123/jame-bond-phang-nga-bay-tour-by-speedboat-from-phuket-t517192/",
+      "title": "From Phuket: James Bond and Phang Nga Bay Tour by Speedboat",
+      "rating": 4.7,
+      "reviewCount": 982,
+      "city": "Phuket",
+      "country": "Thailand",
+      "activities": [
+        "Phang Nga Bay boat tour"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t143931",
+      "url": "https://www.getyourguide.com/krabi-l2174/krabi-early-phi-phi-islands-by-speedboat-with-buffet-lunch-t143931/",
+      "title": "Krabi: Early bird Maya Bay Phi Phi + 4 Islands by Speedboat",
+      "rating": 4.7,
+      "reviewCount": 968,
+      "city": "Krabi",
+      "country": "Thailand",
+      "activities": [
+        "Phi Phi Islands day trip"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t28512",
+      "url": "https://www.getyourguide.com/krabi-l2174/phi-phi-islands-day-trip-by-speedboat-from-krabi-t28512/",
+      "title": "From Krabi: Phi Phi Islands Speedboat Day Tour",
+      "rating": 4.4,
+      "reviewCount": 3904,
+      "city": "Krabi",
+      "country": "Thailand",
+      "activities": [
+        "Phi Phi Islands day trip"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t1327565",
+      "url": "https://www.getyourguide.com/hong-island-360deg-view-point-l196033/krabi-premium-longtail-boat-tour-to-hong-poda-islands-t1327565/",
+      "title": "Krabi: Hong Islands Day Tour by Premium Longtail Boat",
+      "rating": 4.5,
+      "reviewCount": 64,
+      "city": "Krabi",
+      "country": "Thailand",
+      "activities": [
+        "Hong Islands boat trip"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t520519",
+      "url": "https://www.getyourguide.com/ko-samui-l898/koh-samui-day-tour-to-ang-thong-with-kayak-snorkel-lunch-t520519/",
+      "title": "Koh Samui: Ang Thong Day Tour with Kayak, Snorkel & Lunch",
+      "rating": 4.7,
+      "reviewCount": 2057,
+      "city": "Koh Samui",
+      "country": "Thailand",
+      "activities": [
+        "Ang Thong Marine National Park"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t475368",
+      "url": "https://www.getyourguide.com/koh-samui-l898/samui-angthong-marine-park-boat-tour-w-transfer-and-meals-t475368/",
+      "title": "Samui: Angthong Marine Park Boat Tour w/ Transfer and Meals",
+      "rating": 4.4,
+      "reviewCount": 3398,
+      "city": "Koh Samui",
+      "country": "Thailand",
+      "activities": [
+        "Ang Thong Marine National Park"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t499652",
+      "url": "https://www.getyourguide.com/bangkok-l169/hands-on-thai-cooking-class-market-tour-in-sukhumvit-t499652/",
+      "title": "Sukhumvit: Hands-on Thai Cooking Class & Market Tour in BKK",
+      "rating": 4.9,
+      "reviewCount": 294,
+      "city": "Bangkok",
+      "country": "Thailand",
+      "activities": [
+        "Thai cooking class in Bangkok"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t187905",
+      "url": "https://www.getyourguide.com/bangkok-l169/bangkok-half-day-thai-cooking-class-in-bangrak-district-t187905/",
+      "title": "Bangkok: Half-Day Thai Cooking Class in Bangrak District",
+      "rating": 4.9,
+      "reviewCount": 195,
+      "city": "Bangkok",
+      "country": "Thailand",
+      "activities": [
+        "Thai cooking class in Bangkok"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t665852",
+      "url": "https://www.getyourguide.com/marrakesh-l208/majorelle-garden-yves-saint-laurent-berber-museum-entry-t665852/",
+      "title": "Marrakech: Majorelle Garden, YSL, and Berber Museum Entry",
+      "rating": 4.6,
+      "reviewCount": 8372,
+      "city": "Marrakech",
+      "country": "Morocco",
+      "activities": [
+        "Majorelle Garden"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t532268",
+      "url": "https://www.getyourguide.com/fes-l829/explore-fes-unforgettable-guided-walking-tour-of-the-medina-t532268/",
+      "title": "Fes Medina Walking Tour with Local Guide (3 Hours)",
+      "rating": 4.7,
+      "reviewCount": 1824,
+      "city": "Fes",
+      "country": "Morocco",
+      "activities": [
+        "Fes el-Bali medina walk with a licensed guide"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t17851",
+      "url": "https://www.getyourguide.com/merzouga-l1002/from-merzouga-overnight-camel-trek-over-erg-chebbi-dunes-t17851/",
+      "title": "From Merzouga: Overnight Camel Trek over Erg Chebbi Dunes",
+      "rating": 4.5,
+      "reviewCount": 569,
+      "city": "Merzouga",
+      "country": "Morocco",
+      "activities": [
+        "Camel trek in the Erg Chebbi dunes"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t343456",
+      "url": "https://www.getyourguide.com/casablanca-l244/casablanca-hassan-ii-mosque-premium-tour-with-entry-ticket-t343456/",
+      "title": "Casablanca: Hassan II Mosque Premium Tour with Entry Ticket",
+      "rating": 4.5,
+      "reviewCount": 4598,
+      "city": "Casablanca",
+      "country": "Morocco",
+      "activities": [
+        "Hassan II Mosque"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t131232",
+      "url": "https://www.getyourguide.com/seville-l48/skip-the-line-ticket-royal-alcazar-of-seville-t131232/",
+      "title": "Seville: Royal Alcázar Entry Ticket",
+      "rating": 4.6,
+      "reviewCount": 37179,
+      "city": "Seville",
+      "country": "Spain",
+      "activities": [
+        "Real Alcázar of Seville"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t54011",
+      "url": "https://www.getyourguide.com/granada-l207/skip-the-line-alhambra-and-generalife-guided-tour-t54011/",
+      "title": "Granada: Alhambra & Nasrid Palaces Tour with Tickets",
+      "rating": 4.7,
+      "reviewCount": 24176,
+      "city": "Granada",
+      "country": "Spain",
+      "activities": [
+        "Alhambra and Generalife"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t144495",
+      "url": "https://www.getyourguide.com/granada-l207/alhambra-nasrid-palaces-and-generalife-3-hour-guided-tour-t144495/",
+      "title": "Alhambra, Nasrid Palaces, and Generalife 3-Hour Guided Tour",
+      "rating": 4.7,
+      "reviewCount": 1413,
+      "city": "Granada",
+      "country": "Spain",
+      "activities": [
+        "Alhambra and Generalife"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t685603",
+      "url": "https://www.getyourguide.com/granada-l207/granada-tour-of-alhambra-generalife-and-nasrid-palaces-t685603/",
+      "title": "Granada: Tour of Alhambra, Generalife, and Nasrid Palaces",
+      "rating": 4.4,
+      "reviewCount": 2362,
+      "city": "Granada",
+      "country": "Spain",
+      "activities": [
+        "Alhambra and Generalife"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t632032",
+      "url": "https://www.getyourguide.com/granada-l207/granada-los-amayas-cave-flamenco-show-in-sacromonte-t632032/",
+      "title": "Granada: Los Amayas Cave Flamenco Show in Sacromonte",
+      "rating": 4.7,
+      "reviewCount": 1148,
+      "city": "Granada",
+      "country": "Spain",
+      "activities": [
+        "Sacromonte flamenco"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t48474",
+      "url": "https://www.getyourguide.com/granada-l207/sacromonte-flamenco-show-cuevas-los-tarantos-tickets-t48474/",
+      "title": "Sacromonte: Flamenco Show at Cuevas Los Tarantos Tickets",
+      "rating": 4.5,
+      "reviewCount": 2162,
+      "city": "Granada",
+      "country": "Spain",
+      "activities": [
+        "Sacromonte flamenco"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t840866",
+      "url": "https://www.getyourguide.com/granada-l207/granada-flamenco-show-at-cueva-la-faraona-t840866/",
+      "title": "Granada: Flamenco Show at Cueva LA FARAONA",
+      "rating": 4.7,
+      "reviewCount": 923,
+      "city": "Granada",
+      "country": "Spain",
+      "activities": [
+        "Sacromonte flamenco"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t408947",
+      "url": "https://www.getyourguide.com/seville-l48/seville-live-flamenco-dancing-show-ticket-at-the-theater-t408947/",
+      "title": "Seville: Live Flamenco Dancing Show Ticket at the Theater",
+      "rating": 4.7,
+      "reviewCount": 19473,
+      "city": "Seville",
+      "country": "Spain",
+      "activities": [
+        "Flamenco in Seville"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t50027",
+      "url": "https://www.getyourguide.com/barcelona-l45/sagrada-familia-skip-the-line-ticket-t50027/",
+      "title": "Barcelona: Sagrada Familia Entry Ticket with Audio Guide",
+      "rating": 4.6,
+      "reviewCount": 115000,
+      "city": "Barcelona",
+      "country": "Spain",
+      "activities": [
+        "Sagrada Família"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t431708",
+      "url": "https://www.getyourguide.com/barcelona-l45/barcelona-casa-batllo-be-the-first-entry-ticket-t431708/",
+      "title": "Barcelona: Casa Batlló Be The First Entry Ticket",
+      "rating": 4.8,
+      "reviewCount": 1325,
+      "city": "Barcelona",
+      "country": "Spain",
+      "activities": [
+        "Casa Batlló"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t398519",
+      "url": "https://www.getyourguide.com/barcellona-l45/barcellona-l-esperienza-di-casa-batllo-in-10d-t398519/",
+      "title": "Barcelona: Casa Batlló Entry with Self-Audioguide Tour",
+      "rating": 4.7,
+      "reviewCount": 27647,
+      "city": "Barcelona",
+      "country": "Spain",
+      "activities": [
+        "Casa Batlló"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t53791",
+      "url": "https://www.getyourguide.com/barcelona-l45/skip-the-line-park-guell-entrance-ticket-t53791/",
+      "title": "Barcelona: Park Güell Admission Ticket",
+      "rating": 4.4,
+      "reviewCount": 91312,
+      "city": "Barcelona",
+      "country": "Spain",
+      "activities": [
+        "Park Güell"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t826796",
+      "url": "https://www.getyourguide.com/barcelona-l45/barcelona-park-guell-and-gaudi-house-museum-entry-ticket-t826796/",
+      "title": "Barcelona: Park Güell and Gaudí House Museum Entry Ticket",
+      "rating": 4.5,
+      "reviewCount": 9527,
+      "city": "Barcelona",
+      "country": "Spain",
+      "activities": [
+        "Park Güell"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t87947",
+      "url": "https://www.getyourguide.com/sagrada-familia-l2699/barcelona-park-guell-la-sagrada-familia-tickets-and-tour-t87947/",
+      "title": "Barcelona: Park Güell & La Sagrada Familia Tickets and Tour",
+      "rating": 4.8,
+      "reviewCount": 1736,
+      "city": "Barcelona",
+      "country": "Spain",
+      "activities": [
+        "Park Güell",
+        "Sagrada Família"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t658503",
+      "url": "https://www.getyourguide.com/madrid-l46/tablao-flamenco-1911-flamenco-show-welcome-drink-t658503/",
+      "title": "Madrid: Flamenco Show&Drink at Tablao 1911 (World's Oldest)",
+      "rating": 4.7,
+      "reviewCount": 460,
+      "city": "Madrid",
+      "country": "Spain",
+      "activities": [
+        "Flamenco show in a tablao"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t69761",
+      "url": "https://www.getyourguide.com/madrid-l46/madrid-flamenco-show-im-tablao-las-carboneras-t69761/",
+      "title": "Madrid: Flamenco Show at Tablao Las Carboneras",
+      "rating": 4.7,
+      "reviewCount": 782,
+      "city": "Madrid",
+      "country": "Spain",
+      "activities": [
+        "Flamenco show in a tablao"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t463953",
+      "url": "https://www.getyourguide.com/madrid-l46/madrid-authentic-tablao-flamenco-show-t463953/",
+      "title": "Madrid: Flamenco Show at Tablao Sala Temple with Drink",
+      "rating": 4.7,
+      "reviewCount": 1389,
+      "city": "Madrid",
+      "country": "Spain",
+      "activities": [
+        "Flamenco show in a tablao"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t426053",
+      "url": "https://www.getyourguide.com/madrid-l46/madrid-tablao-de-la-villa-flamenco-show-t426053/",
+      "title": "Madrid: Tablao de La Villa Flamenco Show",
+      "rating": 4.6,
+      "reviewCount": 83,
+      "city": "Madrid",
+      "country": "Spain",
+      "activities": [
+        "Flamenco show in a tablao"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t8331",
+      "url": "https://www.getyourguide.com/buenos-aires-l1/tango-porteno-dinner-show-t8331/",
+      "title": "Buenos Aires: Tango Porteño Show with Optional Dinner",
+      "rating": 4.5,
+      "reviewCount": 160,
+      "city": "Buenos Aires",
+      "country": "Argentina",
+      "activities": [
+        "Tango show and dinner"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t233092",
+      "url": "https://www.getyourguide.com/buenos-aires-l1/buenos-aires-piazzolla-tango-show-with-optional-dinner-t233092/",
+      "title": "Buenos Aires: Piazzolla Tango Show with Optional Dinner",
+      "rating": 4.5,
+      "reviewCount": 2816,
+      "city": "Buenos Aires",
+      "country": "Argentina",
+      "activities": [
+        "Tango show and dinner"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t1117512",
+      "url": "https://www.getyourguide.com/el-calafate-l544/el-calafate-all-glaciers-cruise-tour-l-spegazzini-upsala-t1117512/",
+      "title": "El Calafate: All Glaciers Cruise Tour l Spegazzini & Upsala",
+      "rating": 4.5,
+      "reviewCount": 323,
+      "city": "El Calafate",
+      "country": "Argentina",
+      "activities": [
+        "Upsala and Spegazzini glacier cruise"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t55889",
+      "url": "https://www.getyourguide.com/mendoza-l673/andes-day-trip-uspallata-aconcagua-and-puente-del-inca-t55889/",
+      "title": "Mendoza: High Andes Day Tour with Aconcagua & Uspallata",
+      "rating": 4.5,
+      "reviewCount": 88,
+      "city": "Mendoza",
+      "country": "Argentina",
+      "activities": [
+        "High Andes road and Aconcagua viewpoint"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t243092",
+      "url": "https://www.getyourguide.com/mendoza-l673/from-mendoza-andes-day-tour-t243092/",
+      "title": "From Mendoza: High Andes Aconcagua Mountain Tour",
+      "rating": 4.6,
+      "reviewCount": 219,
+      "city": "Mendoza",
+      "country": "Argentina",
+      "activities": [
+        "High Andes road and Aconcagua viewpoint"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t413009",
+      "url": "https://www.getyourguide.com/eiffel-tower-l2600/paris-eiffel-tower-access-seine-river-cruise-t413009/",
+      "title": "Paris: Eiffel Tower Access and Seine River Cruise",
+      "rating": 4.3,
+      "reviewCount": 1279,
+      "city": "Paris",
+      "country": "France",
+      "activities": [
+        "Eiffel Tower and Seine cruise"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t350136",
+      "url": "https://www.getyourguide.com/paris-l16/paris-ticket-de-entrada-a-la-torre-eiffel-y-crucero-por-el-sena-t350136/",
+      "title": "Paris: Eiffel Tower Summit Floor Ticket & Seine River Cruise",
+      "rating": 4.4,
+      "reviewCount": 2596,
+      "city": "Paris",
+      "country": "France",
+      "activities": [
+        "Eiffel Tower and Seine cruise"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t145779",
+      "url": "https://www.getyourguide.com/paris-l16/louvre-ticket-fuer-einlass-ohne-anstehen-t145779/",
+      "title": "Paris: Louvre Museum Timed-Entrance Ticket",
+      "rating": 4.6,
+      "reviewCount": 23000,
+      "city": "Paris",
+      "country": "France",
+      "activities": [
+        "Louvre or Musee d Orsay"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t671450",
+      "url": "https://www.getyourguide.com/paris-l16/paris-louvre-museum-entry-ticket-with-mona-lisa-audio-guide-t671450/",
+      "title": "Paris: Louvre Museum Guided Entry and Mona Lisa Audioguide",
+      "rating": 4.6,
+      "reviewCount": 5506,
+      "city": "Paris",
+      "country": "France",
+      "activities": [
+        "Louvre or Musee d Orsay"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t3399",
+      "url": "https://www.getyourguide.com/paris-l16/skip-the-line-versailles-half-day-tour-from-paris-t3399/",
+      "title": "From Paris: Versailles Guided Tour with Skip-the-Line Entry",
+      "rating": 4.2,
+      "reviewCount": 2509,
+      "city": "Versailles",
+      "country": "France",
+      "activities": [
+        "Palace of Versailles"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t24909",
+      "url": "https://www.getyourguide.com/palace-of-versailles-l317/skip-the-line-versailles-palace-and-gardens-half-day-tour-t24909/",
+      "title": "From Paris: Versailles Palace Self Guided & Gardens tickets",
+      "rating": 4.4,
+      "reviewCount": 1102,
+      "city": "Versailles",
+      "country": "France",
+      "activities": [
+        "Palace of Versailles"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t62065",
+      "url": "https://www.getyourguide.com/paris-l16/loire-valley-castles-chambord-chenonceau-amboise-t62065/",
+      "title": "From Paris: Small-Group Loire Valley Castles Full-Day Tour",
+      "rating": 4.9,
+      "reviewCount": 278,
+      "city": "Amboise",
+      "country": "France",
+      "activities": [
+        "Chenonceau, Chambord and Amboise"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t537123",
+      "url": "https://www.getyourguide.com/bayeux-l32401/bayeux-normandy-d-day-landing-beaches-full-day-guided-tour-t537123/",
+      "title": "Bayeux: Normandy D-Day Landing Beaches Full-Day Guided Tour",
+      "rating": 4.8,
+      "reviewCount": 253,
+      "city": "Bayeux",
+      "country": "France",
+      "activities": [
+        "D-Day beaches tour"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t448896",
+      "url": "https://www.getyourguide.com/bayeux-l32401/dday-american-beaches-and-us-airborne-full-day-tour-t448896/",
+      "title": "From Bayeux: D-Day American Beaches and US Airborne Day Tour",
+      "rating": 4.9,
+      "reviewCount": 80,
+      "city": "Bayeux",
+      "country": "France",
+      "activities": [
+        "D-Day beaches tour"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t53768",
+      "url": "https://www.getyourguide.com/dublin-l31/early-access-book-of-kells-and-dublin-castle-tour-t53768/",
+      "title": "Dublin: Fast-Track Book of Kells Ticket & Dublin Castle Tour",
+      "rating": 4.6,
+      "reviewCount": 2106,
+      "city": "Dublin",
+      "country": "Ireland",
+      "activities": [
+        "Trinity College and the Book of Kells"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t702187",
+      "url": "https://www.getyourguide.com/dublin-l31/dublin-visita-a-san-patricio-el-libro-de-kells-y-el-castillo-de-dublin-t702187/",
+      "title": "Dublin: St Patrick's, Book of Kells, and Dublin Castle Tour",
+      "rating": 4.8,
+      "reviewCount": 425,
+      "city": "Dublin",
+      "country": "Ireland",
+      "activities": [
+        "Trinity College and the Book of Kells"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t45105",
+      "url": "https://www.getyourguide.com/dublin-l31/guinness-storehouse-self-guided-tour-with-free-pint-t45105/",
+      "title": "Dublin: Guinness Storehouse Entry Ticket",
+      "rating": 4.7,
+      "reviewCount": 27075,
+      "city": "Dublin",
+      "country": "Ireland",
+      "activities": [
+        "Guinness Storehouse and a music pub evening"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t374621",
+      "url": "https://www.getyourguide.com/galway-l804/rossaveel-galway-ferry-transfer-to-inis-mor-aran-islands-t374621/",
+      "title": "Rossaveel, Galway: Ferry Transfer to Inis Mór (Aran Islands)",
+      "rating": 4.7,
+      "reviewCount": 262,
+      "city": "Galway",
+      "country": "Ireland",
+      "activities": [
+        "Aran Islands day trip"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t269697",
+      "url": "https://www.getyourguide.com/la-paz-l4674/la-paz-mountain-bike-down-the-world-s-most-dangerous-road-t269697/",
+      "title": "La Paz: Mountain Bike Down the World's Most Dangerous Road",
+      "rating": 4.9,
+      "reviewCount": 527,
+      "city": "La Paz",
+      "country": "Bolivia",
+      "activities": [
+        "Death Road downhill bike ride"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t1041964",
+      "url": "https://www.getyourguide.com/potosi-l32503/potosi-cerro-rico-silver-mine-guided-tour-t1041964/",
+      "title": "Potosí: Cerro Rico Silver Mine Guided Tour",
+      "rating": 4.8,
+      "reviewCount": 81,
+      "city": "Potosi",
+      "country": "Bolivia",
+      "activities": [
+        "Potosi mint museum or Cerro Rico mine tour"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t423811",
+      "url": "https://www.getyourguide.com/la-paz-l4674/la-paz-tiwanaku-archeological-ruins-guided-tour-t423811/",
+      "title": "La Paz: Tiwanaku Archeological Ruins Guided Tour",
+      "rating": 4.2,
+      "reviewCount": 131,
+      "city": "La Paz",
+      "country": "Bolivia",
+      "activities": [
+        "Tiwanaku ruins"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t209091",
+      "url": "https://www.getyourguide.com/san-pedro-de-atacama-l1862/san-pedro-de-atacama-astronomical-tour-t209091/",
+      "title": "San Pedro de Atacama: Etno-Stargazing Tour with Transfer",
+      "rating": 4.7,
+      "reviewCount": 519,
+      "city": "San Pedro de Atacama",
+      "country": "Chile",
+      "activities": [
+        "Atacama stargazing"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t347041",
+      "url": "https://www.getyourguide.com/san-pedro-de-atacama-l1862/san-pedro-de-atacama-atacama-desert-sunset-tour-t347041/",
+      "title": "Valley of the Moon | Stunning Atacama Sunset Tour",
+      "rating": 4.7,
+      "reviewCount": 944,
+      "city": "San Pedro de Atacama",
+      "country": "Chile",
+      "activities": [
+        "Valle de la Luna at sunset"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t345946",
+      "url": "https://www.getyourguide.com/san-pedro-de-atacama-l1862/san-pedro-de-atacama-el-tatio-geysers-tour-t345946/",
+      "title": "Tatio Geysers at Sunrise | Breakfast & Incredible Landscapes",
+      "rating": 4.7,
+      "reviewCount": 1140,
+      "city": "San Pedro de Atacama",
+      "country": "Chile",
+      "activities": [
+        "El Tatio geysers at dawn"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t632997",
+      "url": "https://www.getyourguide.com/san-pedro-de-atacama-l1862/triple-tour-red-stones-highland-lagoons-and-chaxa-lagoon-t632997/",
+      "title": "Triple tour: Red stones, highland lagoons and Chaxa Lagoon",
+      "rating": 4.7,
+      "reviewCount": 325,
+      "city": "San Pedro de Atacama",
+      "country": "Chile",
+      "activities": [
+        "Salt flat, Laguna Chaxa and altiplanic lagoons"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t472203",
+      "url": "https://www.getyourguide.com/san-pedro-de-atacama-l1862/cejar-lagoon-tebenquinche-lagoon-and-ojos-del-salar-t472203/",
+      "title": "Cejar Lagoon, Tebenquinche Lagoon and Ojos del Salar",
+      "rating": 4.4,
+      "reviewCount": 84,
+      "city": "San Pedro de Atacama",
+      "country": "Chile",
+      "activities": [
+        "Cejar Lagoon floating and sunset at Tebinquiche"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t297935",
+      "url": "https://www.getyourguide.com/puerto-natales-l32145/torres-del-paine-3-hour-scenic-boat-tour-to-grey-glacier-t297935/",
+      "title": "Torres del Paine: 3-Hour Scenic Boat Tour to Grey Glacier",
+      "rating": 4.5,
+      "reviewCount": 385,
+      "city": "Torres del Paine",
+      "country": "Chile",
+      "activities": [
+        "Grey Glacier boat trip"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t34789",
+      "url": "https://www.getyourguide.com/reykjavik-l30/reykjavik-the-original-3-hour-whale-watching-tour-t34789/",
+      "title": "Reykjavik: the Original 3-Hour Whale Watching Tour",
+      "rating": 4.4,
+      "reviewCount": 995,
+      "city": "Reykjavik",
+      "country": "Iceland",
+      "activities": [
+        "Whale-watching from Reykjavik"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t974716",
+      "url": "https://www.getyourguide.com/urubamba-l164518/machu-picchu-official-entrance-ticket-t974716/",
+      "title": "Machu Picchu: Official Entrance Ticket",
+      "rating": 4.1,
+      "reviewCount": 334,
+      "city": "Machu Picchu",
+      "country": "Peru",
+      "activities": [
+        "Machu Picchu"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t110689",
+      "url": "https://www.getyourguide.com/mykonos-l472/from-mykonos-delos-guided-tour-with-skip-the-line-tickets-t110689/",
+      "title": "Mykonos Town: Archaeological Site of Delos Guided Day Trip",
+      "rating": 4.6,
+      "reviewCount": 1410,
+      "city": "Mykonos",
+      "country": "Greece",
+      "activities": [
+        "Delos"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t181448",
+      "url": "https://www.getyourguide.com/athens-l91/acropolis-and-acropolis-museum-tour-t181448/",
+      "title": "Athens: Acropolis, Parthenon & Acropolis Museum Guided Tour",
+      "rating": 4.8,
+      "reviewCount": 14336,
+      "city": "Athens",
+      "country": "Greece",
+      "activities": [
+        "Acropolis and the Parthenon"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t374841",
+      "url": "https://www.getyourguide.com/santorini-l753/santorini-morning-or-sunset-cruise-with-food-drinks-t374841/",
+      "title": "Santorini: Luxury Catamaran Day Trip with Meal and Open Bar",
+      "rating": 4.8,
+      "reviewCount": 4217,
+      "city": "Santorini",
+      "country": "Greece",
+      "activities": [
+        "Caldera sailing cruise"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t53571",
+      "url": "https://www.getyourguide.com/antigua-guatemala-l1619/pacaya-volcano-trek-t53571/",
+      "title": "From Antigua: Pacaya Volcano Trek",
+      "rating": 4.4,
+      "reviewCount": 859,
+      "city": "Antigua",
+      "country": "Guatemala",
+      "activities": [
+        "Pacaya volcano hike"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t535277",
+      "url": "https://www.getyourguide.com/tikal-l229903/from-flores-tikal-sunrise-archaeological-tour-t535277/",
+      "title": "From Flores: Tikal Sunrise Archaeological Tour",
+      "rating": 4.6,
+      "reviewCount": 392,
+      "city": "Flores",
+      "country": "Guatemala",
+      "activities": [
+        "Tikal sunrise tour"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t390228",
+      "url": "https://www.getyourguide.com/seoul-l197/seoul-dmz-with-optional-suspension-bridge-north-korea-view-t390228/",
+      "title": "Seoul: DMZ Tour, JSA Museum, Defector Talk & Bridge Options",
+      "rating": 4.9,
+      "reviewCount": 6590,
+      "city": "Seoul",
+      "country": "South Korea",
+      "activities": [
+        "DMZ tour"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t616",
+      "url": "https://www.getyourguide.com/vienna-l7/vienna-mozart-concert-at-the-vienna-state-opera-t616/",
+      "title": "Vienna: Mozart Concert at the Vienna State Opera",
+      "rating": 4.6,
+      "reviewCount": 461,
+      "city": "Vienna",
+      "country": "Austria",
+      "activities": [
+        "State Opera or classical concert"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t543875",
+      "url": "https://www.getyourguide.com/abu-dhabi-l494/louvre-abu-dhabi-museum-general-admission-ticket-t543875/",
+      "title": "Louvre Abu Dhabi Museum General Admission Ticket",
+      "rating": 4.7,
+      "reviewCount": 2514,
+      "city": "Abu Dhabi",
+      "country": "United Arab Emirates",
+      "activities": [
+        "Louvre Abu Dhabi"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t443380",
+      "url": "https://www.getyourguide.com/diani-l200822/dhow-adventure-to-wasini-island-kisite-marine-park-t443380/",
+      "title": "Diani Dhow Adventure to Wasini Island - Kisite Marine Park",
+      "rating": 4.6,
+      "reviewCount": 581,
+      "city": "Diani",
+      "country": "Kenya",
+      "activities": [
+        "Dhow trip to Kisite Marine Park"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t142449",
+      "url": "https://www.getyourguide.com/husavik-l87259/husavik-rib-big-whales-and-puffin-island-tour-t142449/",
+      "title": "Húsavík: Big Whales and Puffin Island Speedboat Tour",
+      "rating": 4.8,
+      "reviewCount": 1120,
+      "city": "Husavik",
+      "country": "Iceland",
+      "activities": [
+        "Whale-watching from Husavik"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t87599",
+      "url": "https://www.getyourguide.com/husavik-l87259/husavik-traditional-whale-watching-tour-t87599/",
+      "title": "Húsavík: Traditional Whale Watching Tour",
+      "rating": 4.6,
+      "reviewCount": 2115,
+      "city": "Husavik",
+      "country": "Iceland",
+      "activities": [
+        "Whale-watching from Husavik"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t599374",
+      "url": "https://www.getyourguide.com/istanbul-l56/istanbul-historical-cagaloglu-hammam-t599374/",
+      "title": "Istanbul: Cagaloglu Hamam Experience",
+      "rating": 4.8,
+      "reviewCount": 832,
+      "city": "Istanbul",
+      "country": "Turkey",
+      "activities": [
+        "Turkish bath (hammam)"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t317882",
+      "url": "https://www.getyourguide.com/victoria-falls-town-l127068/victoria-falls-3-hour-zambezi-river-sunset-cruise-t317882/",
+      "title": "Victoria Falls: 2-Hour Luxury Zambezi River Sunset Cruise",
+      "rating": 4.8,
+      "reviewCount": 405,
+      "city": "Victoria Falls",
+      "country": "Zimbabwe",
+      "activities": [
+        "Zambezi sunset cruise"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t763759",
+      "url": "https://www.getyourguide.com/beijing-l186/tian-anmen-square-forbidden-city-tours-with-options-t763759/",
+      "title": "Beijing: Tiananmen & Forbidden City guided tour-With Tickets",
+      "rating": 4.8,
+      "reviewCount": 6816,
+      "city": "Beijing",
+      "country": "China",
+      "activities": [
+        "Forbidden City and Tiananmen Square"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t772369",
+      "url": "https://www.getyourguide.com/al-ula-l175362/visiting-the-incredible-heritage-site-hegra-in-alula-t772369/",
+      "title": "Visiting The Incredible Heritage Site Hegra in AlUla",
+      "rating": 4.6,
+      "reviewCount": 102,
+      "city": "AlUla",
+      "country": "Saudi Arabia",
+      "activities": [
+        "Hegra guided tour"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t518142",
+      "url": "https://www.getyourguide.com/hoi-an-l831/hoi-an-tra-que-herb-village-cooking-class-t518142/",
+      "title": "Hoi An: Tra Que Herb Village Cooking Class",
+      "rating": 4.6,
+      "reviewCount": 127,
+      "city": "Hoi An",
+      "country": "Vietnam",
+      "activities": [
+        "Cooking class in Hoi An"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t32609",
+      "url": "https://www.getyourguide.com/siem-reap-l274/-phare-the-cambodian-circus-show-in-siem-reap-t32609/",
+      "title": "Siem Reap: Phare, the Cambodian Circus Show Tickets",
+      "rating": 4.8,
+      "reviewCount": 2235,
+      "city": "Siem Reap",
+      "country": "Cambodia",
+      "activities": [
+        "Phare, The Cambodian Circus"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t84264",
+      "url": "https://www.getyourguide.com/siem-reap-l274/angkor-wat-sunrise-small-group-tour-t84264/",
+      "title": "Angkor Wat: Highlights and Sunrise Guided Tour",
+      "rating": 4.9,
+      "reviewCount": 1608,
+      "city": "Siem Reap",
+      "country": "Cambodia",
+      "activities": [
+        "Angkor Wat at sunrise"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t111106",
+      "url": "https://www.getyourguide.com/interlaken-l793/from-interlaken-day-trip-to-jungfraujoch-t111106/",
+      "title": "From Interlaken: Guided Tour to Jungfraujoch - Top of Europe",
+      "rating": 4.8,
+      "reviewCount": 1883,
+      "city": "Interlaken",
+      "country": "Switzerland",
+      "activities": [
+        "Jungfraujoch Top of Europe"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t480753",
+      "url": "https://www.getyourguide.com/takayama-l32150/day-tour-from-takayama-explore-takayama-and-shirakakwa-go-t480753/",
+      "title": "From Takayama: Guided Day Trip to Takayama and Shirakawa-go",
+      "rating": 4.8,
+      "reviewCount": 139,
+      "city": "Takayama",
+      "country": "Japan",
+      "activities": [
+        "Shirakawa-go"
+      ],
+      "checkedAt": "2026-10-31"
+    },
+    {
+      "id": "t382808",
+      "url": "https://www.getyourguide.com/billund-l87275/billund-1-day-ticket-to-legolandr-with-all-rides-access-t382808/",
+      "title": "Billund: 1-Day Ticket to LEGOLAND® with All Rides Access",
+      "rating": 4.6,
+      "reviewCount": 1853,
+      "city": "Billund",
+      "country": "Denmark",
+      "activities": [
+        "Legoland Billund"
+      ],
+      "checkedAt": "2026-10-31"
+    }
+  ]
+}

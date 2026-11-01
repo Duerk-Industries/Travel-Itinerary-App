@@ -1217,7 +1217,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c4/Kiira_rafting_in_uganda_is_the_best.jpg/960px-Kiira_rafting_in_uganda_is_the_best.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Kiira rafting in uganda is the best.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Kiira_rafting_in_uganda_is_the_best.jpg",
+          "license": "CC0",
+          "author": "Ypstudio",
+          "selection": "ai"
+        }
       },
       "uganda/murchison-falls": {
         "name": "Murchison Falls National Park",
@@ -1255,7 +1264,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5e/Wild_Life_at_the_banks_of_Kazinga_channel%2C_Queen_Elizabeth_National_Park_07.jpg/960px-Wild_Life_at_the_banks_of_Kazinga_channel%2C_Queen_Elizabeth_National_Park_07.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Wild Life at the banks of Kazinga channel, Queen Elizabeth National Park 07.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Wild_Life_at_the_banks_of_Kazinga_channel,_Queen_Elizabeth_National_Park_07.jpg",
+          "license": "CC0",
+          "author": "Alvinategyeka",
+          "selection": "ai"
+        }
       },
       "uganda/bwindi-gorillas": {
         "name": "Bwindi mountain gorilla trek",
@@ -1281,7 +1299,16 @@
           "authentic_local"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1d/Lake_Bunyonyi_Rock_Resort%2C_Kabale_City%2C_Uganda.jpg/960px-Lake_Bunyonyi_Rock_Resort%2C_Kabale_City%2C_Uganda.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Lake Bunyonyi Rock Resort, Kabale City, Uganda.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Lake_Bunyonyi_Rock_Resort,_Kabale_City,_Uganda.jpg",
+          "license": "CC0",
+          "author": "none",
+          "selection": "ai"
+        }
       },
       "uganda/kampala-city": {
         "name": "Kampala Kasubi Tombs and markets",
@@ -1292,7 +1319,16 @@
           "authentic_local"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/45/Kasubi_tombs.JPG/960px-Kasubi_tombs.JPG",
+          "width": 960,
+          "height": 648,
+          "title": "File:Kasubi tombs.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Kasubi_tombs.JPG",
+          "license": "Public domain",
+          "author": "Karl.Mustermann",
+          "selection": "ai"
+        }
       }
     },
     "destinations": {
@@ -1314,7 +1350,18 @@
       "uganda/murchison-falls": {
         "name": "Murchison Falls",
         "description": "A Nile gorge and national park.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/bb/Murchison_Falls_-_by_Boschlech.jpg/960px-Murchison_Falls_-_by_Boschlech.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Murchison Falls - by Boschlech.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Murchison_Falls_-_by_Boschlech.jpg",
+            "license": "Public domain",
+            "author": "Boschlech",
+            "selection": "ai"
+          }
+        ]
       },
       "uganda/kibale": {
         "name": "Kibale",
@@ -1324,7 +1371,18 @@
       "uganda/queen-elizabeth": {
         "name": "Queen Elizabeth",
         "description": "A savannah park and channel.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/93/Salt_Lake_in_Queen_Elizabeth_National_Park_Uganda_04.jpg/960px-Salt_Lake_in_Queen_Elizabeth_National_Park_Uganda_04.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:Salt Lake in Queen Elizabeth National Park Uganda 04.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Salt_Lake_in_Queen_Elizabeth_National_Park_Uganda_04.jpg",
+            "license": "CC0",
+            "author": "Alvinategyeka",
+            "selection": "ai"
+          }
+        ]
       },
       "uganda/bwindi": {
         "name": "Bwindi",
@@ -1334,7 +1392,18 @@
       "uganda/lake-bunyonyi": {
         "name": "Lake Bunyonyi",
         "description": "A highland lake of islands.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1d/Lake_Bunyonyi_Rock_Resort%2C_Kabale_City%2C_Uganda.jpg/960px-Lake_Bunyonyi_Rock_Resort%2C_Kabale_City%2C_Uganda.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Lake Bunyonyi Rock Resort, Kabale City, Uganda.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Lake_Bunyonyi_Rock_Resort,_Kabale_City,_Uganda.jpg",
+            "license": "CC0",
+            "author": "none",
+            "selection": "ai"
+          }
+        ]
       }
     }
   }

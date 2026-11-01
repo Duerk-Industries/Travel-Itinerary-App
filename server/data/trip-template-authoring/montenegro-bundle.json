@@ -921,7 +921,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/93/Kotor_Old_Town.JPG/960px-Kotor_Old_Town.JPG",
+          "width": 960,
+          "height": 643,
+          "title": "File:Kotor Old Town.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Kotor_Old_Town.JPG",
+          "license": "Public domain",
+          "author": "Bilardwmeczecie",
+          "selection": "ai"
+        }
       },
       "montenegro/perast-rocks": {
         "name": "Perast and Our Lady of the Rocks",
@@ -933,7 +942,16 @@
           "relax"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f5/R.K.C._Gospa_od_%C5%A0krpjela%2C_Perast%2C_Montenegro.jpg/960px-R.K.C._Gospa_od_%C5%A0krpjela%2C_Perast%2C_Montenegro.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:R.K.C. Gospa od Škrpjela, Perast, Montenegro.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:R.K.C._Gospa_od_%C5%A0krpjela,_Perast,_Montenegro.jpg",
+          "license": "CC0",
+          "author": "Tumi-1983",
+          "selection": "ai"
+        }
       },
       "montenegro/budva-sveti-stefan": {
         "name": "Budva old town and Sveti Stefan",
@@ -945,7 +963,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2e/Old_Town_Budva%2C_Montenegro.jpg/960px-Old_Town_Budva%2C_Montenegro.jpg",
+          "width": 960,
+          "height": 637,
+          "title": "File:Old Town Budva, Montenegro.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Old_Town_Budva,_Montenegro.jpg",
+          "license": "CC0",
+          "author": "otrow_photography",
+          "selection": "ai"
+        }
       },
       "montenegro/lovcen-cetinje": {
         "name": "Lovcen National Park and Cetinje",
@@ -982,7 +1009,16 @@
           "authentic_local"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a5/Lake_Skadar_from_Shirok%C3%AB_beach.jpg/960px-Lake_Skadar_from_Shirok%C3%AB_beach.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Lake Skadar from Shirokë beach.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Lake_Skadar_from_Shirok%C3%AB_beach.jpg",
+          "license": "Public domain",
+          "author": "Belgian man",
+          "selection": "ai"
+        }
       },
       "montenegro/durmitor-tara": {
         "name": "Durmitor National Park and Tara Canyon",
@@ -1019,22 +1055,66 @@
       "montenegro/kotor": {
         "name": "Kotor",
         "description": "A medieval walled town at the head of a bay.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1b/DSC-0309-kotor-old-town-montenegro-july-2017-003.jpg/960px-DSC-0309-kotor-old-town-montenegro-july-2017-003.jpg",
+            "width": 960,
+            "height": 636,
+            "title": "File:DSC-0309-kotor-old-town-montenegro-july-2017-003.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:DSC-0309-kotor-old-town-montenegro-july-2017-003.jpg",
+            "license": "CC0",
+            "author": "Rakoon",
+            "selection": "ai"
+          }
+        ]
       },
       "montenegro/budva": {
         "name": "Budva",
         "description": "The coastal resort with an old town and beaches.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2e/Old_Town_Budva%2C_Montenegro.jpg/960px-Old_Town_Budva%2C_Montenegro.jpg",
+            "width": 960,
+            "height": 637,
+            "title": "File:Old Town Budva, Montenegro.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Old_Town_Budva,_Montenegro.jpg",
+            "license": "CC0",
+            "author": "otrow_photography",
+            "selection": "ai"
+          }
+        ]
       },
       "montenegro/zabljak": {
         "name": "Zabljak",
         "description": "A mountain town, gateway to Durmitor National Park.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5b/Zabljak.jpg/960px-Zabljak.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Zabljak.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Zabljak.jpg",
+            "license": "Public domain",
+            "author": "Rybioko",
+            "selection": "ai"
+          }
+        ]
       },
       "montenegro/ulcinj": {
         "name": "Ulcinj",
         "description": "The southern beach town with Ottoman charm.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/af/Western_panoramic_view_of_Ulcinj_from_the_castle.jpg/960px-Western_panoramic_view_of_Ulcinj_from_the_castle.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Western panoramic view of Ulcinj from the castle.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Western_panoramic_view_of_Ulcinj_from_the_castle.jpg",
+            "license": "CC0",
+            "author": "Desnosie",
+            "selection": "ai"
+          }
+        ]
       }
     }
   }

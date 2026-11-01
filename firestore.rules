@@ -209,6 +209,15 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    match /getyourguide_tours/{tourId} {
+      allow read, write: if false;
+    }
+
+    match /item_ratings/{ratingId} {
+      allow read: if canReadTripById(resource.data.tripId);
+      allow write: if false;
+    }
+
     match /trip_activity/{activityId} {
       allow read: if canReadTripById(resource.data.tripId);
       allow write: if false;

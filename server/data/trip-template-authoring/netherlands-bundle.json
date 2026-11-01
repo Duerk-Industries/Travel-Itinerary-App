@@ -1018,7 +1018,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f6/Amsterdam_Westerkerk_canal_view.jpg/960px-Amsterdam_Westerkerk_canal_view.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Amsterdam Westerkerk canal view.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Amsterdam_Westerkerk_canal_view.jpg",
+          "license": "CC0",
+          "author": "neshom",
+          "selection": "ai"
+        }
       },
       "netherlands/rijksmuseum-van-gogh": {
         "name": "Rijksmuseum and Van Gogh Museum",
@@ -1065,7 +1074,16 @@
           "relax"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/30/Windmills_at_Zaanse_Schans%2C_Zaanstad%2C_2022.jpg/960px-Windmills_at_Zaanse_Schans%2C_Zaanstad%2C_2022.jpg",
+          "width": 960,
+          "height": 638,
+          "title": "File:Windmills at Zaanse Schans, Zaanstad, 2022.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Windmills_at_Zaanse_Schans,_Zaanstad,_2022.jpg",
+          "license": "CC0",
+          "author": "DimiTalen",
+          "selection": "ai"
+        }
       },
       "netherlands/haarlem": {
         "name": "Haarlem old town and Frans Hals Museum",
@@ -1089,7 +1107,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a0/Digital_Delft_Blue_Painting_Robot_in_Royal_Delft_2024-12-02.jpg/960px-Digital_Delft_Blue_Painting_Robot_in_Royal_Delft_2024-12-02.jpg",
+          "width": 960,
+          "height": 723,
+          "title": "File:Digital Delft Blue Painting Robot in Royal Delft 2024-12-02.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Digital_Delft_Blue_Painting_Robot_in_Royal_Delft_2024-12-02.jpg",
+          "license": "CC0",
+          "author": "Andy Li",
+          "selection": "ai"
+        }
       },
       "netherlands/rotterdam": {
         "name": "Rotterdam Markthal, Cube Houses and harbour",
@@ -1102,7 +1129,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/49/Markthal_Rotterdam_2024-12-02.jpg/960px-Markthal_Rotterdam_2024-12-02.jpg",
+          "width": 960,
+          "height": 723,
+          "title": "File:Markthal Rotterdam 2024-12-02.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Markthal_Rotterdam_2024-12-02.jpg",
+          "license": "CC0",
+          "author": "Andy Li",
+          "selection": "ai"
+        }
       },
       "netherlands/kinderdijk": {
         "name": "Kinderdijk windmills",
@@ -1114,7 +1150,16 @@
           "outdoors"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7a/Dutch_windmill_at_Kinderdijk_pic28.JPG/960px-Dutch_windmill_at_Kinderdijk_pic28.JPG",
+          "width": 960,
+          "height": 720,
+          "title": "File:Dutch windmill at Kinderdijk pic28.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Dutch_windmill_at_Kinderdijk_pic28.JPG",
+          "license": "CC0",
+          "author": "Alf van Beem",
+          "selection": "ai"
+        }
       },
       "netherlands/utrecht": {
         "name": "Utrecht canals and Dom Tower",
@@ -1127,7 +1172,16 @@
           "food"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/46/Oudegracht_%28old_canal%29_in_Utrecht.jpg/960px-Oudegracht_%28old_canal%29_in_Utrecht.jpg",
+          "width": 960,
+          "height": 642,
+          "title": "File:Oudegracht (old canal) in Utrecht.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Oudegracht_(old_canal)_in_Utrecht.jpg",
+          "license": "CC0",
+          "author": "Robert von Oliva (naruciakk)",
+          "selection": "ai"
+        }
       },
       "netherlands/giethoorn": {
         "name": "Giethoorn canal village",
@@ -1139,14 +1193,34 @@
           "authentic_local"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/45/20131030_Giethoorn_Binnenpad.jpg/960px-20131030_Giethoorn_Binnenpad.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:20131030 Giethoorn Binnenpad.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:20131030_Giethoorn_Binnenpad.jpg",
+          "license": "CC0",
+          "author": "Gouwenaar",
+          "selection": "ai"
+        }
       }
     },
     "destinations": {
       "netherlands": {
         "name": "Netherlands",
         "description": "A flat, canal-laced country of windmills, tulips, art and cycling.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/15/Netherlands_Kinderdike_1996.png/960px-Netherlands_Kinderdike_1996.png",
+            "width": 960,
+            "height": 709,
+            "title": "File:Netherlands Kinderdike 1996.png",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Netherlands_Kinderdike_1996.png",
+            "license": "CC0",
+            "author": "JohnVerburg",
+            "selection": "ai"
+          }
+        ]
       },
       "netherlands/north-holland": {
         "name": "North Holland",
@@ -1161,7 +1235,18 @@
       "netherlands/haarlem": {
         "name": "Haarlem",
         "description": "A calm old town near the dunes.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d5/Haarlem_Bakenessergracht_Overzicht_2.JPG/960px-Haarlem_Bakenessergracht_Overzicht_2.JPG",
+            "width": 960,
+            "height": 699,
+            "title": "File:Haarlem Bakenessergracht Overzicht 2.JPG",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Haarlem_Bakenessergracht_Overzicht_2.JPG",
+            "license": "CC0",
+            "author": "Torsade de Pointes",
+            "selection": "ai"
+          }
+        ]
       },
       "netherlands/south-holland": {
         "name": "South Holland",
@@ -1186,7 +1271,18 @@
       "netherlands/giethoorn": {
         "name": "Giethoorn",
         "description": "A village without roads.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/62/Gezicht_op_Giethoorn%2C_Overijssel%2C_RP-F-00-5866-49.jpg/960px-Gezicht_op_Giethoorn%2C_Overijssel%2C_RP-F-00-5866-49.jpg",
+            "width": 960,
+            "height": 658,
+            "title": "File:Gezicht op Giethoorn, Overijssel, RP-F-00-5866-49.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Gezicht_op_Giethoorn,_Overijssel,_RP-F-00-5866-49.jpg",
+            "license": "CC0",
+            "author": "Rijksmuseum",
+            "selection": "ai"
+          }
+        ]
       }
     }
   }

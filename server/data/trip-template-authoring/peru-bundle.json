@@ -2524,7 +2524,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5b/Edificio_Oeschle.jpg/960px-Edificio_Oeschle.jpg",
+          "width": 960,
+          "height": 703,
+          "title": "File:Edificio Oeschle.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Edificio_Oeschle.jpg",
+          "license": "Public domain",
+          "author": "Unknown authorUnknown author",
+          "selection": "ai"
+        }
       },
       "peru/miraflores-malecon": {
         "name": "Miraflores Malecón",
@@ -2549,7 +2558,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/db/Puente_de_los_Suspiros%2C_Barranco_-_siglo_XX.png/960px-Puente_de_los_Suspiros%2C_Barranco_-_siglo_XX.png",
+          "width": 960,
+          "height": 688,
+          "title": "File:Puente de los Suspiros, Barranco - siglo XX.png",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Puente_de_los_Suspiros,_Barranco_-_siglo_XX.png",
+          "license": "Public domain",
+          "author": "Unknown authorUnknown author",
+          "selection": "ai"
+        }
       },
       "peru/larco-museum": {
         "name": "Larco Museum",
@@ -2560,7 +2578,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/02/Storage_Gallery.jpg/960px-Storage_Gallery.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Storage Gallery.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Storage_Gallery.jpg",
+          "license": "Public domain",
+          "author": "Lyndsay Ruell",
+          "selection": "ai"
+        }
       },
       "peru/lima-ceviche": {
         "name": "Ceviche in Lima",
@@ -2571,7 +2598,16 @@
           "authentic_local"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/27/Ceviche_at_Peru.jpg/960px-Ceviche_at_Peru.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Ceviche at Peru.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Ceviche_at_Peru.jpg",
+          "license": "CC0",
+          "author": "ProjectManhattan",
+          "selection": "ai"
+        }
       },
       "peru/huaca-pucllana": {
         "name": "Huaca Pucllana",
@@ -2583,7 +2619,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/59/Huaca_pucllana_2009_1.JPG/960px-Huaca_pucllana_2009_1.JPG",
+          "width": 960,
+          "height": 720,
+          "title": "File:Huaca pucllana 2009 1.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Huaca_pucllana_2009_1.JPG",
+          "license": "Public domain",
+          "author": "Pallares1",
+          "selection": "ai"
+        }
       },
       "peru/cusco-plaza-de-armas": {
         "name": "Cusco Plaza de Armas",
@@ -2595,7 +2640,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2d/The_Plaza_de_Armas_of_Cusco.jpg/960px-The_Plaza_de_Armas_of_Cusco.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:The Plaza de Armas of Cusco.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:The_Plaza_de_Armas_of_Cusco.jpg",
+          "license": "Public domain",
+          "author": "Entropy1963",
+          "selection": "ai"
+        }
       },
       "peru/qorikancha": {
         "name": "Qorikancha",
@@ -2606,7 +2660,16 @@
           "iconic_landmarks"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/97/Qurikancha_room.jpg/960px-Qurikancha_room.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Qurikancha room.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Qurikancha_room.jpg",
+          "license": "CC0",
+          "author": "WMrapids",
+          "selection": "ai"
+        }
       },
       "peru/sacsayhuaman": {
         "name": "Sacsayhuamán",
@@ -2618,7 +2681,16 @@
           "outdoors"
         ],
         "mobility": "H",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/dd/Sacsayhuam%C3%A1n_walls.jpg/960px-Sacsayhuam%C3%A1n_walls.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Sacsayhuamán walls.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Sacsayhuam%C3%A1n_walls.jpg",
+          "license": "Public domain",
+          "author": "Esoltas",
+          "selection": "ai"
+        }
       },
       "peru/san-pedro-market": {
         "name": "San Pedro Market",
@@ -2666,7 +2738,16 @@
           "authentic_local"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/da/Lyon_7e_-_Rue_de_la_Thibaudi%C3%A8re_-_Restaurant_Krioya_-_Pisco_sour_%28cocktail%29.jpg/960px-Lyon_7e_-_Rue_de_la_Thibaudi%C3%A8re_-_Restaurant_Krioya_-_Pisco_sour_%28cocktail%29.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Lyon 7e - Rue de la Thibaudière - Restaurant Krioya - Pisco sour (cocktail).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Lyon_7e_-_Rue_de_la_Thibaudi%C3%A8re_-_Restaurant_Krioya_-_Pisco_sour_(cocktail).jpg",
+          "license": "CC0",
+          "author": "Romainbehar",
+          "selection": "ai"
+        }
       },
       "peru/sacred-valley-overview": {
         "name": "Sacred Valley of the Incas",
@@ -2690,7 +2771,16 @@
           "photography"
         ],
         "mobility": "H",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/df/Intihuatana_ruins_at_Pisac%2C_Peru.jpg/960px-Intihuatana_ruins_at_Pisac%2C_Peru.jpg",
+          "width": 960,
+          "height": 593,
+          "title": "File:Intihuatana ruins at Pisac, Peru.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Intihuatana_ruins_at_Pisac,_Peru.jpg",
+          "license": "Public domain",
+          "author": "Unknown",
+          "selection": "ai"
+        }
       },
       "peru/ollantaytambo-ruins": {
         "name": "Ollantaytambo",
@@ -2702,7 +2792,16 @@
           "outdoors"
         ],
         "mobility": "H",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3c/Town_of_Ollantaytambo.jpg/960px-Town_of_Ollantaytambo.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Town of Ollantaytambo.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Town_of_Ollantaytambo.jpg",
+          "license": "CC0",
+          "author": "Mx._Granger",
+          "selection": "ai"
+        }
       },
       "peru/moray-maras": {
         "name": "Moray and the Maras salt pans",
@@ -2714,7 +2813,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0b/Moray_Maras_and_Chicon.jpg/960px-Moray_Maras_and_Chicon.jpg",
+          "width": 960,
+          "height": 539,
+          "title": "File:Moray Maras and Chicon.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Moray_Maras_and_Chicon.jpg",
+          "license": "CC0",
+          "author": "Carlos Olaizola",
+          "selection": "ai"
+        }
       },
       "peru/chinchero-weaving": {
         "name": "Chinchero weaving demonstration",
@@ -2738,7 +2846,16 @@
           "photography"
         ],
         "mobility": "H",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/da/Peru_Machu_Picchu_Sunrise_2.jpg/960px-Peru_Machu_Picchu_Sunrise_2.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Peru Machu Picchu Sunrise 2.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Peru_Machu_Picchu_Sunrise_2.jpg",
+          "license": "Public domain",
+          "author": "Allard Schmidt (The Netherlands)",
+          "selection": "ai"
+        }
       },
       "peru/huayna-picchu": {
         "name": "Huayna Picchu",
@@ -2750,7 +2867,16 @@
           "photography"
         ],
         "mobility": "H",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/44/Huayna_Picchu.jpg/960px-Huayna_Picchu.jpg",
+          "width": 960,
+          "height": 730,
+          "title": "File:Huayna Picchu.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Huayna_Picchu.jpg",
+          "license": "Public domain",
+          "author": "Allard Schmidt (The Netherlands)",
+          "selection": "ai"
+        }
       },
       "peru/aguas-calientes": {
         "name": "Aguas Calientes",
@@ -2761,7 +2887,16 @@
           "relax"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/62/Aguas_calientes-4.jpg/960px-Aguas_calientes-4.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Aguas calientes-4.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Aguas_calientes-4.jpg",
+          "license": "Public domain",
+          "author": "Bgabel",
+          "selection": "ai"
+        }
       },
       "peru/rainbow-mountain": {
         "name": "Vinicunca (Rainbow Mountain)",
@@ -2773,7 +2908,16 @@
           "photography"
         ],
         "mobility": "H",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1e/Rainbow_Mountain_Peru.jpg/960px-Rainbow_Mountain_Peru.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Rainbow Mountain Peru.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Rainbow_Mountain_Peru.jpg",
+          "license": "CC0",
+          "author": "MareikeHeuer(WMDE)",
+          "selection": "ai"
+        }
       },
       "peru/arequipa-plaza-de-armas": {
         "name": "Arequipa Plaza de Armas",
@@ -2785,7 +2929,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/23/Arequipa_Plaza3.jpg/960px-Arequipa_Plaza3.jpg",
+          "width": 960,
+          "height": 540,
+          "title": "File:Arequipa Plaza3.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Arequipa_Plaza3.jpg",
+          "license": "CC0",
+          "author": "Laslamedas40",
+          "selection": "ai"
+        }
       },
       "peru/santa-catalina-monastery": {
         "name": "Santa Catalina Monastery",
@@ -2830,7 +2983,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/ba/Colca_Canyon%2C_Chivay%2C_Peru_%28Unsplash%29.jpg/960px-Colca_Canyon%2C_Chivay%2C_Peru_%28Unsplash%29.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Colca Canyon, Chivay, Peru (Unsplash).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Colca_Canyon,_Chivay,_Peru_(Unsplash).jpg",
+          "license": "CC0",
+          "author": "Nad Hemnani santtd",
+          "selection": "ai"
+        }
       },
       "peru/cruz-del-condor": {
         "name": "Cruz del Cóndor",
@@ -2864,7 +3026,16 @@
           "authentic_local"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/db/Lake_Titicaca_%28Unsplash_JbiN3xQ5efk%29.jpg/960px-Lake_Titicaca_%28Unsplash_JbiN3xQ5efk%29.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Lake Titicaca (Unsplash JbiN3xQ5efk).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Lake_Titicaca_(Unsplash_JbiN3xQ5efk).jpg",
+          "license": "CC0",
+          "author": "Paul Summers somonesummers",
+          "selection": "ai"
+        }
       },
       "peru/uros-floating-islands": {
         "name": "Uros floating islands",
@@ -2876,7 +3047,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/66/Photo_-_Floating_Islands_%28Puno%2C_Peru%29.JPG/960px-Photo_-_Floating_Islands_%28Puno%2C_Peru%29.JPG",
+          "width": 960,
+          "height": 720,
+          "title": "File:Photo - Floating Islands (Puno, Peru).JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Photo_-_Floating_Islands_(Puno,_Peru).JPG",
+          "license": "Public domain",
+          "author": "Jpduchesneau",
+          "selection": "ai"
+        }
       },
       "peru/taquile-island": {
         "name": "Taquile Island",
@@ -2900,7 +3080,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9d/Sillustani_%281%29.jpg/960px-Sillustani_%281%29.jpg",
+          "width": 960,
+          "height": 761,
+          "title": "File:Sillustani (1).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Sillustani_(1).jpg",
+          "license": "Public domain",
+          "author": "Bcasterline at English Wikipedia",
+          "selection": "ai"
+        }
       },
       "peru/tambopata-lodge": {
         "name": "Tambopata jungle lodge",
@@ -2912,7 +3101,16 @@
           "relax"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/92/TambopataRiver.JPG/960px-TambopataRiver.JPG",
+          "width": 960,
+          "height": 720,
+          "title": "File:TambopataRiver.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:TambopataRiver.JPG",
+          "license": "Public domain",
+          "author": "PalestinaPeru",
+          "selection": "ai"
+        }
       },
       "peru/amazon-canopy-walk": {
         "name": "Amazon canopy walkway",
@@ -2975,7 +3173,18 @@
       "peru/cusco": {
         "name": "Cusco",
         "description": "The former Inca capital high in the Andes, where colonial churches sit on Inca foundations and most Machu Picchu trips begin.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ef/Cusco_Peru_Hillside.jpg/960px-Cusco_Peru_Hillside.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Cusco Peru Hillside.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Cusco_Peru_Hillside.jpg",
+            "license": "Public domain",
+            "author": "Allyson Hoffman (Allyson Hoffman)",
+            "selection": "ai"
+          }
+        ]
       },
       "peru/sacred-valley": {
         "name": "Sacred Valley",
@@ -2990,17 +3199,50 @@
       "peru/ollantaytambo": {
         "name": "Ollantaytambo",
         "description": "A Sacred Valley town still on its original Inca street plan, below a steep terraced fortress, and the main railhead for Machu Picchu.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3c/Town_of_Ollantaytambo.jpg/960px-Town_of_Ollantaytambo.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Town of Ollantaytambo.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Town_of_Ollantaytambo.jpg",
+            "license": "CC0",
+            "author": "Mx._Granger",
+            "selection": "ai"
+          }
+        ]
       },
       "peru/aguas-calientes": {
         "name": "Aguas Calientes",
         "description": "The town in the gorge directly below Machu Picchu, reached only by train or on foot.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/62/Aguas_calientes-4.jpg/960px-Aguas_calientes-4.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Aguas calientes-4.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Aguas_calientes-4.jpg",
+            "license": "Public domain",
+            "author": "Bgabel",
+            "selection": "ai"
+          }
+        ]
       },
       "peru/machu-picchu": {
         "name": "Machu Picchu",
         "description": "The Inca citadel on a high ridge above the Urubamba river, abandoned in the sixteenth century and never found by the Spanish.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/da/Peru_Machu_Picchu_Sunrise_2.jpg/960px-Peru_Machu_Picchu_Sunrise_2.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Peru Machu Picchu Sunrise 2.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Peru_Machu_Picchu_Sunrise_2.jpg",
+            "license": "Public domain",
+            "author": "Allard Schmidt (The Netherlands)",
+            "selection": "ai"
+          }
+        ]
       },
       "peru/arequipa": {
         "name": "Arequipa",
@@ -3010,7 +3252,18 @@
       "peru/colca-canyon": {
         "name": "Colca Canyon",
         "description": "A deep terraced canyon north of Arequipa, farmed since pre-Inca times and known for close views of Andean condors.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/ba/Colca_Canyon%2C_Chivay%2C_Peru_%28Unsplash%29.jpg/960px-Colca_Canyon%2C_Chivay%2C_Peru_%28Unsplash%29.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:Colca Canyon, Chivay, Peru (Unsplash).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Colca_Canyon,_Chivay,_Peru_(Unsplash).jpg",
+            "license": "CC0",
+            "author": "Nad Hemnani santtd",
+            "selection": "ai"
+          }
+        ]
       },
       "peru/puno": {
         "name": "Puno",
@@ -3020,12 +3273,34 @@
       "peru/lake-titicaca": {
         "name": "Lake Titicaca",
         "description": "A vast lake on the Peru–Bolivia altiplano at around 3,810 metres, the highest in the world with commercial navigation.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/db/Lake_Titicaca_%28Unsplash_JbiN3xQ5efk%29.jpg/960px-Lake_Titicaca_%28Unsplash_JbiN3xQ5efk%29.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:Lake Titicaca (Unsplash JbiN3xQ5efk).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Lake_Titicaca_(Unsplash_JbiN3xQ5efk).jpg",
+            "license": "CC0",
+            "author": "Paul Summers somonesummers",
+            "selection": "ai"
+          }
+        ]
       },
       "peru/madre-de-dios": {
         "name": "Madre de Dios",
         "description": "Peru's south-eastern Amazon region, of lowland rainforest, river lodges and some of the most biodiverse protected land in the country.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c2/Rio_Madre_de_Dios%2C_Peru.JPG/960px-Rio_Madre_de_Dios%2C_Peru.JPG",
+            "width": 960,
+            "height": 720,
+            "title": "File:Rio Madre de Dios, Peru.JPG",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Rio_Madre_de_Dios,_Peru.JPG",
+            "license": "Public domain",
+            "author": "Roosevelt Garcia",
+            "selection": "ai"
+          }
+        ]
       },
       "peru/puerto-maldonado": {
         "name": "Puerto Maldonado",

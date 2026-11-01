@@ -4,7 +4,6 @@ import { parseDto, DtoValidationError } from '../src/utils/dtoParse';
 import {
   createCarRentalDto,
   updateCarRentalDto,
-  voteOrRatingDto,
 } from '../src/routes/carRentalDtos';
 
 const expectValidationError = (fn: () => unknown, regex?: RegExp) => {
@@ -81,23 +80,3 @@ describe('updateCarRentalDto', () => {
   });
 });
 
-describe('voteOrRatingDto', () => {
-  it('accepts 1 and -1 as numbers', () => {
-    expect(parseDto(voteOrRatingDto, { value: 1 }).value).toBe(1);
-    expect(parseDto(voteOrRatingDto, { value: -1 }).value).toBe(-1);
-  });
-
-  it('accepts "1" and "-1" as strings', () => {
-    expect(parseDto(voteOrRatingDto, { value: '1' }).value).toBe(1);
-    expect(parseDto(voteOrRatingDto, { value: '-1' }).value).toBe(-1);
-  });
-
-  it('rejects other numeric values', () => {
-    expectValidationError(() => parseDto(voteOrRatingDto, { value: 0 }));
-    expectValidationError(() => parseDto(voteOrRatingDto, { value: 2 }));
-  });
-
-  it('rejects a missing value field', () => {
-    expectValidationError(() => parseDto(voteOrRatingDto, {}));
-  });
-});

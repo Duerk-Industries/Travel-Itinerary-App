@@ -1245,7 +1245,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e0/Grand_Place_1-7%2C_Brussels%2C_Belgium.jpg/960px-Grand_Place_1-7%2C_Brussels%2C_Belgium.jpg",
+          "width": 960,
+          "height": 591,
+          "title": "File:Grand Place 1-7, Brussels, Belgium.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Grand_Place_1-7,_Brussels,_Belgium.jpg",
+          "license": "CC0",
+          "author": "Julian Lupyan",
+          "selection": "ai"
+        }
       },
       "belgium/brussels-museums": {
         "name": "Magritte Museum and comic-strip walls",
@@ -1257,7 +1266,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/83/Mus%C3%A9e_Magritte%2C_Brussels%2C_in_June_2016.jpg/960px-Mus%C3%A9e_Magritte%2C_Brussels%2C_in_June_2016.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Musée Magritte, Brussels, in June 2016.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Mus%C3%A9e_Magritte,_Brussels,_in_June_2016.jpg",
+          "license": "CC0",
+          "author": "Mx. Granger",
+          "selection": "ai"
+        }
       },
       "belgium/atomium": {
         "name": "Atomium",
@@ -1268,7 +1286,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1c/Atomium_-_Brussels%2C_Belgium_-_DSC07664.jpg/960px-Atomium_-_Brussels%2C_Belgium_-_DSC07664.jpg",
+          "width": 960,
+          "height": 668,
+          "title": "File:Atomium - Brussels, Belgium - DSC07664.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Atomium_-_Brussels,_Belgium_-_DSC07664.jpg",
+          "license": "CC0",
+          "author": "Daderot",
+          "selection": "ai"
+        }
       },
       "belgium/chocolate-beer": {
         "name": "Belgian chocolate and beer tasting",
@@ -1292,7 +1319,16 @@
           "culture"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/14/Brugge_Halletoren_en_groote_Markt._Bruges_Beffroi_et_Grand%27Place._%282%29.jpg/960px-Brugge_Halletoren_en_groote_Markt._Bruges_Beffroi_et_Grand%27Place._%282%29.jpg",
+          "width": 960,
+          "height": 601,
+          "title": "File:Brugge Halletoren en groote Markt. Bruges Beffroi et Grand'Place. (2).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Brugge_Halletoren_en_groote_Markt._Bruges_Beffroi_et_Grand%27Place._(2).jpg",
+          "license": "Public domain",
+          "author": "Unknown authorUnknown author",
+          "selection": "ai"
+        }
       },
       "belgium/bruges-canal-boat": {
         "name": "Bruges canal boat tour",
@@ -1304,7 +1340,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/79/Canal_in_Bruges_1.jpg/960px-Canal_in_Bruges_1.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Canal in Bruges 1.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Canal_in_Bruges_1.jpg",
+          "license": "Public domain",
+          "author": "Tony Grist",
+          "selection": "ai"
+        }
       },
       "belgium/begijnhof": {
         "name": "Begijnhof and Minnewater",
@@ -1339,7 +1384,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/33/Gravensteen%2C_Ghent.jpg/960px-Gravensteen%2C_Ghent.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Gravensteen, Ghent.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Gravensteen,_Ghent.jpg",
+          "license": "CC0",
+          "author": "Poliphilo",
+          "selection": "ai"
+        }
       },
       "belgium/ghent-altarpiece": {
         "name": "St Bavo Cathedral and the Ghent Altarpiece",
@@ -1362,7 +1416,16 @@
           "relax"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/85/The_Graslei%2C_Gent.jpg/960px-The_Graslei%2C_Gent.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:The Graslei, Gent.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:The_Graslei,_Gent.jpg",
+          "license": "CC0",
+          "author": "Poliphilo",
+          "selection": "ai"
+        }
       },
       "belgium/antwerp-cathedral": {
         "name": "Cathedral of Our Lady and Rubens",
@@ -1428,12 +1491,34 @@
       "belgium/bruges": {
         "name": "Bruges",
         "description": "A medieval canal town with a belfry and cobbled lanes.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9c/Bruges_Christmas_market_2013.jpg/960px-Bruges_Christmas_market_2013.jpg",
+            "width": 960,
+            "height": 638,
+            "title": "File:Bruges Christmas market 2013.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Bruges_Christmas_market_2013.jpg",
+            "license": "CC0",
+            "author": "DimiTalen",
+            "selection": "ai"
+          }
+        ]
       },
       "belgium/ghent": {
         "name": "Ghent",
         "description": "A lively canal city with a castle and the Van Eyck altarpiece.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f3/View_of_the_Three_Towers_from_De_Krook%2C_Ghent%2C_2026.jpg/960px-View_of_the_Three_Towers_from_De_Krook%2C_Ghent%2C_2026.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:View of the Three Towers from De Krook, Ghent, 2026.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:View_of_the_Three_Towers_from_De_Krook,_Ghent,_2026.jpg",
+            "license": "CC0",
+            "author": "DimiTalen",
+            "selection": "ai"
+          }
+        ]
       },
       "belgium/antwerp": {
         "name": "Antwerp",

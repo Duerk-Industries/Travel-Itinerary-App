@@ -2506,7 +2506,16 @@
           "nightlife"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d0/Tuk-tuk_and_busy_street_life_under_a_red_Chinese_gate_in_Chinatown%2C_Bangkok.jpg/960px-Tuk-tuk_and_busy_street_life_under_a_red_Chinese_gate_in_Chinatown%2C_Bangkok.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Tuk-tuk and busy street life under a red Chinese gate in Chinatown, Bangkok.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Tuk-tuk_and_busy_street_life_under_a_red_Chinese_gate_in_Chinatown,_Bangkok.jpg",
+          "license": "CC0",
+          "author": "Mussi Katz",
+          "selection": "ai"
+        }
       },
       "thailand/grand-palace": {
         "name": "Grand Palace and Wat Phra Kaew",
@@ -2518,7 +2527,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7c/Thai_Grand_Palace%2C_Bangkok_%2845433715204%29.jpg/960px-Thai_Grand_Palace%2C_Bangkok_%2845433715204%29.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Thai Grand Palace, Bangkok (45433715204).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Thai_Grand_Palace,_Bangkok_(45433715204).jpg",
+          "license": "CC0",
+          "author": "Gary Todd from Xinzheng, China",
+          "selection": "ai"
+        }
       },
       "thailand/wat-pho": {
         "name": "Wat Pho",
@@ -2542,7 +2560,16 @@
           "photography"
         ],
         "mobility": "H",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/6f/Temple_Wat_Arun_1.jpg/960px-Temple_Wat_Arun_1.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Temple Wat Arun 1.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Temple_Wat_Arun_1.jpg",
+          "license": "CC0",
+          "author": "Welcome to Thailand",
+          "selection": "ai"
+        }
       },
       "thailand/chao-phraya-ferry": {
         "name": "Chao Phraya river ferry",
@@ -2554,7 +2581,16 @@
           "authentic_local"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7c/Bangkok_water_transport_on_the_Chao_Phraya_river._%2810417158085%29.jpg/960px-Bangkok_water_transport_on_the_Chao_Phraya_river._%2810417158085%29.jpg",
+          "width": 960,
+          "height": 530,
+          "title": "File:Bangkok water transport on the Chao Phraya river. (10417158085).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Bangkok_water_transport_on_the_Chao_Phraya_river._(10417158085).jpg",
+          "license": "CC0",
+          "author": "Bernard Spragg. NZ from Christchurch, New Zealand",
+          "selection": "ai"
+        }
       },
       "thailand/thonburi-canals": {
         "name": "Thonburi canal tour by longtail boat",
@@ -2577,7 +2613,16 @@
           "relax"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/db/Maison_Jim_Thompson_3.jpg/960px-Maison_Jim_Thompson_3.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Maison Jim Thompson 3.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Maison_Jim_Thompson_3.jpg",
+          "license": "CC0",
+          "author": "Welcome to Thailand",
+          "selection": "ai"
+        }
       },
       "thailand/chatuchak-market": {
         "name": "Chatuchak Weekend Market",
@@ -2589,7 +2634,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b3/Colorful_covered_alley_lined_with_clothing_and_souvenir_stalls_at_Chatuchak_Weekend_Market%2C_Bangkok.jpg/960px-Colorful_covered_alley_lined_with_clothing_and_souvenir_stalls_at_Chatuchak_Weekend_Market%2C_Bangkok.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Colorful covered alley lined with clothing and souvenir stalls at Chatuchak Weekend Market, Bangkok.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Colorful_covered_alley_lined_with_clothing_and_souvenir_stalls_at_Chatuchak_Weekend_Market,_Bangkok.jpg",
+          "license": "CC0",
+          "author": "Mussi Katz",
+          "selection": "ai"
+        }
       },
       "thailand/thai-massage": {
         "name": "Traditional Thai massage",
@@ -2625,7 +2679,16 @@
           "outdoors"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7a/Ayutthaya_Historical_Park_%2832581348898%29.jpg/960px-Ayutthaya_Historical_Park_%2832581348898%29.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Ayutthaya Historical Park (32581348898).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Ayutthaya_Historical_Park_(32581348898).jpg",
+          "license": "CC0",
+          "author": "Gary Todd from Xinzheng, China",
+          "selection": "ai"
+        }
       },
       "thailand/chiang-mai-old-city-temples": {
         "name": "Chiang Mai Old City temples",
@@ -2660,7 +2723,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/81/Wat_Phra_That_Doi_Suthep_D_17.jpg/960px-Wat_Phra_That_Doi_Suthep_D_17.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Wat Phra That Doi Suthep D 17.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Wat_Phra_That_Doi_Suthep_D_17.jpg",
+          "license": "CC0",
+          "author": "Dinkum",
+          "selection": "ai"
+        }
       },
       "thailand/chiang-mai-night-bazaar": {
         "name": "Chiang Mai Night Bazaar",
@@ -2720,7 +2792,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/07/Temple_blanc_Wat_Rong_Khun_1.jpg/960px-Temple_blanc_Wat_Rong_Khun_1.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Temple blanc Wat Rong Khun 1.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Temple_blanc_Wat_Rong_Khun_1.jpg",
+          "license": "CC0",
+          "author": "Welcome to Thailand",
+          "selection": "ai"
+        }
       },
       "thailand/blue-temple": {
         "name": "Wat Rong Suea Ten (Blue Temple)",
@@ -2779,7 +2860,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/13/Railay_beach%2C_Krabi_province%2C_Thailand_2018_2.jpg/960px-Railay_beach%2C_Krabi_province%2C_Thailand_2018_2.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Railay beach, Krabi province, Thailand 2018 2.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Railay_beach,_Krabi_province,_Thailand_2018_2.jpg",
+          "license": "Public domain",
+          "author": "Karelj",
+          "selection": "ai"
+        }
       },
       "thailand/phi-phi-islands": {
         "name": "Phi Phi Islands day trip",
@@ -2791,7 +2881,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4f/Ko_Phi_Phi_Le_in_early_2025_04.jpg/960px-Ko_Phi_Phi_Le_in_early_2025_04.jpg",
+          "width": 960,
+          "height": 540,
+          "title": "File:Ko Phi Phi Le in early 2025 04.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Ko_Phi_Phi_Le_in_early_2025_04.jpg",
+          "license": "CC0",
+          "author": "Renek78",
+          "selection": "ai"
+        }
       },
       "thailand/hong-islands": {
         "name": "Hong Islands boat trip",
@@ -2829,7 +2928,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c0/Phuket_old_town_%2852549766215%29.jpg/960px-Phuket_old_town_%2852549766215%29.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Phuket old town (52549766215).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Phuket_old_town_(52549766215).jpg",
+          "license": "CC0",
+          "author": "Mussi Katz from Israel",
+          "selection": "ai"
+        }
       },
       "thailand/phuket-big-buddha": {
         "name": "Phuket Big Buddha",
@@ -2841,7 +2949,16 @@
           "culture"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/50/Big_Buddha_-_Phuket.jpg/960px-Big_Buddha_-_Phuket.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Big Buddha - Phuket.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Big_Buddha_-_Phuket.jpg",
+          "license": "CC0",
+          "author": "Mussi Katz",
+          "selection": "ai"
+        }
       },
       "thailand/phang-nga-bay": {
         "name": "Phang Nga Bay boat tour",
@@ -2853,7 +2970,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/76/Boat_cruise_in_Phang-nga_%28Unsplash%29.jpg/960px-Boat_cruise_in_Phang-nga_%28Unsplash%29.jpg",
+          "width": 960,
+          "height": 540,
+          "title": "File:Boat cruise in Phang-nga (Unsplash).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Boat_cruise_in_Phang-nga_(Unsplash).jpg",
+          "license": "CC0",
+          "author": "Yap Chin Kuan bergeryap87",
+          "selection": "ai"
+        }
       },
       "thailand/phuket-beach-day": {
         "name": "Beach day on Phuket's west coast",
@@ -2912,24 +3038,66 @@
           "nightlife"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/df/Chaweng_Beach_on_Ko_Samui.JPG/960px-Chaweng_Beach_on_Ko_Samui.JPG",
+          "width": 960,
+          "height": 720,
+          "title": "File:Chaweng Beach on Ko Samui.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Chaweng_Beach_on_Ko_Samui.JPG",
+          "license": "Public domain",
+          "author": "User: (WT-shared) Wipkinger at wts wikivoyage",
+          "selection": "ai"
+        }
       }
     },
     "destinations": {
       "thailand": {
         "name": "Thailand",
         "description": "A country of golden temples, northern mountains, street food and island beaches on two different coasts.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f1/Ayutthaya_Thailand_2004.jpg/960px-Ayutthaya_Thailand_2004.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:Ayutthaya Thailand 2004.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Ayutthaya_Thailand_2004.jpg",
+            "license": "Public domain",
+            "author": "Evilarry",
+            "selection": "ai"
+          }
+        ]
       },
       "thailand/bangkok": {
         "name": "Bangkok",
         "description": "Thailand's sprawling capital, a mix of royal temples, river life, street food and malls that rewards an early start and a lot of water.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/15/Bangkok_%28Thailand%29%2C_Bestanddeelnr_926-0134.jpg/960px-Bangkok_%28Thailand%29%2C_Bestanddeelnr_926-0134.jpg",
+            "width": 960,
+            "height": 620,
+            "title": "File:Bangkok (Thailand), Bestanddeelnr 926-0134.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Bangkok_(Thailand),_Bestanddeelnr_926-0134.jpg",
+            "license": "CC0",
+            "author": "Anefo",
+            "selection": "ai"
+          }
+        ]
       },
       "thailand/ayutthaya": {
         "name": "Ayutthaya",
         "description": "The ruined former capital of Siam, an hour or two north of Bangkok, with brick prangs and temples spread across an island.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f1/Ayutthaya_Thailand_2004.jpg/960px-Ayutthaya_Thailand_2004.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:Ayutthaya Thailand 2004.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Ayutthaya_Thailand_2004.jpg",
+            "license": "Public domain",
+            "author": "Evilarry",
+            "selection": "ai"
+          }
+        ]
       },
       "thailand/chiang-mai": {
         "name": "Chiang Mai",
@@ -2949,17 +3117,50 @@
       "thailand/golden-triangle": {
         "name": "Golden Triangle",
         "description": "The point north of Chiang Rai where Thailand, Laos and Myanmar meet at the confluence of the Mekong and Ruak rivers.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0e/1985_at_Golden_Triangle._Small_boats_on_Mekong_River._Confluence_Ruak_River._Spielvogel_Archiv.jpg/960px-1985_at_Golden_Triangle._Small_boats_on_Mekong_River._Confluence_Ruak_River._Spielvogel_Archiv.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:1985 at Golden Triangle. Small boats on Mekong River. Confluence Ruak River. Spielvogel Archiv.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:1985_at_Golden_Triangle._Small_boats_on_Mekong_River._Confluence_Ruak_River._Spielvogel_Archiv.jpg",
+            "license": "CC0",
+            "author": "For a gallery of some more of my uploaded pictures see: here.",
+            "selection": "ai"
+          }
+        ]
       },
       "thailand/krabi": {
         "name": "Krabi",
         "description": "A province of limestone cliffs, beaches and island boat trips on the Andaman coast, centred on Ao Nang.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/98/Krabi%2C_Thailand_%28Unsplash%29.jpg/960px-Krabi%2C_Thailand_%28Unsplash%29.jpg",
+            "width": 960,
+            "height": 636,
+            "title": "File:Krabi, Thailand (Unsplash).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Krabi,_Thailand_(Unsplash).jpg",
+            "license": "CC0",
+            "author": "Mo Baghdadi playserious",
+            "selection": "ai"
+          }
+        ]
       },
       "thailand/railay-beach": {
         "name": "Railay Beach",
         "description": "A beach peninsula in Krabi reached only by longtail boat, backed by limestone cliffs popular with climbers.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/13/Railay_beach%2C_Krabi_province%2C_Thailand_2018_2.jpg/960px-Railay_beach%2C_Krabi_province%2C_Thailand_2018_2.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:Railay beach, Krabi province, Thailand 2018 2.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Railay_beach,_Krabi_province,_Thailand_2018_2.jpg",
+            "license": "Public domain",
+            "author": "Karelj",
+            "selection": "ai"
+          }
+        ]
       },
       "thailand/koh-phi-phi": {
         "name": "Koh Phi Phi",
@@ -2969,12 +3170,34 @@
       "thailand/phuket": {
         "name": "Phuket",
         "description": "Thailand's largest island, with west-coast beaches, an old Sino-Portuguese town and boat trips into Phang Nga Bay.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/25/Phuket_City.jpg/960px-Phuket_City.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Phuket City.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Phuket_City.jpg",
+            "license": "CC0",
+            "author": "Myinternationalwikipedia",
+            "selection": "ai"
+          }
+        ]
       },
       "thailand/phang-nga-bay": {
         "name": "Phang Nga Bay",
         "description": "A sheltered bay north-east of Phuket studded with limestone islands, caves and sea canoe routes.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/76/Boat_cruise_in_Phang-nga_%28Unsplash%29.jpg/960px-Boat_cruise_in_Phang-nga_%28Unsplash%29.jpg",
+            "width": 960,
+            "height": 540,
+            "title": "File:Boat cruise in Phang-nga (Unsplash).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Boat_cruise_in_Phang-nga_(Unsplash).jpg",
+            "license": "CC0",
+            "author": "Yap Chin Kuan bergeryap87",
+            "selection": "ai"
+          }
+        ]
       },
       "thailand/surat-thani": {
         "name": "Surat Thani",
@@ -2984,7 +3207,18 @@
       "thailand/koh-samui": {
         "name": "Koh Samui",
         "description": "A Gulf of Thailand island of palm-lined beaches, fishing villages and golden temples, driest when the Andaman coast is wet.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/ca/Thailand_Koh_Samui_Island_Beach.jpg/960px-Thailand_Koh_Samui_Island_Beach.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Thailand Koh Samui Island Beach.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Thailand_Koh_Samui_Island_Beach.jpg",
+            "license": "CC0",
+            "author": "fallix",
+            "selection": "ai"
+          }
+        ]
       },
       "thailand/ang-thong-marine-park": {
         "name": "Ang Thong Marine Park",

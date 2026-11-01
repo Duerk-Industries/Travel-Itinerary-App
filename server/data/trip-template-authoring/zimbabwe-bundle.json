@@ -974,7 +974,16 @@
           "outdoors"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a8/Victoria_Falls_The_Smoke_That_Thunders_July_2019.jpg/960px-Victoria_Falls_The_Smoke_That_Thunders_July_2019.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Victoria Falls The Smoke That Thunders July 2019.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Victoria_Falls_The_Smoke_That_Thunders_July_2019.jpg",
+          "license": "CC0",
+          "author": "Stiac H",
+          "selection": "ai"
+        }
       },
       "zimbabwe/zambezi-sunset-cruise": {
         "name": "Zambezi River sunset cruise",
@@ -986,7 +995,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/22/Zambezi_River_-_Zambezi3527.jpg/960px-Zambezi_River_-_Zambezi3527.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Zambezi River - Zambezi3527.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Zambezi_River_-_Zambezi3527.jpg",
+          "license": "CC0",
+          "author": "lumoplank",
+          "selection": "ai"
+        }
       },
       "zimbabwe/vic-falls-adventure": {
         "name": "Victoria Falls adventure activities",
@@ -1023,7 +1041,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/68/Hwange_National_Park%2C_Zimbabwe_%28Unsplash%29.jpg/960px-Hwange_National_Park%2C_Zimbabwe_%28Unsplash%29.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Hwange National Park, Zimbabwe (Unsplash).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Hwange_National_Park,_Zimbabwe_(Unsplash).jpg",
+          "license": "CC0",
+          "author": "Christine Donaldson californiawait",
+          "selection": "ai"
+        }
       },
       "zimbabwe/matobo-hills": {
         "name": "Matobo Hills rhinos, rock art and Rhodes grave",
@@ -1047,7 +1074,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a6/Khami_ruins_%28ZW%29.jpg/960px-Khami_ruins_%28ZW%29.jpg",
+          "width": 960,
+          "height": 635,
+          "title": "File:Khami ruins (ZW).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Khami_ruins_(ZW).jpg",
+          "license": "Public domain",
+          "author": "Ulamm 10:16, 31 January 2008 (UTC)",
+          "selection": "ai"
+        }
       },
       "zimbabwe/great-zimbabwe": {
         "name": "Great Zimbabwe",
@@ -1078,22 +1114,66 @@
       "zimbabwe": {
         "name": "Zimbabwe",
         "description": "A land of Victoria Falls, elephants, granite hills and ancient stone cities.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9d/Zimbabwe_wall.jpg/960px-Zimbabwe_wall.jpg",
+            "width": 960,
+            "height": 630,
+            "title": "File:Zimbabwe wall.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Zimbabwe_wall.jpg",
+            "license": "Public domain",
+            "author": "User:Ulamm",
+            "selection": "ai"
+          }
+        ]
       },
       "zimbabwe/victoria-falls": {
         "name": "Victoria Falls",
         "description": "A gateway town to one of the greatest waterfalls.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/28/Victoria_Falls_Main_Falls_Zimbabwe_July_2019.jpg/960px-Victoria_Falls_Main_Falls_Zimbabwe_July_2019.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Victoria Falls Main Falls Zimbabwe July 2019.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Victoria_Falls_Main_Falls_Zimbabwe_July_2019.jpg",
+            "license": "CC0",
+            "author": "Stiac H",
+            "selection": "ai"
+          }
+        ]
       },
       "zimbabwe/hwange": {
         "name": "Hwange",
         "description": "The largest national park in the country.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/68/Hwange_National_Park%2C_Zimbabwe_%28Unsplash%29.jpg/960px-Hwange_National_Park%2C_Zimbabwe_%28Unsplash%29.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:Hwange National Park, Zimbabwe (Unsplash).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Hwange_National_Park,_Zimbabwe_(Unsplash).jpg",
+            "license": "CC0",
+            "author": "Christine Donaldson californiawait",
+            "selection": "ai"
+          }
+        ]
       },
       "zimbabwe/matobo": {
         "name": "Matobo",
         "description": "A hill park near Bulawayo.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/04/Maleme_Dam.jpg/960px-Maleme_Dam.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Maleme Dam.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Maleme_Dam.jpg",
+            "license": "Public domain",
+            "author": "Babakathy",
+            "selection": "ai"
+          }
+        ]
       },
       "zimbabwe/great-zimbabwe": {
         "name": "Great Zimbabwe",
@@ -1103,7 +1183,18 @@
       "zimbabwe/harare": {
         "name": "Harare",
         "description": "The green capital.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/17/Harare_-_Harare3492.jpg/960px-Harare_-_Harare3492.jpg",
+            "width": 960,
+            "height": 685,
+            "title": "File:Harare - Harare3492.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Harare_-_Harare3492.jpg",
+            "license": "CC0",
+            "author": "lumoplank",
+            "selection": "ai"
+          }
+        ]
       }
     }
   }

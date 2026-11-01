@@ -600,7 +600,16 @@
           "relax"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/61/Marina-bay-sands-wikipedia.jpg/960px-Marina-bay-sands-wikipedia.jpg",
+          "width": 960,
+          "height": 540,
+          "title": "File:Marina-bay-sands-wikipedia.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Marina-bay-sands-wikipedia.jpg",
+          "license": "CC0",
+          "author": "ToNameOrNotToName",
+          "selection": "ai"
+        }
       },
       "singapore/gardens-by-the-bay": {
         "name": "Gardens by the Bay and Supertree Grove",
@@ -612,7 +621,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/16/Supertree_Grove%2C_Gardens_by_the_Bay%2C_Singapore1.jpg/960px-Supertree_Grove%2C_Gardens_by_the_Bay%2C_Singapore1.jpg",
+          "width": 960,
+          "height": 540,
+          "title": "File:Supertree Grove, Gardens by the Bay, Singapore1.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Supertree_Grove,_Gardens_by_the_Bay,_Singapore1.jpg",
+          "license": "CC0",
+          "author": "Mustang Joe",
+          "selection": "ai"
+        }
       },
       "singapore/chinatown-hawker": {
         "name": "Chinatown, temples and hawker food",
@@ -649,7 +667,16 @@
           "outdoors"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/72/Sentosa_Gateway%2C_Singapore_-_20150222.jpg/960px-Sentosa_Gateway%2C_Singapore_-_20150222.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Sentosa Gateway, Singapore - 20150222.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Sentosa_Gateway,_Singapore_-_20150222.jpg",
+          "license": "CC0",
+          "author": "C1815.",
+          "selection": "ai"
+        }
       },
       "singapore/pulau-ubin": {
         "name": "Pulau Ubin by bike",

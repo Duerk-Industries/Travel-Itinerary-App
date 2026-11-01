@@ -1344,7 +1344,16 @@
           "food"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a5/%C3%89vora_2014_%28roman_Temple_of_%C3%89vora%29.JPG/960px-%C3%89vora_2014_%28roman_Temple_of_%C3%89vora%29.JPG",
+          "width": 960,
+          "height": 720,
+          "title": "File:Évora 2014 (roman Temple of Évora).JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:%C3%89vora_2014_(roman_Temple_of_%C3%89vora).JPG",
+          "license": "CC0",
+          "author": "Benoît Prieur",
+          "selection": "curated"
+        }
       },
       "portugal/coimbra": {
         "name": "Coimbra University and Biblioteca Joanina",
@@ -1356,7 +1365,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/95/Portugal%2C_Coimbra%2C_University_%2852594121109%29.jpg/960px-Portugal%2C_Coimbra%2C_University_%2852594121109%29.jpg",
+          "width": 960,
+          "height": 533,
+          "title": "File:Portugal, Coimbra, University (52594121109).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Portugal,_Coimbra,_University_(52594121109).jpg",
+          "license": "Public domain",
+          "author": "Lark Ascending",
+          "selection": "curated"
+        }
       },
       "portugal/porto-ribeira": {
         "name": "Porto Ribeira, Livraria Lello and port cellars",
@@ -1394,7 +1412,16 @@
           "food"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0e/2025-a-Obidos_-_23_%2854887916119%29.jpg/960px-2025-a-Obidos_-_23_%2854887916119%29.jpg",
+          "width": 960,
+          "height": 541,
+          "title": "File:2025-a-Obidos - 23 (54887916119).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:2025-a-Obidos_-_23_(54887916119).jpg",
+          "license": "CC0",
+          "author": "Werner Bayer",
+          "selection": "curated"
+        }
       },
       "portugal/algarve-lagos": {
         "name": "Algarve: Lagos, Ponta da Piedade and Benagil Cave",
@@ -1419,37 +1446,114 @@
       "portugal/lisbon": {
         "name": "Lisbon",
         "description": "The hilly capital of trams, fado and custard tarts.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b7/Woman_overlooking_Lisbon_sunset_%28Unsplash%29.jpg/960px-Woman_overlooking_Lisbon_sunset_%28Unsplash%29.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:Woman overlooking Lisbon sunset (Unsplash).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Woman_overlooking_Lisbon_sunset_(Unsplash).jpg",
+            "license": "CC0",
+            "author": "John Sting joaoferrao",
+            "selection": "curated"
+          }
+        ]
       },
       "portugal/alentejo": {
         "name": "Alentejo",
         "description": "The southern plains region of cork, wine and Evora.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f1/Alentejo_Countryside_-_Castro_Verde_-_Portugal.png/960px-Alentejo_Countryside_-_Castro_Verde_-_Portugal.png",
+            "width": 960,
+            "height": 720,
+            "title": "File:Alentejo Countryside - Castro Verde - Portugal.png",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Alentejo_Countryside_-_Castro_Verde_-_Portugal.png",
+            "license": "Public domain",
+            "author": "Forcastro",
+            "selection": "curated"
+          }
+        ]
       },
       "portugal/evora": {
         "name": "Evora",
         "description": "A walled UNESCO city of Roman and medieval sights.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/53/Templo_Romano_de_%C3%89vora%2C_West_view_%282014%29.jpg/960px-Templo_Romano_de_%C3%89vora%2C_West_view_%282014%29.jpg",
+            "width": 960,
+            "height": 752,
+            "title": "File:Templo Romano de Évora, West view (2014).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Templo_Romano_de_%C3%89vora,_West_view_(2014).jpg",
+            "license": "CC0",
+            "author": "Benoît Prieur",
+            "selection": "curated"
+          }
+        ]
       },
       "portugal/coimbra": {
         "name": "Coimbra",
         "description": "A university city on the Mondego river.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d0/Buildings_-_Coimbra%2C_Portugal_-_DSC09774.jpg/960px-Buildings_-_Coimbra%2C_Portugal_-_DSC09774.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:Buildings - Coimbra, Portugal - DSC09774.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Buildings_-_Coimbra,_Portugal_-_DSC09774.jpg",
+            "license": "CC0",
+            "author": "Daderot",
+            "selection": "curated"
+          }
+        ]
       },
       "portugal/porto": {
         "name": "Porto",
         "description": "The northern city of port wine and azulejo tiles.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c6/Porto_Portugal_2016_P1290305_%2837204881982%29.jpg/960px-Porto_Portugal_2016_P1290305_%2837204881982%29.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:Porto Portugal 2016 P1290305 (37204881982).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Porto_Portugal_2016_P1290305_(37204881982).jpg",
+            "license": "CC0",
+            "author": "Thierry Marthy",
+            "selection": "curated"
+          }
+        ]
       },
       "portugal/douro-valley": {
         "name": "Douro Valley",
         "description": "Terraced vineyards along the Douro river.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d2/Portugal_Douro_valley_%2852929174081%29.jpg/960px-Portugal_Douro_valley_%2852929174081%29.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:Portugal Douro valley (52929174081).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Portugal_Douro_valley_(52929174081).jpg",
+            "license": "CC0",
+            "author": "Mussi Katz from Israel",
+            "selection": "curated"
+          }
+        ]
       },
       "portugal/algarve": {
         "name": "Algarve",
         "description": "The southern coast of cliffs, caves and beaches.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/cd/Algarve_2014_%284%29.JPG/960px-Algarve_2014_%284%29.JPG",
+            "width": 960,
+            "height": 720,
+            "title": "File:Algarve 2014 (4).JPG",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Algarve_2014_(4).JPG",
+            "license": "CC0",
+            "author": "Benoît Prieur",
+            "selection": "curated"
+          }
+        ]
       },
       "portugal/lagos": {
         "name": "Lagos",

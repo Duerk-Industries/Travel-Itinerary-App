@@ -898,7 +898,16 @@
           "food"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/6f/Old_Town_Hall_in_Bratislava_as_seen_from_the_Hlavn%C3%A9_n%C3%A1mestie.jpg/960px-Old_Town_Hall_in_Bratislava_as_seen_from_the_Hlavn%C3%A9_n%C3%A1mestie.jpg",
+          "width": 960,
+          "height": 642,
+          "title": "File:Old Town Hall in Bratislava as seen from the Hlavné námestie.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Old_Town_Hall_in_Bratislava_as_seen_from_the_Hlavn%C3%A9_n%C3%A1mestie.jpg",
+          "license": "CC0",
+          "author": "Robert von Oliva (naruciakk)",
+          "selection": "ai"
+        }
       },
       "slovakia/devin-castle": {
         "name": "Devin Castle",
@@ -910,7 +919,16 @@
           "outdoors"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/26/Slovakia-Devin_castle_1.JPG/960px-Slovakia-Devin_castle_1.JPG",
+          "width": 960,
+          "height": 720,
+          "title": "File:Slovakia-Devin castle 1.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Slovakia-Devin_castle_1.JPG",
+          "license": "Public domain",
+          "author": "No machine-readable author provided. Rado Bahna~commonswiki assumed (based on copyright claims).",
+          "selection": "ai"
+        }
       },
       "slovakia/banska-stiavnica": {
         "name": "Banska Stiavnica mining town",
@@ -923,7 +941,16 @@
           "outdoors"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/96/Banska_Stiavnica-_pohlad_z_Katovej_ulice.jpg/960px-Banska_Stiavnica-_pohlad_z_Katovej_ulice.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Banska Stiavnica- pohlad z Katovej ulice.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Banska_Stiavnica-_pohlad_z_Katovej_ulice.jpg",
+          "license": "Public domain",
+          "author": "Original uploader was Skreno at sk.wikipedia",
+          "selection": "ai"
+        }
       },
       "slovakia/orava-vlkolinec": {
         "name": "Orava Castle and Vlkolinec",
@@ -935,7 +962,16 @@
           "authentic_local"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/13/Oravsk%C3%BD_hrad_001.JPG/960px-Oravsk%C3%BD_hrad_001.JPG",
+          "width": 960,
+          "height": 647,
+          "title": "File:Oravský hrad 001.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Oravsk%C3%BD_hrad_001.JPG",
+          "license": "Public domain",
+          "author": "Janericloebe",
+          "selection": "ai"
+        }
       },
       "slovakia/high-tatras": {
         "name": "High Tatras hiking from Strbske Pleso",
@@ -948,7 +984,16 @@
           "iconic_landmarks"
         ],
         "mobility": "H",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1b/Hikers_in_the_High_Tatras_%28Unsplash%29.jpg/960px-Hikers_in_the_High_Tatras_%28Unsplash%29.jpg",
+          "width": 960,
+          "height": 636,
+          "title": "File:Hikers in the High Tatras (Unsplash).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Hikers_in_the_High_Tatras_(Unsplash).jpg",
+          "license": "CC0",
+          "author": "Katerina Bartosova kate_b",
+          "selection": "ai"
+        }
       },
       "slovakia/spis-levoca": {
         "name": "Spis Castle and Levoca",
@@ -960,7 +1005,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f0/Spis_Castle_-_Slovakia.jpg/960px-Spis_Castle_-_Slovakia.jpg",
+          "width": 960,
+          "height": 500,
+          "title": "File:Spis Castle - Slovakia.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Spis_Castle_-_Slovakia.jpg",
+          "license": "CC0",
+          "author": "Petr Kratochvil",
+          "selection": "ai"
+        }
       },
       "slovakia/slovak-paradise": {
         "name": "Slovak Paradise and Dobsinska Ice Cave",
@@ -972,7 +1026,16 @@
           "photography"
         ],
         "mobility": "H",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0b/Slovensky_raj_Piecky3.jpg/960px-Slovensky_raj_Piecky3.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Slovensky raj Piecky3.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Slovensky_raj_Piecky3.jpg",
+          "license": "CC0",
+          "author": "Rudolphs no uno",
+          "selection": "ai"
+        }
       },
       "slovakia/kosice": {
         "name": "Kosice old town and St Elisabeth Cathedral",
@@ -1002,7 +1065,18 @@
       "slovakia/banska-stiavnica": {
         "name": "Banska Stiavnica",
         "description": "A UNESCO mining town on hills.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/96/Banska_Stiavnica-_pohlad_z_Katovej_ulice.jpg/960px-Banska_Stiavnica-_pohlad_z_Katovej_ulice.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Banska Stiavnica- pohlad z Katovej ulice.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Banska_Stiavnica-_pohlad_z_Katovej_ulice.jpg",
+            "license": "Public domain",
+            "author": "Original uploader was Skreno at sk.wikipedia",
+            "selection": "ai"
+          }
+        ]
       },
       "slovakia/high-tatras": {
         "name": "High Tatras",
@@ -1012,7 +1086,18 @@
       "slovakia/kosice": {
         "name": "Kosice",
         "description": "The eastern cultural city.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/40/Ko%C5%A1ice_2026%2C_view_of_the_Old_Town.jpg/960px-Ko%C5%A1ice_2026%2C_view_of_the_Old_Town.jpg",
+            "width": 960,
+            "height": 540,
+            "title": "File:Košice 2026, view of the Old Town.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Ko%C5%A1ice_2026,_view_of_the_Old_Town.jpg",
+            "license": "CC0",
+            "author": "Benche.ix",
+            "selection": "ai"
+          }
+        ]
       }
     }
   }

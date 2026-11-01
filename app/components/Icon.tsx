@@ -1,4 +1,5 @@
 import React from 'react';
+import { Platform } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 /**
@@ -76,22 +77,31 @@ type Props = {
   name: IconName;
   size?: number;
   color: string;
+  /** Fills the shape (e.g. a solid star); outline-only when omitted. */
+  fill?: string;
   strokeWidth?: number;
+  /** Shorthand for filling the shape with the icon colour. */
+  filled?: boolean;
   testID?: string;
 };
 
-const Icon: React.FC<Props> = ({ name, size = 22, color, strokeWidth = 1.75, testID }) => (
+// react-native-svg forwards props straight to the <svg> on web, where the native accessibility props are unknown
+// DOM attributes (React warns about each); aria-hidden is the web equivalent.
+const hiddenFromAssistiveTech = Platform?.OS === 'web'
+  ? ({ 'aria-hidden': true } as Record<string, unknown>)
+  : { accessibilityElementsHidden: true, importantForAccessibility: 'no' as const };
+
+const Icon: React.FC<Props> = ({ name, size = 22, color, fill = 'none', strokeWidth = 1.75, filled = false, testID }) => (
   <Svg
     width={size}
     height={size}
     viewBox="0 0 24 24"
-    fill="none"
+    fill={filled ? color : fill}
     stroke={color}
     strokeWidth={strokeWidth}
     strokeLinecap="round"
     strokeLinejoin="round"
-    accessibilityElementsHidden
-    importantForAccessibility="no"
+    {...hiddenFromAssistiveTech}
     testID={testID}
   >
     {ICON_PATHS[name].map((d) => <Path key={d} d={d} />)}

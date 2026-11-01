@@ -1233,7 +1233,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/28/Fort_Santiago_Intramuros_Manila.jpg/960px-Fort_Santiago_Intramuros_Manila.jpg",
+          "width": 960,
+          "height": 522,
+          "title": "File:Fort Santiago Intramuros Manila.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Fort_Santiago_Intramuros_Manila.jpg",
+          "license": "Public domain",
+          "author": "anonymous",
+          "selection": "ai"
+        }
       },
       "philippines/banaue-terraces": {
         "name": "Banaue and Batad rice terraces",
@@ -1246,7 +1255,16 @@
           "iconic_landmarks"
         ],
         "mobility": "H",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/17/Rice_Terraces_Banaue.jpg/960px-Rice_Terraces_Banaue.jpg",
+          "width": 960,
+          "height": 656,
+          "title": "File:Rice Terraces Banaue.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Rice_Terraces_Banaue.jpg",
+          "license": "Public domain",
+          "author": "Magalhães",
+          "selection": "ai"
+        }
       },
       "philippines/coron-lagoons": {
         "name": "Coron island hopping and Kayangan Lake",
@@ -1259,7 +1277,16 @@
           "iconic_landmarks"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/56/Coron_and_Calamian_Islands_-_Coron1713.jpg/960px-Coron_and_Calamian_Islands_-_Coron1713.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Coron and Calamian Islands - Coron1713.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Coron_and_Calamian_Islands_-_Coron1713.jpg",
+          "license": "CC0",
+          "author": "lumoplank",
+          "selection": "ai"
+        }
       },
       "philippines/el-nido-bacuit": {
         "name": "El Nido island hopping in Bacuit Bay",
@@ -1284,7 +1311,16 @@
           "outdoors"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d8/Puerto_Princesa_Subterranean_River_-_PuertoPrincesaSR1755.jpg/960px-Puerto_Princesa_Subterranean_River_-_PuertoPrincesaSR1755.jpg",
+          "width": 960,
+          "height": 711,
+          "title": "File:Puerto Princesa Subterranean River - PuertoPrincesaSR1755.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Puerto_Princesa_Subterranean_River_-_PuertoPrincesaSR1755.jpg",
+          "license": "CC0",
+          "author": "lumoplank",
+          "selection": "ai"
+        }
       },
       "philippines/cebu-kawasan-moalboal": {
         "name": "Cebu: Kawasan Falls canyoning and Moalboal sardines",
@@ -1308,7 +1344,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/60/Bohol%27s_Chocolate_Hills.jpg/960px-Bohol%27s_Chocolate_Hills.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Bohol's Chocolate Hills.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Bohol%27s_Chocolate_Hills.jpg",
+          "license": "CC0",
+          "author": "rogel tura",
+          "selection": "ai"
+        }
       },
       "philippines/panglao-beach": {
         "name": "Panglao beaches and dolphin watching",
@@ -1320,7 +1365,16 @@
           "adventure"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/47/Alona_Beach_Overview.jpg/960px-Alona_Beach_Overview.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Alona Beach Overview.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Alona_Beach_Overview.jpg",
+          "license": "Public domain",
+          "author": "No machine-readable author provided. Magalhães assumed (based on copyright claims).",
+          "selection": "ai"
+        }
       },
       "philippines/siargao-surf": {
         "name": "Siargao surfing and island lagoons",
@@ -1333,7 +1387,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c1/Cloud_9_October_2026.jpg/960px-Cloud_9_October_2026.jpg",
+          "width": 960,
+          "height": 635,
+          "title": "File:Cloud 9 October 2026.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Cloud_9_October_2026.jpg",
+          "license": "Public domain",
+          "author": "Surigao del Norte Provincial Government",
+          "selection": "ai"
+        }
       }
     },
     "destinations": {
@@ -1350,12 +1413,34 @@
       "philippines/banaue": {
         "name": "Banaue",
         "description": "A mountain town of ancient rice terraces.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a6/Banaue_Rice_Terraces.jpg/960px-Banaue_Rice_Terraces.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Banaue Rice Terraces.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Banaue_Rice_Terraces.jpg",
+            "license": "Public domain",
+            "author": "Bangaliboy at English Wikipedia",
+            "selection": "ai"
+          }
+        ]
       },
       "philippines/coron": {
         "name": "Coron",
         "description": "A lagoon and wreck-diving town on Busuanga.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/56/Coron_and_Calamian_Islands_-_Coron1713.jpg/960px-Coron_and_Calamian_Islands_-_Coron1713.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:Coron and Calamian Islands - Coron1713.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Coron_and_Calamian_Islands_-_Coron1713.jpg",
+            "license": "CC0",
+            "author": "lumoplank",
+            "selection": "ai"
+          }
+        ]
       },
       "philippines/el-nido": {
         "name": "El Nido",

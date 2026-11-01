@@ -1833,7 +1833,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/84/Sky_Tower%2C_Auckland.jpg/960px-Sky_Tower%2C_Auckland.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Sky Tower, Auckland.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Sky_Tower,_Auckland.jpg",
+          "license": "CC0",
+          "author": "August Dominus",
+          "selection": "ai"
+        }
       },
       "new-zealand/waiheke-island": {
         "name": "Waiheke Island",
@@ -1858,7 +1867,16 @@
           "culture"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/82/Hobbiton_Movie_Set%2C_Matamata.jpg/960px-Hobbiton_Movie_Set%2C_Matamata.jpg",
+          "width": 960,
+          "height": 540,
+          "title": "File:Hobbiton Movie Set, Matamata.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Hobbiton_Movie_Set,_Matamata.jpg",
+          "license": "CC0",
+          "author": "Andres Iga",
+          "selection": "ai"
+        }
       },
       "new-zealand/waitomo-caves": {
         "name": "Waitomo glowworm caves",
@@ -1870,7 +1888,16 @@
           "iconic_landmarks"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1a/Glow_Worms_in_the_Waitomo_Caves_New_Zealand%28GN04828%29.jpg/960px-Glow_Worms_in_the_Waitomo_Caves_New_Zealand%28GN04828%29.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Glow Worms in the Waitomo Caves New Zealand(GN04828).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Glow_Worms_in_the_Waitomo_Caves_New_Zealand(GN04828).jpg",
+          "license": "CC0",
+          "author": "State Government Photographer",
+          "selection": "ai"
+        }
       },
       "new-zealand/te-puia": {
         "name": "Te Puia and Te Whakarewarewa",
@@ -1931,7 +1958,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/ca/Huka_Falls_-_Wairakei%2C_NZ_-_DSC06179.jpg/960px-Huka_Falls_-_Wairakei%2C_NZ_-_DSC06179.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Huka Falls - Wairakei, NZ - DSC06179.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Huka_Falls_-_Wairakei,_NZ_-_DSC06179.jpg",
+          "license": "CC0",
+          "author": "Daderot",
+          "selection": "ai"
+        }
       },
       "new-zealand/taupo-rock-carvings": {
         "name": "Lake Taupō cruise and Maori rock carvings",
@@ -1944,7 +1980,16 @@
           "outdoors"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/42/Taniwha_rock_carving_from_the_side_%28Lake_Taupo%29.jpg/960px-Taniwha_rock_carving_from_the_side_%28Lake_Taupo%29.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Taniwha rock carving from the side (Lake Taupo).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Taniwha_rock_carving_from_the_side_(Lake_Taupo).jpg",
+          "license": "Public domain",
+          "author": "Pseudopanax at en.wikipedia",
+          "selection": "ai"
+        }
       },
       "new-zealand/te-papa": {
         "name": "Te Papa Tongarewa",
@@ -1955,7 +2000,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f4/Museum_of_New_Zealand_Te_Papa_Tongarewa_-_Wellington%2C_NZ_-_DSC09543.jpg/960px-Museum_of_New_Zealand_Te_Papa_Tongarewa_-_Wellington%2C_NZ_-_DSC09543.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Museum of New Zealand Te Papa Tongarewa - Wellington, NZ - DSC09543.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Museum_of_New_Zealand_Te_Papa_Tongarewa_-_Wellington,_NZ_-_DSC09543.jpg",
+          "license": "CC0",
+          "author": "Daderot",
+          "selection": "ai"
+        }
       },
       "new-zealand/wellington-cable-car": {
         "name": "Wellington Cable Car and Botanic Garden",
@@ -1967,7 +2021,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/12/Wellington_cable_car_%28public_domain%29.jpg/960px-Wellington_cable_car_%28public_domain%29.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Wellington cable car (public domain).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Wellington_cable_car_(public_domain).jpg",
+          "license": "CC0",
+          "author": "Simon",
+          "selection": "ai"
+        }
       },
       "new-zealand/zealandia": {
         "name": "Zealandia",
@@ -1991,7 +2054,16 @@
           "outdoors"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/41/Avon_River_-_Christchurch_Botanic_Gardens_-_Christchurch%2C_NZ_-_DSC00947.jpg/960px-Avon_River_-_Christchurch_Botanic_Gardens_-_Christchurch%2C_NZ_-_DSC00947.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Avon River - Christchurch Botanic Gardens - Christchurch, NZ - DSC00947.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Avon_River_-_Christchurch_Botanic_Gardens_-_Christchurch,_NZ_-_DSC00947.jpg",
+          "license": "CC0",
+          "author": "Daderot",
+          "selection": "ai"
+        }
       },
       "new-zealand/akaroa-dolphins": {
         "name": "Akaroa and Hector's dolphins",
@@ -2003,7 +2075,16 @@
           "relax"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/17/Cephalorhynchus_hectori_98833054.jpg/960px-Cephalorhynchus_hectori_98833054.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Cephalorhynchus hectori 98833054.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Cephalorhynchus_hectori_98833054.jpg",
+          "license": "CC0",
+          "author": "Siobhan Leachman",
+          "selection": "ai"
+        }
       },
       "new-zealand/lake-tekapo-church": {
         "name": "Church of the Good Shepherd",
@@ -2015,7 +2096,16 @@
           "relax"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7f/Church_of_the_Good_Shepherd%2C_Canterbury%2C_New_Zealand%3B_September_2010.jpg/960px-Church_of_the_Good_Shepherd%2C_Canterbury%2C_New_Zealand%3B_September_2010.jpg",
+          "width": 960,
+          "height": 619,
+          "title": "File:Church of the Good Shepherd, Canterbury, New Zealand; September 2010.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Church_of_the_Good_Shepherd,_Canterbury,_New_Zealand;_September_2010.jpg",
+          "license": "CC0",
+          "author": "Bernard Spragg. NZ",
+          "selection": "ai"
+        }
       },
       "new-zealand/tekapo-stargazing": {
         "name": "Stargazing at Tekapo",
@@ -2039,7 +2129,16 @@
           "iconic_landmarks"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fe/NZ_Hooker_Valley_track.jpg/960px-NZ_Hooker_Valley_track.jpg",
+          "width": 960,
+          "height": 649,
+          "title": "File:NZ Hooker Valley track.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:NZ_Hooker_Valley_track.jpg",
+          "license": "CC0",
+          "author": "Jan Helebrant",
+          "selection": "ai"
+        }
       },
       "new-zealand/lake-wanaka-tree": {
         "name": "That Wanaka Tree and Lake Wanaka",
@@ -2051,7 +2150,16 @@
           "outdoors"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/ca/%22The_Tree%22_Lake_Wanaka._NZ_%2824202789152%29.jpg/960px-%22The_Tree%22_Lake_Wanaka._NZ_%2824202789152%29.jpg",
+          "width": 960,
+          "height": 508,
+          "title": "File:\"The Tree\" Lake Wanaka. NZ (24202789152).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:%22The_Tree%22_Lake_Wanaka._NZ_(24202789152).jpg",
+          "license": "CC0",
+          "author": "Bernard Spragg. NZ from Christchurch, New Zealand",
+          "selection": "ai"
+        }
       },
       "new-zealand/roys-peak": {
         "name": "Roys Peak track",
@@ -2063,7 +2171,16 @@
           "photography"
         ],
         "mobility": "H",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d1/Sunrise_at_Roy%27s_Peak_%28Unsplash%29.jpg/960px-Sunrise_at_Roy%27s_Peak_%28Unsplash%29.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Sunrise at Roy's Peak (Unsplash).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Sunrise_at_Roy%27s_Peak_(Unsplash).jpg",
+          "license": "CC0",
+          "author": "Jingwei Ke lenscapism",
+          "selection": "ai"
+        }
       },
       "new-zealand/arthurs-pass": {
         "name": "Arthur's Pass",
@@ -2075,7 +2192,16 @@
           "iconic_landmarks"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/89/Wild_Kea_at_the_peak_of_the_Arthur%27s_Pass_%28Unsplash%29.jpg/960px-Wild_Kea_at_the_peak_of_the_Arthur%27s_Pass_%28Unsplash%29.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Wild Kea at the peak of the Arthur's Pass (Unsplash).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Wild_Kea_at_the_peak_of_the_Arthur%27s_Pass_(Unsplash).jpg",
+          "license": "CC0",
+          "author": "Pablo Heimplatz pabloheimplatz",
+          "selection": "ai"
+        }
       },
       "new-zealand/franz-josef-glacier": {
         "name": "Franz Josef Glacier",
@@ -2088,7 +2214,16 @@
           "iconic_landmarks"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/da/Franz_Josef_Glacier_-_K%C4%81_Roimata_o_Hine_Hukatere_-_FranzJosef10000.jpg/960px-Franz_Josef_Glacier_-_K%C4%81_Roimata_o_Hine_Hukatere_-_FranzJosef10000.jpg",
+          "width": 960,
+          "height": 658,
+          "title": "File:Franz Josef Glacier - Kā Roimata o Hine Hukatere - FranzJosef10000.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Franz_Josef_Glacier_-_K%C4%81_Roimata_o_Hine_Hukatere_-_FranzJosef10000.jpg",
+          "license": "CC0",
+          "author": "lumoplank",
+          "selection": "ai"
+        }
       },
       "new-zealand/skyline-gondola": {
         "name": "Skyline Gondola, Queenstown",
@@ -2100,7 +2235,16 @@
           "adventure"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/eb/Queenstown_-_Wakatipu_Lake_%26_Remarkable_Mountains_View_from_Skyline_Gondola_Observation_Deck.jpg/960px-Queenstown_-_Wakatipu_Lake_%26_Remarkable_Mountains_View_from_Skyline_Gondola_Observation_Deck.jpg",
+          "width": 960,
+          "height": 718,
+          "title": "File:Queenstown - Wakatipu Lake & Remarkable Mountains View from Skyline Gondola Observation Deck.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Queenstown_-_Wakatipu_Lake_%26_Remarkable_Mountains_View_from_Skyline_Gondola_Observation_Deck.jpg",
+          "license": "Public domain",
+          "author": "Unknown",
+          "selection": "ai"
+        }
       },
       "new-zealand/shotover-jet": {
         "name": "Shotover Jet",
@@ -2111,7 +2255,16 @@
           "outdoors"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/62/The_Shotover_Jet_Boat._%2816138190187%29.jpg/960px-The_Shotover_Jet_Boat._%2816138190187%29.jpg",
+          "width": 960,
+          "height": 638,
+          "title": "File:The Shotover Jet Boat. (16138190187).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:The_Shotover_Jet_Boat._(16138190187).jpg",
+          "license": "CC0",
+          "author": "Bernard Spragg. NZ from Christchurch, New Zealand",
+          "selection": "ai"
+        }
       },
       "new-zealand/queenstown-bungy": {
         "name": "Bungy jumping at Kawarau Bridge",
@@ -2134,7 +2287,16 @@
           "relax"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/21/Arrowtown%2C_New_Zealand._%2822284780322%29.jpg/960px-Arrowtown%2C_New_Zealand._%2822284780322%29.jpg",
+          "width": 960,
+          "height": 493,
+          "title": "File:Arrowtown, New Zealand. (22284780322).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Arrowtown,_New_Zealand._(22284780322).jpg",
+          "license": "CC0",
+          "author": "Bernard Spragg. NZ from Christchurch, New Zealand",
+          "selection": "ai"
+        }
       },
       "new-zealand/glenorchy": {
         "name": "Glenorchy",
@@ -2146,7 +2308,16 @@
           "relax"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/81/Glenorchy_wharf_and_red_shed_at_Lake_Wakatipu.jpg/960px-Glenorchy_wharf_and_red_shed_at_Lake_Wakatipu.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Glenorchy wharf and red shed at Lake Wakatipu.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Glenorchy_wharf_and_red_shed_at_Lake_Wakatipu.jpg",
+          "license": "Public domain",
+          "author": "Pseudopanax at English Wikipedia",
+          "selection": "ai"
+        }
       },
       "new-zealand/te-anau-glowworms": {
         "name": "Te Anau Glowworm Caves",
@@ -2170,7 +2341,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0f/Milford_Sound_cruising_2016-01-31-6.jpg/960px-Milford_Sound_cruising_2016-01-31-6.jpg",
+          "width": 960,
+          "height": 569,
+          "title": "File:Milford Sound cruising 2016-01-31-6.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Milford_Sound_cruising_2016-01-31-6.jpg",
+          "license": "Public domain",
+          "author": "Szilas",
+          "selection": "ai"
+        }
       }
     },
     "destinations": {
@@ -2182,7 +2362,18 @@
       "new-zealand/auckland": {
         "name": "Auckland",
         "description": "New Zealand's largest city, built on volcanic cones between two harbours with islands close by.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/85/Auckland%2C_New_Zealand._1848.jpg/960px-Auckland%2C_New_Zealand._1848.jpg",
+            "width": 960,
+            "height": 719,
+            "title": "File:Auckland, New Zealand. 1848.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Auckland,_New_Zealand._1848.jpg",
+            "license": "Public domain",
+            "author": "Page, George Hyde",
+            "selection": "ai"
+          }
+        ]
       },
       "new-zealand/waikato": {
         "name": "Waikato",
@@ -2197,7 +2388,18 @@
       "new-zealand/rotorua": {
         "name": "Rotorua",
         "description": "A geothermal city of geysers, mud pools and Maori cultural experiences.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8e/City_of_Rotorua.jpg/960px-City_of_Rotorua.jpg",
+            "width": 960,
+            "height": 666,
+            "title": "File:City of Rotorua.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:City_of_Rotorua.jpg",
+            "license": "Public domain",
+            "author": "Sircha at English Wikipedia",
+            "selection": "ai"
+          }
+        ]
       },
       "new-zealand/taupo": {
         "name": "Taupō",
@@ -2222,47 +2424,146 @@
       "new-zealand/milford-sound": {
         "name": "Milford Sound",
         "description": "A fiord of sheer cliffs and waterfalls in Fiordland National Park.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ef/Milford_Sound_New_Zealand_2016.jpg/960px-Milford_Sound_New_Zealand_2016.jpg",
+            "width": 960,
+            "height": 639,
+            "title": "File:Milford Sound New Zealand 2016.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Milford_Sound_New_Zealand_2016.jpg",
+            "license": "Public domain",
+            "author": "Bernard Spragg. NZ from Christchurch, New Zealand",
+            "selection": "ai"
+          }
+        ]
       },
       "new-zealand/christchurch": {
         "name": "Christchurch",
         "description": "The South Island's main city, a garden city rebuilding with a river, parks and arts.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/28/New_Regent_St_Christchurch._%2810588849634%29.jpg/960px-New_Regent_St_Christchurch._%2810588849634%29.jpg",
+            "width": 960,
+            "height": 659,
+            "title": "File:New Regent St Christchurch. (10588849634).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:New_Regent_St_Christchurch._(10588849634).jpg",
+            "license": "CC0",
+            "author": "Bernard Spragg. NZ from Christchurch, New Zealand",
+            "selection": "ai"
+          }
+        ]
       },
       "new-zealand/lake-tekapo": {
         "name": "Lake Tekapo",
         "description": "A turquoise glacial lake with a stone chapel and one of the world's clearest night skies.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/80/Lake_Tekapo_Canterbury_NZ.jpg/960px-Lake_Tekapo_Canterbury_NZ.jpg",
+            "width": 960,
+            "height": 585,
+            "title": "File:Lake Tekapo Canterbury NZ.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Lake_Tekapo_Canterbury_NZ.jpg",
+            "license": "CC0",
+            "author": "Bernard Spragg. NZ",
+            "selection": "ai"
+          }
+        ]
       },
       "new-zealand/mount-cook": {
         "name": "Aoraki Mount Cook",
         "description": "The country's highest peak and a national park of glaciers, with easy valley walks.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c9/Aoraki_Mount_Cook_%288400614065%29.jpg/960px-Aoraki_Mount_Cook_%288400614065%29.jpg",
+            "width": 960,
+            "height": 638,
+            "title": "File:Aoraki Mount Cook (8400614065).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Aoraki_Mount_Cook_(8400614065).jpg",
+            "license": "CC0",
+            "author": "Bernard Spragg. NZ from Christchurch, New Zealand",
+            "selection": "ai"
+          }
+        ]
       },
       "new-zealand/otago": {
         "name": "Otago",
         "description": "The southern region of Queenstown, Wanaka and gold-rush heritage.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3e/Autumn_in_Otago%2C_New_Zealand.jpg/960px-Autumn_in_Otago%2C_New_Zealand.jpg",
+            "width": 960,
+            "height": 612,
+            "title": "File:Autumn in Otago, New Zealand.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Autumn_in_Otago,_New_Zealand.jpg",
+            "license": "Public domain",
+            "author": "Bernard Spragg. NZ from Christchurch, New Zealand",
+            "selection": "ai"
+          }
+        ]
       },
       "new-zealand/wanaka": {
         "name": "Wanaka",
         "description": "A lakeside town below the Southern Alps, calmer than Queenstown, with hiking and views.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9b/Wanaka%2C_New_Zealand_%28Unsplash_KonWFWUaAuk%29.jpg/960px-Wanaka%2C_New_Zealand_%28Unsplash_KonWFWUaAuk%29.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:Wanaka, New Zealand (Unsplash KonWFWUaAuk).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Wanaka,_New_Zealand_(Unsplash_KonWFWUaAuk).jpg",
+            "license": "CC0",
+            "author": "Ken Cheung kencheungphoto",
+            "selection": "ai"
+          }
+        ]
       },
       "new-zealand/queenstown": {
         "name": "Queenstown",
         "description": "The adventure capital, set on Lake Wakatipu beneath the Remarkables.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ef/Queenstown_-_2026_%2810115%29.jpg/960px-Queenstown_-_2026_%2810115%29.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:Queenstown - 2026 (10115).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Queenstown_-_2026_(10115).jpg",
+            "license": "CC0",
+            "author": "lumoplank",
+            "selection": "ai"
+          }
+        ]
       },
       "new-zealand/west-coast": {
         "name": "West Coast",
         "description": "A wild coastal region of rainforest and glaciers on the western side of the Southern Alps.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/07/West_Coast_New_Zealand.jpg/960px-West_Coast_New_Zealand.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:West Coast New Zealand.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:West_Coast_New_Zealand.jpg",
+            "license": "Public domain",
+            "author": "Ingolfson at English Wikipedia (Original text: Uploader,)",
+            "selection": "ai"
+          }
+        ]
       },
       "new-zealand/franz-josef": {
         "name": "Franz Josef",
         "description": "A small village at the foot of a glacier that flows into rainforest.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5b/Graham%27s_Hotel%2C_Franz_Josef_Glacier%2C_New_Zealand.jpg/960px-Graham%27s_Hotel%2C_Franz_Josef_Glacier%2C_New_Zealand.jpg",
+            "width": 960,
+            "height": 731,
+            "title": "File:Graham's Hotel, Franz Josef Glacier, New Zealand.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Graham%27s_Hotel,_Franz_Josef_Glacier,_New_Zealand.jpg",
+            "license": "Public domain",
+            "author": "Unknown authorUnknown author",
+            "selection": "ai"
+          }
+        ]
       },
       "new-zealand/southland": {
         "name": "Southland",
@@ -2272,7 +2573,18 @@
       "new-zealand/te-anau": {
         "name": "Te Anau",
         "description": "A lakeside gateway to Fiordland and Milford Sound.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/72/Te_Anau_-_TeAnau9024.jpg/960px-Te_Anau_-_TeAnau9024.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:Te Anau - TeAnau9024.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Te_Anau_-_TeAnau9024.jpg",
+            "license": "CC0",
+            "author": "lumoplank",
+            "selection": "ai"
+          }
+        ]
       }
     }
   }

@@ -1027,7 +1027,16 @@
           "food"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/29/GT056-Antigua_ChrchSet.jpeg/960px-GT056-Antigua_ChrchSet.jpeg",
+          "width": 960,
+          "height": 720,
+          "title": "File:GT056-Antigua ChrchSet.jpeg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:GT056-Antigua_ChrchSet.jpeg",
+          "license": "Public domain",
+          "author": "Zack Clark",
+          "selection": "ai"
+        }
       },
       "guatemala/pacaya-volcano": {
         "name": "Pacaya Volcano hike",
@@ -1039,7 +1048,16 @@
           "photography"
         ],
         "mobility": "H",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3d/Pacaya2.jpg/960px-Pacaya2.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Pacaya2.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Pacaya2.jpg",
+          "license": "Public domain",
+          "author": "MatSi",
+          "selection": "ai"
+        }
       },
       "guatemala/acatenango": {
         "name": "Acatenango overnight volcano climb",
@@ -1064,7 +1082,16 @@
           "authentic_local"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7f/Atitlan1.jpg/960px-Atitlan1.jpg",
+          "width": 960,
+          "height": 615,
+          "title": "File:Atitlan1.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Atitlan1.jpg",
+          "license": "CC0",
+          "author": "Alex Wild",
+          "selection": "ai"
+        }
       },
       "guatemala/indian-nose": {
         "name": "Indian Nose sunrise",
@@ -1100,7 +1127,16 @@
           "relax"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/95/Semuc_Champey_natural_wonder.jpg/960px-Semuc_Champey_natural_wonder.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Semuc Champey natural wonder.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Semuc_Champey_natural_wonder.jpg",
+          "license": "CC0",
+          "author": "Lucía García González",
+          "selection": "ai"
+        }
       },
       "guatemala/tikal": {
         "name": "Tikal National Park",
@@ -1125,7 +1161,16 @@
           "food"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/26/Paved_street_in_Flores%2C_Guatemala_1923.jpg/960px-Paved_street_in_Flores%2C_Guatemala_1923.jpg",
+          "width": 960,
+          "height": 558,
+          "title": "File:Paved street in Flores, Guatemala 1923.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Paved_street_in_Flores,_Guatemala_1923.jpg",
+          "license": "Public domain",
+          "author": "Jerome O. Kilmartin",
+          "selection": "ai"
+        }
       }
     },
     "destinations": {
@@ -1142,7 +1187,18 @@
       "guatemala/antigua": {
         "name": "Antigua",
         "description": "A UNESCO colonial city beneath three volcanoes.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/94/Antigua_Guatemala_Street.jpg/960px-Antigua_Guatemala_Street.jpg",
+            "width": 960,
+            "height": 638,
+            "title": "File:Antigua Guatemala Street.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Antigua_Guatemala_Street.jpg",
+            "license": "Public domain",
+            "author": "CIA Factbook",
+            "selection": "ai"
+          }
+        ]
       },
       "guatemala/solola": {
         "name": "Solola",
@@ -1152,7 +1208,18 @@
       "guatemala/lake-atitlan": {
         "name": "Lake Atitlan",
         "description": "A crater lake ringed by volcanoes and Maya villages.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/29/Sunset_over_lage_Atitlan.jpg/960px-Sunset_over_lage_Atitlan.jpg",
+            "width": 960,
+            "height": 590,
+            "title": "File:Sunset over lage Atitlan.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Sunset_over_lage_Atitlan.jpg",
+            "license": "CC0",
+            "author": "Erik Albers",
+            "selection": "ai"
+          }
+        ]
       },
       "guatemala/alta-verapaz": {
         "name": "Alta Verapaz",
@@ -1172,7 +1239,18 @@
       "guatemala/flores": {
         "name": "Flores",
         "description": "An island town on Lake Peten Itza.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fe/Flores%2C_Guatemala_-_Maya_Tayasal.jpg/960px-Flores%2C_Guatemala_-_Maya_Tayasal.jpg",
+            "width": 960,
+            "height": 648,
+            "title": "File:Flores, Guatemala - Maya Tayasal.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Flores,_Guatemala_-_Maya_Tayasal.jpg",
+            "license": "CC0",
+            "author": "Gary Todd",
+            "selection": "ai"
+          }
+        ]
       }
     }
   }

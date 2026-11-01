@@ -1331,7 +1331,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/bb/Aztec_%28Mexica%29_Gallery%2C_National_Museum_of_Anthropology%2C_Mexico_City_%289778512611%29.jpg/960px-Aztec_%28Mexica%29_Gallery%2C_National_Museum_of_Anthropology%2C_Mexico_City_%289778512611%29.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Aztec (Mexica) Gallery, National Museum of Anthropology, Mexico City (9778512611).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Aztec_(Mexica)_Gallery,_National_Museum_of_Anthropology,_Mexico_City_(9778512611).jpg",
+          "license": "CC0",
+          "author": "Gary Todd from Xinzheng, China",
+          "selection": "ai"
+        }
       },
       "mexico/frida-coyoacan": {
         "name": "Coyoacan and the Frida Kahlo Museum",
@@ -1343,7 +1352,16 @@
           "authentic_local"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/88/La_Casa_Azul_%28The_Blue_House%29%2C_better_known_as_the_Frida_Kahlo_Museum%2C_located_in_the_Coyoac%C3%A1n_neighborhood_of_Mexico_City.jpg/960px-La_Casa_Azul_%28The_Blue_House%29%2C_better_known_as_the_Frida_Kahlo_Museum%2C_located_in_the_Coyoac%C3%A1n_neighborhood_of_Mexico_City.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:La Casa Azul (The Blue House), better known as the Frida Kahlo Museum, located in the Coyoacán neighborhood of Mexico City.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:La_Casa_Azul_(The_Blue_House),_better_known_as_the_Frida_Kahlo_Museum,_located_in_the_Coyoac%C3%A1n_neighborhood_of_Mexico_City.jpg",
+          "license": "CC0",
+          "author": "Rebeccananonof",
+          "selection": "ai"
+        }
       },
       "mexico/teotihuacan": {
         "name": "Teotihuacan pyramids",
@@ -1355,7 +1373,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b8/Teotihuacan_Citadel_View_of_Pyramids_of_Sun_%26_Moon_%289783332506%29.jpg/960px-Teotihuacan_Citadel_View_of_Pyramids_of_Sun_%26_Moon_%289783332506%29.jpg",
+          "width": 960,
+          "height": 690,
+          "title": "File:Teotihuacan Citadel View of Pyramids of Sun & Moon (9783332506).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Teotihuacan_Citadel_View_of_Pyramids_of_Sun_%26_Moon_(9783332506).jpg",
+          "license": "CC0",
+          "author": "Gary Todd from Xinzheng, China",
+          "selection": "ai"
+        }
       },
       "mexico/guanajuato": {
         "name": "Guanajuato colourful hill town",
@@ -1405,7 +1432,16 @@
           "authentic_local"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/03/Edificio_El_Gallito.jpg/960px-Edificio_El_Gallito.jpg",
+          "width": 960,
+          "height": 540,
+          "title": "File:Edificio El Gallito.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Edificio_El_Gallito.jpg",
+          "license": "CC0",
+          "author": "Abanero 1704",
+          "selection": "ai"
+        }
       },
       "mexico/chichen-itza": {
         "name": "Chichen Itza and a cenote swim",
@@ -1418,7 +1454,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/33/Chichen_Itza_from_the_Air_1932_-_Caracol_and_Monjas.jpg/960px-Chichen_Itza_from_the_Air_1932_-_Caracol_and_Monjas.jpg",
+          "width": 960,
+          "height": 660,
+          "title": "File:Chichen Itza from the Air 1932 - Caracol and Monjas.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Chichen_Itza_from_the_Air_1932_-_Caracol_and_Monjas.jpg",
+          "license": "CC0",
+          "author": "Sigvald Linné",
+          "selection": "ai"
+        }
       },
       "mexico/valladolid-cenote": {
         "name": "Valladolid and Cenote Zaci",
@@ -1430,7 +1475,16 @@
           "culture"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/25/Cenote_Zaci_17.jpg/960px-Cenote_Zaci_17.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Cenote Zaci 17.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Cenote_Zaci_17.jpg",
+          "license": "CC0",
+          "author": "Álvaro de la Paz Franco",
+          "selection": "ai"
+        }
       },
       "mexico/tulum-ruins": {
         "name": "Tulum ruins and beach",
@@ -1443,7 +1497,16 @@
           "relax"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3d/Tulum_2001_by_Gary_Todd_08.jpg/960px-Tulum_2001_by_Gary_Todd_08.jpg",
+          "width": 960,
+          "height": 653,
+          "title": "File:Tulum 2001 by Gary Todd 08.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Tulum_2001_by_Gary_Todd_08.jpg",
+          "license": "CC0",
+          "author": "Gary Todd",
+          "selection": "ai"
+        }
       }
     },
     "destinations": {
@@ -1465,22 +1528,66 @@
       "mexico/oaxaca": {
         "name": "Oaxaca",
         "description": "A southern city of food, craft and Zapotec heritage.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/bf/Tomas_generales_de_Oaxaca_37.jpg/960px-Tomas_generales_de_Oaxaca_37.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Tomas generales de Oaxaca 37.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Tomas_generales_de_Oaxaca_37.jpg",
+            "license": "CC0",
+            "author": "Avecus",
+            "selection": "ai"
+          }
+        ]
       },
       "mexico/yucatan": {
         "name": "Yucatan",
         "description": "The peninsula state of Maya ruins, haciendas and cenotes.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/01/Sediment_off_the_Yucatan_Peninsula.jpg/960px-Sediment_off_the_Yucatan_Peninsula.jpg",
+            "width": 960,
+            "height": 800,
+            "title": "File:Sediment off the Yucatan Peninsula.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Sediment_off_the_Yucatan_Peninsula.jpg",
+            "license": "Public domain",
+            "author": "NASA image courtesy the MODIS Rapid Response Team at NASA GSFC.",
+            "selection": "ai"
+          }
+        ]
       },
       "mexico/merida": {
         "name": "Merida",
         "description": "The Yucatan capital, a white colonial city.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5a/Merida_Cathedral_-_Yucatan_Feb_2002.jpg/960px-Merida_Cathedral_-_Yucatan_Feb_2002.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:Merida Cathedral - Yucatan Feb 2002.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Merida_Cathedral_-_Yucatan_Feb_2002.jpg",
+            "license": "CC0",
+            "author": "Gary Todd",
+            "selection": "ai"
+          }
+        ]
       },
       "mexico/valladolid": {
         "name": "Valladolid",
         "description": "A colonial town close to Chichen Itza and cenotes.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/04/St._Servatius_Church%2C_Valladolid%2C_Yucatan%2C_Mexico_Feb_2001_-_02.jpg/960px-St._Servatius_Church%2C_Valladolid%2C_Yucatan%2C_Mexico_Feb_2001_-_02.jpg",
+            "width": 960,
+            "height": 708,
+            "title": "File:St. Servatius Church, Valladolid, Yucatan, Mexico Feb 2001 - 02.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:St._Servatius_Church,_Valladolid,_Yucatan,_Mexico_Feb_2001_-_02.jpg",
+            "license": "CC0",
+            "author": "Gary Todd",
+            "selection": "ai"
+          }
+        ]
       },
       "mexico/quintana-roo": {
         "name": "Quintana Roo",
@@ -1490,7 +1597,18 @@
       "mexico/tulum": {
         "name": "Tulum",
         "description": "A clifftop Maya site and beach town.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/af/Tulum_Archaeological_Zone_Mexico_04.jpg/960px-Tulum_Archaeological_Zone_Mexico_04.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Tulum Archaeological Zone Mexico 04.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Tulum_Archaeological_Zone_Mexico_04.jpg",
+            "license": "CC0",
+            "author": "Nosferattus",
+            "selection": "ai"
+          }
+        ]
       }
     }
   }

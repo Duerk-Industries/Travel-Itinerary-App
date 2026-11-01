@@ -2463,7 +2463,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b1/Museo_del_Prado_%281%29.jpg/960px-Museo_del_Prado_%281%29.jpg",
+          "width": 960,
+          "height": 540,
+          "title": "File:Museo del Prado (1).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Museo_del_Prado_(1).jpg",
+          "license": "CC0",
+          "author": "Coralma*",
+          "selection": "ai"
+        }
       },
       "spain/retiro-park": {
         "name": "Retiro Park",
@@ -2522,7 +2531,16 @@
           "photography"
         ],
         "mobility": "H",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7f/Toledo%2C_Spain_%28Unsplash%29.jpg/960px-Toledo%2C_Spain_%28Unsplash%29.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Toledo, Spain (Unsplash).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Toledo,_Spain_(Unsplash).jpg",
+          "license": "CC0",
+          "author": "Greta Schölderle Møller schoelderle",
+          "selection": "ai"
+        }
       },
       "spain/seville-alcazar": {
         "name": "Real Alcázar of Seville",
@@ -2546,7 +2564,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9f/Giralda_cath%C3%A9drale_tour_Seville_Espagne.jpg/960px-Giralda_cath%C3%A9drale_tour_Seville_Espagne.jpg",
+          "width": 960,
+          "height": 782,
+          "title": "File:Giralda cathédrale tour Seville Espagne.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Giralda_cath%C3%A9drale_tour_Seville_Espagne.jpg",
+          "license": "CC0",
+          "author": "Jebulon",
+          "selection": "ai"
+        }
       },
       "spain/plaza-de-espana": {
         "name": "Plaza de España and Parque de María Luisa",
@@ -2570,7 +2597,16 @@
           "culture"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/11/Toits_%C3%A9glise_Santa_Cruz_S%C3%A9ville_Espagne.jpg/960px-Toits_%C3%A9glise_Santa_Cruz_S%C3%A9ville_Espagne.jpg",
+          "width": 960,
+          "height": 639,
+          "title": "File:Toits église Santa Cruz Séville Espagne.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Toits_%C3%A9glise_Santa_Cruz_S%C3%A9ville_Espagne.jpg",
+          "license": "CC0",
+          "author": "Jebulon",
+          "selection": "ai"
+        }
       },
       "spain/triana": {
         "name": "Triana",
@@ -2582,7 +2618,16 @@
           "culture"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8e/Triana_embankment_Seville_Spain.jpg/960px-Triana_embankment_Seville_Spain.jpg",
+          "width": 960,
+          "height": 639,
+          "title": "File:Triana embankment Seville Spain.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Triana_embankment_Seville_Spain.jpg",
+          "license": "CC0",
+          "author": "Jebulon",
+          "selection": "ai"
+        }
       },
       "spain/flamenco-seville": {
         "name": "Flamenco in Seville",
@@ -2618,7 +2663,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/30/Ceiling_of_the_Mosque-Cathedral_of_C%C3%B3rdoba%2C_Spain_-_DSC07108.JPG/960px-Ceiling_of_the_Mosque-Cathedral_of_C%C3%B3rdoba%2C_Spain_-_DSC07108.JPG",
+          "width": 960,
+          "height": 640,
+          "title": "File:Ceiling of the Mosque-Cathedral of Córdoba, Spain - DSC07108.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Ceiling_of_the_Mosque-Cathedral_of_C%C3%B3rdoba,_Spain_-_DSC07108.JPG",
+          "license": "CC0",
+          "author": "Daderot",
+          "selection": "ai"
+        }
       },
       "spain/cordoba-juderia": {
         "name": "Córdoba Jewish Quarter and patios",
@@ -2642,7 +2696,16 @@
           "photography"
         ],
         "mobility": "H",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/6f/Roofs_and_towers_of_Alhambra_from_Generalife%2C_Granada%2C_Spain.jpg/960px-Roofs_and_towers_of_Alhambra_from_Generalife%2C_Granada%2C_Spain.jpg",
+          "width": 960,
+          "height": 639,
+          "title": "File:Roofs and towers of Alhambra from Generalife, Granada, Spain.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Roofs_and_towers_of_Alhambra_from_Generalife,_Granada,_Spain.jpg",
+          "license": "CC0",
+          "author": "Jebulon",
+          "selection": "ai"
+        }
       },
       "spain/albaicin-viewpoint": {
         "name": "Albaicín and the Mirador de San Nicolás",
@@ -2654,7 +2717,16 @@
           "relax"
         ],
         "mobility": "H",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f9/San_Nicolas_from_Alhambra_Granada_Spain.jpg/960px-San_Nicolas_from_Alhambra_Granada_Spain.jpg",
+          "width": 960,
+          "height": 639,
+          "title": "File:San Nicolas from Alhambra Granada Spain.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:San_Nicolas_from_Alhambra_Granada_Spain.jpg",
+          "license": "CC0",
+          "author": "Jebulon",
+          "selection": "ai"
+        }
       },
       "spain/granada-tapas": {
         "name": "Tapas in Granada",
@@ -2689,7 +2761,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/19/Cathedral_Granada_from_Alhambra.jpg/960px-Cathedral_Granada_from_Alhambra.jpg",
+          "width": 960,
+          "height": 639,
+          "title": "File:Cathedral Granada from Alhambra.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Cathedral_Granada_from_Alhambra.jpg",
+          "license": "CC0",
+          "author": "Jebulon",
+          "selection": "ai"
+        }
       },
       "spain/city-of-arts-sciences": {
         "name": "City of Arts and Sciences",
@@ -2701,7 +2782,16 @@
           "culture"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/04/Palau_de_Les_Arts_Reina_Sof%C3%ADa_-_Pool_View_-_City_of_Arts_and_Sciences_-_Valencia_Spain.jpg/960px-Palau_de_Les_Arts_Reina_Sof%C3%ADa_-_Pool_View_-_City_of_Arts_and_Sciences_-_Valencia_Spain.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Palau de Les Arts Reina Sofía - Pool View - City of Arts and Sciences - Valencia Spain.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Palau_de_Les_Arts_Reina_Sof%C3%ADa_-_Pool_View_-_City_of_Arts_and_Sciences_-_Valencia_Spain.jpg",
+          "license": "CC0",
+          "author": "MCAE Consulting",
+          "selection": "ai"
+        }
       },
       "spain/valencia-central-market": {
         "name": "Central Market and La Lonja",
@@ -2737,7 +2827,16 @@
           "outdoors"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/33/Gulliver_Park_in_the_Garden_of_Turia_in_Valencia_Spain.jpg/960px-Gulliver_Park_in_the_Garden_of_Turia_in_Valencia_Spain.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Gulliver Park in the Garden of Turia in Valencia Spain.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Gulliver_Park_in_the_Garden_of_Turia_in_Valencia_Spain.jpg",
+          "license": "CC0",
+          "author": "MCAE Consulting",
+          "selection": "ai"
+        }
       },
       "spain/sagrada-familia": {
         "name": "Sagrada Família",
@@ -2749,7 +2848,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/81/Sagrada_Fam%C3%ADlia%2C_Barcelona.jpg/960px-Sagrada_Fam%C3%ADlia%2C_Barcelona.jpg",
+          "width": 960,
+          "height": 635,
+          "title": "File:Sagrada Família, Barcelona.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Sagrada_Fam%C3%ADlia,_Barcelona.jpg",
+          "license": "CC0",
+          "author": "Julian Lupyan",
+          "selection": "ai"
+        }
       },
       "spain/park-guell": {
         "name": "Park Güell",
@@ -2761,7 +2869,16 @@
           "iconic_landmarks"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/cb/Park_Guell_Barcelona_Spain.jpg/960px-Park_Guell_Barcelona_Spain.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Park Guell Barcelona Spain.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Park_Guell_Barcelona_Spain.jpg",
+          "license": "CC0",
+          "author": "Salwa Farwaneh",
+          "selection": "ai"
+        }
       },
       "spain/casa-batllo": {
         "name": "Casa Batlló",
@@ -2773,7 +2890,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fc/Barcelona_-_Casa_Batll%C3%B3_3.jpg/960px-Barcelona_-_Casa_Batll%C3%B3_3.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Barcelona - Casa Batlló 3.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Barcelona_-_Casa_Batll%C3%B3_3.jpg",
+          "license": "CC0",
+          "author": "Zarateman",
+          "selection": "ai"
+        }
       },
       "spain/barri-gotic": {
         "name": "Gothic Quarter",
@@ -2785,7 +2911,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/33/Gothic_Quarter%2C_Barcelona%2C_Spain_%28Unsplash%29.jpg/960px-Gothic_Quarter%2C_Barcelona%2C_Spain_%28Unsplash%29.jpg",
+          "width": 960,
+          "height": 638,
+          "title": "File:Gothic Quarter, Barcelona, Spain (Unsplash).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Gothic_Quarter,_Barcelona,_Spain_(Unsplash).jpg",
+          "license": "CC0",
+          "author": "Biel Morro bielmb",
+          "selection": "ai"
+        }
       },
       "spain/la-boqueria": {
         "name": "La Boqueria market",
@@ -2821,7 +2956,16 @@
           "food"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/6f/Promenade_and_beach%2C_Platja_de_la_Barceloneta%2C_Barcelona%2C_2015.jpg/960px-Promenade_and_beach%2C_Platja_de_la_Barceloneta%2C_Barcelona%2C_2015.jpg",
+          "width": 960,
+          "height": 638,
+          "title": "File:Promenade and beach, Platja de la Barceloneta, Barcelona, 2015.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Promenade_and_beach,_Platja_de_la_Barceloneta,_Barcelona,_2015.jpg",
+          "license": "CC0",
+          "author": "DimiTalen",
+          "selection": "ai"
+        }
       },
       "spain/montjuic": {
         "name": "Montjuïc",
@@ -2833,7 +2977,16 @@
           "culture"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/61/Gezicht_op_Barcelona%2C_gezien_vanaf_het_Kasteel_van_Montju%C3%AFc_VUE_G%C3%89N%C3%89RALE_DE_BARCELONE_PRISE_DU_FORT_MONJUICH_%28titel_op_object%29%2C_RP-F-F07611.jpg/960px-Gezicht_op_Barcelona%2C_gezien_vanaf_het_Kasteel_van_Montju%C3%AFc_VUE_G%C3%89N%C3%89RALE_DE_BARCELONE_PRISE_DU_FORT_MONJUICH_%28titel_op_object%29%2C_RP-F-F07611.jpg",
+          "width": 960,
+          "height": 490,
+          "title": "File:Gezicht op Barcelona, gezien vanaf het Kasteel van Montjuïc VUE GÉNÉRALE DE BARCELONE PRISE DU FORT MONJUICH (titel op object), RP-F-F07611.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Gezicht_op_Barcelona,_gezien_vanaf_het_Kasteel_van_Montju%C3%AFc_VUE_G%C3%89N%C3%89RALE_DE_BARCELONE_PRISE_DU_FORT_MONJUICH_(titel_op_object),_RP-F-F07611.jpg",
+          "license": "CC0",
+          "author": "Rijksmuseum",
+          "selection": "ai"
+        }
       },
       "spain/montserrat": {
         "name": "Montserrat monastery",
@@ -2845,7 +2998,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/78/Monistrol_de_Montserrat_-_Monasterio_de_Santa_Mar%C3%ADa_de_Montserrat_75.jpg/960px-Monistrol_de_Montserrat_-_Monasterio_de_Santa_Mar%C3%ADa_de_Montserrat_75.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Monistrol de Montserrat - Monasterio de Santa María de Montserrat 75.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Monistrol_de_Montserrat_-_Monasterio_de_Santa_Mar%C3%ADa_de_Montserrat_75.jpg",
+          "license": "CC0",
+          "author": "Zarateman",
+          "selection": "ai"
+        }
       },
       "spain/guggenheim-bilbao": {
         "name": "Guggenheim Museum Bilbao",
@@ -2857,7 +3019,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fa/Museo_Guggenheim_Bilbao_%2812141898293%29_%282%29.jpg/960px-Museo_Guggenheim_Bilbao_%2812141898293%29_%282%29.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Museo Guggenheim Bilbao (12141898293) (2).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Museo_Guggenheim_Bilbao_(12141898293)_(2).jpg",
+          "license": "CC0",
+          "author": "Nicolas Vigier from Paris, France",
+          "selection": "ai"
+        }
       },
       "spain/bilbao-casco-viejo": {
         "name": "Casco Viejo and pintxos",
@@ -2869,7 +3040,16 @@
           "authentic_local"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/64/Bilbao_-_Casco_Viejo_10.jpg/960px-Bilbao_-_Casco_Viejo_10.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Bilbao - Casco Viejo 10.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Bilbao_-_Casco_Viejo_10.jpg",
+          "license": "CC0",
+          "author": "Zarateman",
+          "selection": "ai"
+        }
       },
       "spain/la-concha": {
         "name": "La Concha Bay",
@@ -2905,7 +3085,16 @@
           "relax"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/74/San_Sebasti%C3%A1n_-_Monte_Igeldo_3.jpg/960px-San_Sebasti%C3%A1n_-_Monte_Igeldo_3.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:San Sebastián - Monte Igeldo 3.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:San_Sebasti%C3%A1n_-_Monte_Igeldo_3.jpg",
+          "license": "CC0",
+          "author": "Zarateman",
+          "selection": "ai"
+        }
       },
       "spain/getaria-coast": {
         "name": "Getaria and the Basque coast",
@@ -2918,7 +3107,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0a/Getaria_-_Playa_03.JPG/960px-Getaria_-_Playa_03.JPG",
+          "width": 960,
+          "height": 720,
+          "title": "File:Getaria - Playa 03.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Getaria_-_Playa_03.JPG",
+          "license": "CC0",
+          "author": "Zarateman",
+          "selection": "ai"
+        }
       }
     },
     "destinations": {
@@ -2930,17 +3128,50 @@
       "spain/madrid": {
         "name": "Madrid",
         "description": "Spain's capital, with world-class art museums, grand squares, a lively tapas culture and late nights.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/84/Madrid-spain-europe-Alejandro-Alonso-sky-city-1447267.jpg/960px-Madrid-spain-europe-Alejandro-Alonso-sky-city-1447267.jpg",
+            "width": 960,
+            "height": 540,
+            "title": "File:Madrid-spain-europe-Alejandro-Alonso-sky-city-1447267.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Madrid-spain-europe-Alejandro-Alonso-sky-city-1447267.jpg",
+            "license": "CC0",
+            "author": "Alejandro Silvio Alonso",
+            "selection": "ai"
+          }
+        ]
       },
       "spain/castile-la-mancha": {
         "name": "Castile-La Mancha",
         "description": "The central region south of Madrid, home to the walled hill city of Toledo and Don Quixote's windmills.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/84/Moulins_La_Mancha.jpg/960px-Moulins_La_Mancha.jpg",
+            "width": 960,
+            "height": 667,
+            "title": "File:Moulins La Mancha.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Moulins_La_Mancha.jpg",
+            "license": "Public domain",
+            "author": "Jebulon",
+            "selection": "ai"
+          }
+        ]
       },
       "spain/toledo": {
         "name": "Toledo",
         "description": "A walled medieval city on a hill, with a Gothic cathedral, former synagogues and El Greco paintings.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7f/Toledo%2C_Spain_%28Unsplash%29.jpg/960px-Toledo%2C_Spain_%28Unsplash%29.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:Toledo, Spain (Unsplash).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Toledo,_Spain_(Unsplash).jpg",
+            "license": "CC0",
+            "author": "Greta Schölderle Møller schoelderle",
+            "selection": "ai"
+          }
+        ]
       },
       "spain/andalusia": {
         "name": "Andalusia",
@@ -2955,12 +3186,34 @@
       "spain/cordoba": {
         "name": "Córdoba",
         "description": "A former Moorish capital with a spectacular mosque-cathedral and whitewashed lanes of flower-filled courtyards.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d0/Puente_romano_de_C%C3%B3rdoba_3.jpg/960px-Puente_romano_de_C%C3%B3rdoba_3.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Puente romano de Córdoba 3.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Puente_romano_de_C%C3%B3rdoba_3.jpg",
+            "license": "CC0",
+            "author": "RedCat34",
+            "selection": "ai"
+          }
+        ]
       },
       "spain/granada": {
         "name": "Granada",
         "description": "A hillside city beneath the Sierra Nevada, dominated by the Alhambra and known for its free tapas.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/48/Patio_de_los_Arrayanes_detail_Alhambra_Granada_Spain.jpg/960px-Patio_de_los_Arrayanes_detail_Alhambra_Granada_Spain.jpg",
+            "width": 960,
+            "height": 653,
+            "title": "File:Patio de los Arrayanes detail Alhambra Granada Spain.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Patio_de_los_Arrayanes_detail_Alhambra_Granada_Spain.jpg",
+            "license": "CC0",
+            "author": "Jebulon",
+            "selection": "ai"
+          }
+        ]
       },
       "spain/valencian-community": {
         "name": "Valencian Community",
@@ -2975,7 +3228,18 @@
       "spain/catalonia": {
         "name": "Catalonia",
         "description": "The north-eastern region with its own language and culture, centred on Barcelona and including Montserrat.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/93/Spain_Catalonia_Barcelona_MontJuic_Puig_i_Cadafalch_Columns.jpg/960px-Spain_Catalonia_Barcelona_MontJuic_Puig_i_Cadafalch_Columns.jpg",
+            "width": 960,
+            "height": 643,
+            "title": "File:Spain Catalonia Barcelona MontJuic Puig i Cadafalch Columns.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Spain_Catalonia_Barcelona_MontJuic_Puig_i_Cadafalch_Columns.jpg",
+            "license": "CC0",
+            "author": "Imelenchon",
+            "selection": "ai"
+          }
+        ]
       },
       "spain/barcelona": {
         "name": "Barcelona",
@@ -3005,7 +3269,18 @@
       "spain/getaria": {
         "name": "Getaria",
         "description": "A fishing harbour town on the Basque coast, known for grilled turbot, txakoli wine and the birthplace of Balenciaga.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5f/Getaria_-_Puerto_1.JPG/960px-Getaria_-_Puerto_1.JPG",
+            "width": 960,
+            "height": 720,
+            "title": "File:Getaria - Puerto 1.JPG",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Getaria_-_Puerto_1.JPG",
+            "license": "CC0",
+            "author": "Zarateman",
+            "selection": "ai"
+          }
+        ]
       }
     }
   }

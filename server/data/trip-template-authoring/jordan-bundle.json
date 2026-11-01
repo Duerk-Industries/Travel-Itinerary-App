@@ -1823,7 +1823,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8c/Umayyad_Palace_at_Amman_citadel_2025.jpg/960px-Umayyad_Palace_at_Amman_citadel_2025.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Umayyad Palace at Amman citadel 2025.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Umayyad_Palace_at_Amman_citadel_2025.jpg",
+          "license": "CC0",
+          "author": "ほっきー",
+          "selection": "ai"
+        }
       },
       "jordan/roman-theatre-amman": {
         "name": "Roman Theatre and downtown Amman",
@@ -1859,7 +1868,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f3/Cardo_Maximus%2C_Jerash%2C_Jordan_%2853626589639%29.jpg/960px-Cardo_Maximus%2C_Jerash%2C_Jordan_%2853626589639%29.jpg",
+          "width": 960,
+          "height": 641,
+          "title": "File:Cardo Maximus, Jerash, Jordan (53626589639).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Cardo_Maximus,_Jerash,_Jordan_(53626589639).jpg",
+          "license": "CC0",
+          "author": "Mustang Joe",
+          "selection": "ai"
+        }
       },
       "jordan/ajloun-castle": {
         "name": "Ajloun Castle",
@@ -1871,7 +1889,16 @@
           "outdoors"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8d/Ajlun_Castle_view.jpg/960px-Ajlun_Castle_view.jpg",
+          "width": 960,
+          "height": 698,
+          "title": "File:Ajlun Castle view.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Ajlun_Castle_view.jpg",
+          "license": "CC0",
+          "author": "Sura ah83",
+          "selection": "ai"
+        }
       },
       "jordan/umm-qais": {
         "name": "Umm Qais",
@@ -1882,7 +1909,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/07/Gadara_Aum_Qais.jpg/960px-Gadara_Aum_Qais.jpg",
+          "width": 960,
+          "height": 719,
+          "title": "File:Gadara Aum Qais.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Gadara_Aum_Qais.jpg",
+          "license": "CC0",
+          "author": "Sura ah83",
+          "selection": "ai"
+        }
       },
       "jordan/madaba-mosaics": {
         "name": "Madaba mosaics",
@@ -1893,7 +1929,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5d/Madaba_mosaic.jpg/960px-Madaba_mosaic.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Madaba mosaic.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Madaba_mosaic.jpg",
+          "license": "Public domain",
+          "author": "Tom Neys",
+          "selection": "ai"
+        }
       },
       "jordan/mount-nebo": {
         "name": "Mount Nebo",
@@ -1928,7 +1973,16 @@
           "adventure"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/91/14_Al-Karak_2.JPG/960px-14_Al-Karak_2.JPG",
+          "width": 960,
+          "height": 720,
+          "title": "File:14 Al-Karak 2.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:14_Al-Karak_2.JPG",
+          "license": "Public domain",
+          "author": "Teo Blancato",
+          "selection": "ai"
+        }
       },
       "jordan/desert-castles": {
         "name": "Desert castles and Qusayr Amra",
@@ -1940,7 +1994,16 @@
           "adventure"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5d/Qasr_Al-Harranah.jpg/960px-Qasr_Al-Harranah.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Qasr Al-Harranah.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Qasr_Al-Harranah.jpg",
+          "license": "CC0",
+          "author": "Iainsimpsonstewart",
+          "selection": "ai"
+        }
       },
       "jordan/petra-treasury": {
         "name": "Petra: Siq and the Treasury",
@@ -1953,7 +2016,16 @@
           "outdoors"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/75/Petra_-_063.jpg/960px-Petra_-_063.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Petra - 063.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Petra_-_063.jpg",
+          "license": "CC0",
+          "author": "Rudolfo Kithera",
+          "selection": "ai"
+        }
       },
       "jordan/petra-monastery": {
         "name": "Petra: the Monastery",
@@ -1966,7 +2038,16 @@
           "culture"
         ],
         "mobility": "H",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a5/Petra_Jordan_BW_36.JPG/960px-Petra_Jordan_BW_36.JPG",
+          "width": 960,
+          "height": 675,
+          "title": "File:Petra Jordan BW 36.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Petra_Jordan_BW_36.JPG",
+          "license": "Public domain",
+          "author": "Berthold Werner",
+          "selection": "ai"
+        }
       },
       "jordan/petra-by-night": {
         "name": "Petra by Night",
@@ -1990,7 +2071,16 @@
           "relax"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3a/The_Triclinium%2C_Little_Petra%2C_Jordan_%2853612960828%29.jpg/960px-The_Triclinium%2C_Little_Petra%2C_Jordan_%2853612960828%29.jpg",
+          "width": 960,
+          "height": 641,
+          "title": "File:The Triclinium, Little Petra, Jordan (53612960828).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:The_Triclinium,_Little_Petra,_Jordan_(53612960828).jpg",
+          "license": "CC0",
+          "author": "Mustang Joe",
+          "selection": "ai"
+        }
       },
       "jordan/wadi-rum-jeep": {
         "name": "Wadi Rum jeep tour",
@@ -2003,7 +2093,16 @@
           "authentic_local"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/da/Wadi_Rum_Protected_Area%2C_Wadi_Rum_Village%2C_Jordan_%28Unsplash_cHiZUnL20xo%29.jpg/960px-Wadi_Rum_Protected_Area%2C_Wadi_Rum_Village%2C_Jordan_%28Unsplash_cHiZUnL20xo%29.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Wadi Rum Protected Area, Wadi Rum Village, Jordan (Unsplash cHiZUnL20xo).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Wadi_Rum_Protected_Area,_Wadi_Rum_Village,_Jordan_(Unsplash_cHiZUnL20xo).jpg",
+          "license": "CC0",
+          "author": "Evan Qu wenhong",
+          "selection": "ai"
+        }
       },
       "jordan/wadi-rum-sunset-camp": {
         "name": "Wadi Rum sunset and desert camp",
@@ -2015,7 +2114,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a5/Wadi_Rum_Sunset.jpg/960px-Wadi_Rum_Sunset.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Wadi Rum Sunset.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Wadi_Rum_Sunset.jpg",
+          "license": "CC0",
+          "author": "Sura ah83",
+          "selection": "ai"
+        }
       },
       "jordan/wadi-rum-camel": {
         "name": "Camel ride in Wadi Rum",
@@ -2074,7 +2182,16 @@
           "photography"
         ],
         "mobility": "H",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/24/Aussichtspunkt_im_Dana_Biosph%C3%A4renreservat_%281%29.jpg/960px-Aussichtspunkt_im_Dana_Biosph%C3%A4renreservat_%281%29.jpg",
+          "width": 960,
+          "height": 574,
+          "title": "File:Aussichtspunkt im Dana Biosphärenreservat (1).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Aussichtspunkt_im_Dana_Biosph%C3%A4renreservat_(1).jpg",
+          "license": "CC0",
+          "author": "Rudolfo Kithera",
+          "selection": "ai"
+        }
       }
     },
     "destinations": {
@@ -2091,27 +2208,82 @@
       "jordan/jerash": {
         "name": "Jerash",
         "description": "A town north of Amman beside one of the best-preserved Roman cities in the Middle East.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f3/Cardo_Maximus%2C_Jerash%2C_Jordan_%2853626589639%29.jpg/960px-Cardo_Maximus%2C_Jerash%2C_Jordan_%2853626589639%29.jpg",
+            "width": 960,
+            "height": 641,
+            "title": "File:Cardo Maximus, Jerash, Jordan (53626589639).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Cardo_Maximus,_Jerash,_Jordan_(53626589639).jpg",
+            "license": "CC0",
+            "author": "Mustang Joe",
+            "selection": "ai"
+          }
+        ]
       },
       "jordan/madaba": {
         "name": "Madaba",
         "description": "A small town of Byzantine mosaics, close to Mount Nebo and the Dead Sea.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5d/Madaba_mosaic.jpg/960px-Madaba_mosaic.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Madaba mosaic.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Madaba_mosaic.jpg",
+            "license": "Public domain",
+            "author": "Tom Neys",
+            "selection": "ai"
+          }
+        ]
       },
       "jordan/dana": {
         "name": "Dana",
         "description": "A stone village on the edge of Dana Biosphere Reserve, with hiking trails and desert views.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1b/Dana.JPG/960px-Dana.JPG",
+            "width": 960,
+            "height": 720,
+            "title": "File:Dana.JPG",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Dana.JPG",
+            "license": "Public domain",
+            "author": "MatthiasGP",
+            "selection": "ai"
+          }
+        ]
       },
       "jordan/petra": {
         "name": "Petra",
         "description": "The rose-red Nabataean capital carved into the cliffs, reached from the town of Wadi Musa.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a5/Petra_Jordan_BW_36.JPG/960px-Petra_Jordan_BW_36.JPG",
+            "width": 960,
+            "height": 675,
+            "title": "File:Petra Jordan BW 36.JPG",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Petra_Jordan_BW_36.JPG",
+            "license": "Public domain",
+            "author": "Berthold Werner",
+            "selection": "ai"
+          }
+        ]
       },
       "jordan/wadi-rum": {
         "name": "Wadi Rum",
         "description": "A protected desert of red sand and sandstone cliffs, explored with Bedouin guides and camps.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c2/Wadi_rum_desert.jpg/960px-Wadi_rum_desert.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Wadi rum desert.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Wadi_rum_desert.jpg",
+            "license": "CC0",
+            "author": "Peter Chisholm",
+            "selection": "ai"
+          }
+        ]
       },
       "jordan/aqaba": {
         "name": "Aqaba",
@@ -2121,7 +2293,18 @@
       "jordan/dead-sea": {
         "name": "Dead Sea",
         "description": "The lowest point on land, with salty water that lets bathers float.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/80/The_Dead_Sea_%2849532877853%29.jpg/960px-The_Dead_Sea_%2849532877853%29.jpg",
+            "width": 960,
+            "height": 600,
+            "title": "File:The Dead Sea (49532877853).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:The_Dead_Sea_(49532877853).jpg",
+            "license": "CC0",
+            "author": "Mussi Katz from Israel",
+            "selection": "ai"
+          }
+        ]
       },
       "jordan/ma-an": {
         "name": "Ma'an Governorate",

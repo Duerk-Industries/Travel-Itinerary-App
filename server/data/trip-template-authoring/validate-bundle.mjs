@@ -305,22 +305,21 @@ function validate(file) {
     if (p.mobility !== undefined && !MOBILITY.includes(p.mobility)) {
       errors.push(`${pat}.mobility "${p.mobility}" must be L, M or H`);
     }
-    if (p.image !== null && p.image !== undefined) {
-      const img = p.image;
-      if (typeof img !== 'object') errors.push(`${pat}.image must be null or a complete image object`);
-      else {
-        if (!/^https:\/\/upload\.wikimedia\.org\//.test(img.url ?? '')) {
-          errors.push(`${pat}.image.url must be on upload.wikimedia.org`);
-        }
-        if (!['CC0', 'PD', 'Public Domain'].includes(img.license)) {
-          errors.push(`${pat}.image.license must be a public-domain or CC0 license`);
-        }
-        for (const f of ['width', 'height', 'title', 'pageUrl', 'author']) {
-          if (img[f] === undefined) errors.push(`${pat}.image.${f} is required`);
-        }
-      }
-    }
+    if (p.image !== null && p.image !== undefined) checkImage(p.image, `${pat}.image`);
     if (!placeUsed(key)) warnings.push(`${pat} is not referenced by any activity`);
+  }
+
+  // A picture is optional, but when present it must be a complete public-domain or CC0 Wikimedia Commons file
+  // (the app's import applies the same rules). `selection` records who chose it: a person ('curated') or the
+  // AI review pass ('ai').
+  function checkImage(img, at) {
+    if (typeof img !== 'object' || img === null) { errors.push(`${at} must be null or a complete image object`); return; }
+    if (!/^https:\/\/(upload|thumb)\.wikimedia\.org\//.test(img.url ?? '')) errors.push(`${at}.url must be on upload.wikimedia.org`);
+    if (!/public domain|\bpd\b|cc0|cc[- ]?zero/i.test(img.license ?? '')) errors.push(`${at}.license must be a public-domain or CC0 license`);
+    for (const f of ['width', 'height', 'title', 'pageUrl', 'author']) {
+      if (img[f] === undefined) errors.push(`${at}.${f} is required`);
+    }
+    if (img.selection !== undefined && !['curated', 'ai'].includes(img.selection)) errors.push(`${at}.selection must be "curated" or "ai"`);
   }
 
   function placeUsed(key) {
@@ -337,7 +336,7 @@ function validate(file) {
     }
     if (/https?:\/\//i.test(d.description ?? '')) errors.push(`${dat}.description contains a link`);
     if (!Array.isArray(d.images)) errors.push(`${dat}.images must be an array`);
-    else if (d.images.length) errors.push(`${dat}.images must be [] unless a CC0/public-domain file was verified`);
+    else d.images.forEach((img, i) => checkImage(img, `${dat}.images[${i}]`));
     if (!usedDestKeys.has(key)) warnings.push(`${dat} is not referenced by any template`);
   }
 

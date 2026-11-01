@@ -1278,7 +1278,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5a/Tarangire-Natpark800600.jpg/960px-Tarangire-Natpark800600.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Tarangire-Natpark800600.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Tarangire-Natpark800600.jpg",
+          "license": "Public domain",
+          "author": "ProfessorX",
+          "selection": "ai"
+        }
       },
       "tanzania/lake-manyara": {
         "name": "Lake Manyara National Park",
@@ -1303,7 +1312,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5e/Close-up_of_hippos_in_the_water_at_Ngorongoro_Crater%2C_Tanzania.jpg/960px-Close-up_of_hippos_in_the_water_at_Ngorongoro_Crater%2C_Tanzania.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Close-up of hippos in the water at Ngorongoro Crater, Tanzania.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Close-up_of_hippos_in_the_water_at_Ngorongoro_Crater,_Tanzania.jpg",
+          "license": "CC0",
+          "author": "Ljhlusko",
+          "selection": "ai"
+        }
       },
       "tanzania/serengeti-game-drive": {
         "name": "Serengeti game drives",
@@ -1341,7 +1359,16 @@
           "authentic_local"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4e/Stone_Town%2C_Zanzibar_Town%2C_Tanzania_%28Unsplash%29.jpg/960px-Stone_Town%2C_Zanzibar_Town%2C_Tanzania_%28Unsplash%29.jpg",
+          "width": 960,
+          "height": 582,
+          "title": "File:Stone Town, Zanzibar Town, Tanzania (Unsplash).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Stone_Town,_Zanzibar_Town,_Tanzania_(Unsplash).jpg",
+          "license": "CC0",
+          "author": "Alessio Rinella mumbojumbo",
+          "selection": "ai"
+        }
       },
       "tanzania/nungwi-beach": {
         "name": "Nungwi and Kendwa beaches",
@@ -1354,7 +1381,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a9/Pl%C3%A1%C5%BE_Nungwi_Zanzibar.jpg/960px-Pl%C3%A1%C5%BE_Nungwi_Zanzibar.jpg",
+          "width": 960,
+          "height": 473,
+          "title": "File:Pláž Nungwi Zanzibar.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Pl%C3%A1%C5%BE_Nungwi_Zanzibar.jpg",
+          "license": "CC0",
+          "author": "Libkap",
+          "selection": "ai"
+        }
       }
     },
     "destinations": {
@@ -1386,17 +1422,50 @@
       "tanzania/serengeti": {
         "name": "Serengeti",
         "description": "The great plains and migration.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3b/Mannetjes_masaigiraffe_in_de_Serengeti%2C_Tanzania%2C_-12_januari_2013_a.jpg/960px-Mannetjes_masaigiraffe_in_de_Serengeti%2C_Tanzania%2C_-12_januari_2013_a.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Mannetjes masaigiraffe in de Serengeti, Tanzania, -12 januari 2013 a.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Mannetjes_masaigiraffe_in_de_Serengeti,_Tanzania,_-12_januari_2013_a.jpg",
+            "license": "CC0",
+            "author": "David Sluka",
+            "selection": "ai"
+          }
+        ]
       },
       "tanzania/stone-town": {
         "name": "Stone Town",
         "description": "The old town of Zanzibar.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4e/Stone_Town%2C_Zanzibar_Town%2C_Tanzania_%28Unsplash%29.jpg/960px-Stone_Town%2C_Zanzibar_Town%2C_Tanzania_%28Unsplash%29.jpg",
+            "width": 960,
+            "height": 582,
+            "title": "File:Stone Town, Zanzibar Town, Tanzania (Unsplash).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Stone_Town,_Zanzibar_Town,_Tanzania_(Unsplash).jpg",
+            "license": "CC0",
+            "author": "Alessio Rinella mumbojumbo",
+            "selection": "ai"
+          }
+        ]
       },
       "tanzania/nungwi": {
         "name": "Nungwi",
         "description": "A northern Zanzibar beach.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a9/Pl%C3%A1%C5%BE_Nungwi_Zanzibar.jpg/960px-Pl%C3%A1%C5%BE_Nungwi_Zanzibar.jpg",
+            "width": 960,
+            "height": 473,
+            "title": "File:Pláž Nungwi Zanzibar.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Pl%C3%A1%C5%BE_Nungwi_Zanzibar.jpg",
+            "license": "CC0",
+            "author": "Libkap",
+            "selection": "ai"
+          }
+        ]
       }
     }
   }

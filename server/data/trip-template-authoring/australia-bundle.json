@@ -1562,7 +1562,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ef/Sydney_Opera_House_in_2011.jpg/960px-Sydney_Opera_House_in_2011.jpg",
+          "width": 960,
+          "height": 600,
+          "title": "File:Sydney Opera House in 2011.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Sydney_Opera_House_in_2011.jpg",
+          "license": "Public domain",
+          "author": "Bernard Spragg. NZ",
+          "selection": "ai"
+        }
       },
       "australia/harbour-bridge-climb": {
         "name": "Sydney Harbour Bridge climb",
@@ -1574,7 +1583,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/35/Sydney_harbour_bridge.jpg/960px-Sydney_harbour_bridge.jpg",
+          "width": 960,
+          "height": 596,
+          "title": "File:Sydney harbour bridge.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Sydney_harbour_bridge.jpg",
+          "license": "Public domain",
+          "author": "Jan Derk at en.wikipedia",
+          "selection": "ai"
+        }
       },
       "australia/the-rocks": {
         "name": "The Rocks",
@@ -1610,7 +1628,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/db/Ferry_pulling_into_Manly_Beach_%282688378562%29.jpg/960px-Ferry_pulling_into_Manly_Beach_%282688378562%29.jpg",
+          "width": 960,
+          "height": 719,
+          "title": "File:Ferry pulling into Manly Beach (2688378562).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Ferry_pulling_into_Manly_Beach_(2688378562).jpg",
+          "license": "CC0",
+          "author": "cogdogblog",
+          "selection": "ai"
+        }
       },
       "australia/blue-mountains": {
         "name": "Blue Mountains and Three Sisters",
@@ -1623,7 +1650,16 @@
           "adventure"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/bf/Three_Sisters_%28Australia%29_-_Borskin.jpg/960px-Three_Sisters_%28Australia%29_-_Borskin.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Three Sisters (Australia) - Borskin.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Three_Sisters_(Australia)_-_Borskin.jpg",
+          "license": "Public domain",
+          "author": "Borskin at English Wikipedia",
+          "selection": "ai"
+        }
       },
       "australia/hunter-valley": {
         "name": "Hunter Valley wine country",
@@ -1648,7 +1684,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a4/Hosier_Lane_Melbourne._%2821380271866%29.jpg/960px-Hosier_Lane_Melbourne._%2821380271866%29.jpg",
+          "width": 960,
+          "height": 540,
+          "title": "File:Hosier Lane Melbourne. (21380271866).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Hosier_Lane_Melbourne._(21380271866).jpg",
+          "license": "CC0",
+          "author": "Bernard Spragg. NZ from Christchurch, New Zealand",
+          "selection": "ai"
+        }
       },
       "australia/queen-victoria-market": {
         "name": "Queen Victoria Market",
@@ -1733,7 +1778,16 @@
           "authentic_local"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/63/Daintree_forrest.jpg/960px-Daintree_forrest.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Daintree forrest.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Daintree_forrest.jpg",
+          "license": "CC0",
+          "author": "Dinkum",
+          "selection": "ai"
+        }
       },
       "australia/kuranda": {
         "name": "Kuranda Scenic Railway and Skyrail",
@@ -1745,7 +1799,16 @@
           "culture"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/40/Kuranda_Scenic_Railway.jpg/960px-Kuranda_Scenic_Railway.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Kuranda Scenic Railway.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Kuranda_Scenic_Railway.jpg",
+          "license": "CC0",
+          "author": "HannahChen",
+          "selection": "ai"
+        }
       },
       "australia/uluru-base-walk": {
         "name": "Uluru sunrise and base walk",
@@ -1770,7 +1833,16 @@
           "adventure"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a5/Australie_Red_Center_Kata_Tjutas_Olgas.JPG/960px-Australie_Red_Center_Kata_Tjutas_Olgas.JPG",
+          "width": 960,
+          "height": 640,
+          "title": "File:Australie Red Center Kata Tjutas Olgas.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Australie_Red_Center_Kata_Tjutas_Olgas.JPG",
+          "license": "Public domain",
+          "author": "Unknown",
+          "selection": "ai"
+        }
       },
       "australia/field-of-light": {
         "name": "Field of Light and desert dinner",
@@ -1789,7 +1861,18 @@
       "australia": {
         "name": "Australia",
         "description": "A vast island continent of harbour cities, reef, rainforest and the red desert heart.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ed/Australia_satellite_plane.jpg/960px-Australia_satellite_plane.jpg",
+            "width": 960,
+            "height": 790,
+            "title": "File:Australia satellite plane.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Australia_satellite_plane.jpg",
+            "license": "Public domain",
+            "author": "Reto Stöckl / NASA Goddard Space Flight Center",
+            "selection": "ai"
+          }
+        ]
       },
       "australia/new-south-wales": {
         "name": "New South Wales",
@@ -1799,7 +1882,18 @@
       "australia/sydney": {
         "name": "Sydney",
         "description": "A harbour city of beaches, the Opera House and the Bridge.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ef/Sydney_Opera_House_in_2011.jpg/960px-Sydney_Opera_House_in_2011.jpg",
+            "width": 960,
+            "height": 600,
+            "title": "File:Sydney Opera House in 2011.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Sydney_Opera_House_in_2011.jpg",
+            "license": "Public domain",
+            "author": "Bernard Spragg. NZ",
+            "selection": "ai"
+          }
+        ]
       },
       "australia/katoomba": {
         "name": "Katoomba",
@@ -1814,7 +1908,18 @@
       "australia/melbourne": {
         "name": "Melbourne",
         "description": "A city of laneways, coffee, markets, sport and art.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/60/View_of_Melbourne_city_from_near_Port_melbourne.jpg/960px-View_of_Melbourne_city_from_near_Port_melbourne.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:View of Melbourne city from near Port melbourne.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:View_of_Melbourne_city_from_near_Port_melbourne.jpg",
+            "license": "CC0",
+            "author": "Dprzvhar",
+            "selection": "ai"
+          }
+        ]
       },
       "australia/queensland": {
         "name": "Queensland",
@@ -1824,22 +1929,66 @@
       "australia/cairns": {
         "name": "Cairns",
         "description": "The gateway city to the Great Barrier Reef and tropical rainforest.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/97/Cairns_Esplanade_-_Pier_%28Shangrila_Hotel%29.jpg/960px-Cairns_Esplanade_-_Pier_%28Shangrila_Hotel%29.jpg",
+            "width": 960,
+            "height": 598,
+            "title": "File:Cairns Esplanade - Pier (Shangrila Hotel).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Cairns_Esplanade_-_Pier_(Shangrila_Hotel).jpg",
+            "license": "Public domain",
+            "author": "Donaldytong",
+            "selection": "ai"
+          }
+        ]
       },
       "australia/port-douglas": {
         "name": "Port Douglas",
         "description": "A relaxed resort town between the reef and the Daintree.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/80/StateLibQld_1_294923_View_of_Port_Douglas%2C_Queensland%2C_1941.jpg/960px-StateLibQld_1_294923_View_of_Port_Douglas%2C_Queensland%2C_1941.jpg",
+            "width": 960,
+            "height": 595,
+            "title": "File:StateLibQld 1 294923 View of Port Douglas, Queensland, 1941.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:StateLibQld_1_294923_View_of_Port_Douglas,_Queensland,_1941.jpg",
+            "license": "Public domain",
+            "author": "Unknown",
+            "selection": "ai"
+          }
+        ]
       },
       "australia/northern-territory": {
         "name": "Northern Territory",
         "description": "The Red Centre and Top End, home to Uluru and Kata Tjuta.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/dd/ISS056-E-177518_-_View_of_the_Northern_Territory.jpg/960px-ISS056-E-177518_-_View_of_the_Northern_Territory.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:ISS056-E-177518 - View of the Northern Territory.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:ISS056-E-177518_-_View_of_the_Northern_Territory.jpg",
+            "license": "Public domain",
+            "author": "Earth Science and Remote Sensing Unit, NASA Johnson Space Center",
+            "selection": "ai"
+          }
+        ]
       },
       "australia/uluru": {
         "name": "Uluru",
         "description": "The red monolith and Kata Tjuta, sacred to the Anangu, in the desert at Yulara.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2f/Ulu%E1%B9%9Fu_%28Ayers_Rock%29%2C_Sunset.jpg/960px-Ulu%E1%B9%9Fu_%28Ayers_Rock%29%2C_Sunset.jpg",
+            "width": 960,
+            "height": 600,
+            "title": "File:Uluṟu (Ayers Rock), Sunset.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Ulu%E1%B9%9Fu_(Ayers_Rock),_Sunset.jpg",
+            "license": "CC0",
+            "author": "Weyf",
+            "selection": "ai"
+          }
+        ]
       }
     }
   }

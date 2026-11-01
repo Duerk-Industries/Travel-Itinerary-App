@@ -56,6 +56,26 @@ describe('LocationSelector', () => {
     expect(getAllByText('Add').length).toBe(1);
   });
 
+  it('closes each suggestion list on blur and reopens it on focus', async () => {
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: async () => [{ id: 'city-1', name: 'Boston', sourceType: 'city' }],
+    });
+    const { getByPlaceholderText, findByText, queryByText } = render(
+      <LocationSelector {...defaultProps} selectedLocations={[{ id: 'us', name: 'USA', sourceType: 'country' }]} />
+    );
+    for (const placeholder of ['Search countries or states', 'Search cities']) {
+      const input = getByPlaceholderText(placeholder);
+      fireEvent.changeText(input, `Bos ${placeholder}`);
+      await findByText('Boston');
+      fireEvent(input, 'blur');
+      expect(queryByText('Boston')).toBeNull();
+      fireEvent(input, 'focus');
+      expect(queryByText('Boston')).toBeTruthy();
+      fireEvent(input, 'blur');
+    }
+  });
+
   it('fetches country/state suggestions on input', async () => {
     (global.fetch as jest.Mock).mockResolvedValueOnce({
       ok: true,

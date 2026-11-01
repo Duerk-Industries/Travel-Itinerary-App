@@ -2436,7 +2436,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/67/Delhi_red_fort_1.jpg/960px-Delhi_red_fort_1.jpg",
+          "width": 960,
+          "height": 747,
+          "title": "File:Delhi red fort 1.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Delhi_red_fort_1.jpg",
+          "license": "CC0",
+          "author": "Turjo19",
+          "selection": "ai"
+        }
       },
       "india/jama-masjid-delhi": {
         "name": "Jama Masjid, Delhi",
@@ -2448,7 +2457,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ac/Jama_Masjid%2C_Delhi_5.jpg/960px-Jama_Masjid%2C_Delhi_5.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Jama Masjid, Delhi 5.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Jama_Masjid,_Delhi_5.jpg",
+          "license": "CC0",
+          "author": "Sripathroy",
+          "selection": "ai"
+        }
       },
       "india/chandni-chowk": {
         "name": "Chandni Chowk food walk",
@@ -2460,7 +2478,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/78/Chandni_chowk_with_sisganj_gurudwara_by_ashish.jpg/960px-Chandni_chowk_with_sisganj_gurudwara_by_ashish.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Chandni chowk with sisganj gurudwara by ashish.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Chandni_chowk_with_sisganj_gurudwara_by_ashish.jpg",
+          "license": "Public domain",
+          "author": "User:आशीष भटनागर",
+          "selection": "ai"
+        }
       },
       "india/humayuns-tomb": {
         "name": "Humayun's Tomb",
@@ -2472,7 +2499,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7a/Humayun%27s_tomb_original_aspect_ratio.jpg/960px-Humayun%27s_tomb_original_aspect_ratio.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Humayun's tomb original aspect ratio.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Humayun%27s_tomb_original_aspect_ratio.jpg",
+          "license": "CC0",
+          "author": "Vishnu Rema Jayaram",
+          "selection": "ai"
+        }
       },
       "india/india-gate": {
         "name": "India Gate and Kartavya Path",
@@ -2484,7 +2520,16 @@
           "relax"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a4/India_Gate_in_New_Delhi%2C_India.jpg/960px-India_Gate_in_New_Delhi%2C_India.jpg",
+          "width": 960,
+          "height": 541,
+          "title": "File:India Gate in New Delhi, India.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:India_Gate_in_New_Delhi,_India.jpg",
+          "license": "CC0",
+          "author": "Jais006",
+          "selection": "ai"
+        }
       },
       "india/qutub-minar": {
         "name": "Qutub Minar",
@@ -2496,7 +2541,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b5/Qutub_Minar_Complex_2019.jpg/960px-Qutub_Minar_Complex_2019.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Qutub Minar Complex 2019.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Qutub_Minar_Complex_2019.jpg",
+          "license": "CC0",
+          "author": "Rohitpavana",
+          "selection": "ai"
+        }
       },
       "india/bangla-sahib": {
         "name": "Gurudwara Bangla Sahib",
@@ -2508,7 +2562,16 @@
           "relax"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/79/Gurdwara_Bangla_Sahib%2C_Delhi.jpg/960px-Gurdwara_Bangla_Sahib%2C_Delhi.jpg",
+          "width": 960,
+          "height": 680,
+          "title": "File:Gurdwara Bangla Sahib, Delhi.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Gurdwara_Bangla_Sahib,_Delhi.jpg",
+          "license": "CC0",
+          "author": "Dudva",
+          "selection": "ai"
+        }
       },
       "india/taj-mahal": {
         "name": "Taj Mahal",
@@ -2520,7 +2583,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/21/Taj_Mahal_2018.jpg/960px-Taj_Mahal_2018.jpg",
+          "width": 960,
+          "height": 708,
+          "title": "File:Taj Mahal 2018.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Taj_Mahal_2018.jpg",
+          "license": "CC0",
+          "author": "Almbauer",
+          "selection": "ai"
+        }
       },
       "india/agra-fort": {
         "name": "Agra Fort",
@@ -2532,7 +2604,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/01/Southern_Entrance%2C_Agra_Fort%2C_India_2025.jpg/960px-Southern_Entrance%2C_Agra_Fort%2C_India_2025.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Southern Entrance, Agra Fort, India 2025.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Southern_Entrance,_Agra_Fort,_India_2025.jpg",
+          "license": "CC0",
+          "author": "Dudva",
+          "selection": "ai"
+        }
       },
       "india/itimad-ud-daulah": {
         "name": "Itimad-ud-Daulah",
@@ -2543,7 +2624,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/58/Itimad-ud-Daula-Mausoleum%2C_Agra.jpg/960px-Itimad-ud-Daula-Mausoleum%2C_Agra.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Itimad-ud-Daula-Mausoleum, Agra.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Itimad-ud-Daula-Mausoleum,_Agra.jpg",
+          "license": "CC0",
+          "author": "Almbauer",
+          "selection": "ai"
+        }
       },
       "india/mehtab-bagh": {
         "name": "Mehtab Bagh",
@@ -2555,7 +2645,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/84/Mehtab_Bagh_lawn.jpg/960px-Mehtab_Bagh_lawn.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Mehtab Bagh lawn.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Mehtab_Bagh_lawn.jpg",
+          "license": "Public domain",
+          "author": ":en:Aks khandelwal (talk | contribs)",
+          "selection": "ai"
+        }
       },
       "india/fatehpur-sikri": {
         "name": "Fatehpur Sikri",
@@ -2567,7 +2666,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a7/Fatehpur_Sikri_near_Agra%2C_Uttar_Pradesh.jpg/960px-Fatehpur_Sikri_near_Agra%2C_Uttar_Pradesh.jpg",
+          "width": 960,
+          "height": 540,
+          "title": "File:Fatehpur Sikri near Agra, Uttar Pradesh.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Fatehpur_Sikri_near_Agra,_Uttar_Pradesh.jpg",
+          "license": "CC0",
+          "author": "RndmCrs",
+          "selection": "ai"
+        }
       },
       "india/amber-fort": {
         "name": "Amber Fort",
@@ -2579,7 +2687,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/42/Amber_Fort_in_Jaipur_2.jpg/960px-Amber_Fort_in_Jaipur_2.jpg",
+          "width": 960,
+          "height": 573,
+          "title": "File:Amber Fort in Jaipur 2.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Amber_Fort_in_Jaipur_2.jpg",
+          "license": "CC0",
+          "author": "Dudva",
+          "selection": "ai"
+        }
       },
       "india/city-palace-jaipur": {
         "name": "City Palace, Jaipur",
@@ -2591,7 +2708,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/48/City_Palace_Jaipur.jpg/960px-City_Palace_Jaipur.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:City Palace Jaipur.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:City_Palace_Jaipur.jpg",
+          "license": "Public domain",
+          "author": "Sandeep sharma",
+          "selection": "ai"
+        }
       },
       "india/hawa-mahal": {
         "name": "Hawa Mahal",
@@ -2602,7 +2728,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/83/Hawa_Mahal%2C_The_Palace_of_Winds%2C_Jaipur%2C_India_%2854390513832%29.jpg/960px-Hawa_Mahal%2C_The_Palace_of_Winds%2C_Jaipur%2C_India_%2854390513832%29.jpg",
+          "width": 960,
+          "height": 728,
+          "title": "File:Hawa Mahal, The Palace of Winds, Jaipur, India (54390513832).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Hawa_Mahal,_The_Palace_of_Winds,_Jaipur,_India_(54390513832).jpg",
+          "license": "CC0",
+          "author": "Mustang Joe",
+          "selection": "ai"
+        }
       },
       "india/jantar-mantar-jaipur": {
         "name": "Jantar Mantar",
@@ -2614,7 +2749,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3f/Jantar_Mantar_at_Jaipur.jpg/960px-Jantar_Mantar_at_Jaipur.jpg",
+          "width": 960,
+          "height": 604,
+          "title": "File:Jantar Mantar at Jaipur.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Jantar_Mantar_at_Jaipur.jpg",
+          "license": "Public domain",
+          "author": "Knowledge Seeker",
+          "selection": "ai"
+        }
       },
       "india/jaipur-bazaars": {
         "name": "Jaipur bazaars",
@@ -2626,7 +2770,16 @@
           "food"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a9/Bazaar_Merchants_in_Jaipur_in_1962_%281%29.jpg/960px-Bazaar_Merchants_in_Jaipur_in_1962_%281%29.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Bazaar Merchants in Jaipur in 1962 (1).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Bazaar_Merchants_in_Jaipur_in_1962_(1).jpg",
+          "license": "Public domain",
+          "author": "Cecil Stoughton",
+          "selection": "ai"
+        }
       },
       "india/nahargarh-fort": {
         "name": "Nahargarh Fort sunset",
@@ -2638,7 +2791,16 @@
           "outdoors"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2f/Scenic_view_of_Nahargarh_Fort.jpg/960px-Scenic_view_of_Nahargarh_Fort.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Scenic view of Nahargarh Fort.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Scenic_view_of_Nahargarh_Fort.jpg",
+          "license": "CC0",
+          "author": "Siddharthseth20",
+          "selection": "ai"
+        }
       },
       "india/mehrangarh-fort": {
         "name": "Mehrangarh Fort",
@@ -2650,7 +2812,16 @@
           "photography"
         ],
         "mobility": "H",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b8/The_Mehrangarh_Fort_%2854341967789%29.jpg/960px-The_Mehrangarh_Fort_%2854341967789%29.jpg",
+          "width": 960,
+          "height": 641,
+          "title": "File:The Mehrangarh Fort (54341967789).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:The_Mehrangarh_Fort_(54341967789).jpg",
+          "license": "CC0",
+          "author": "Mustang Joe",
+          "selection": "ai"
+        }
       },
       "india/jaswant-thada": {
         "name": "Jaswant Thada",
@@ -2662,7 +2833,16 @@
           "relax"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3a/Jaswant_Thada_2018.jpg/960px-Jaswant_Thada_2018.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Jaswant Thada 2018.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Jaswant_Thada_2018.jpg",
+          "license": "CC0",
+          "author": "Almbauer",
+          "selection": "ai"
+        }
       },
       "india/jodhpur-blue-city": {
         "name": "Jodhpur Blue City walk",
@@ -2674,7 +2854,16 @@
           "culture"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d7/Jodhpur%2C_the_Blue_City_%2854347548876%29.jpg/960px-Jodhpur%2C_the_Blue_City_%2854347548876%29.jpg",
+          "width": 960,
+          "height": 641,
+          "title": "File:Jodhpur, the Blue City (54347548876).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Jodhpur,_the_Blue_City_(54347548876).jpg",
+          "license": "CC0",
+          "author": "Mustang Joe",
+          "selection": "ai"
+        }
       },
       "india/sardar-market": {
         "name": "Sardar Market and Clock Tower",
@@ -2698,7 +2887,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/bb/Ranakpur_Jain_Temple_%2854340858042%29.jpg/960px-Ranakpur_Jain_Temple_%2854340858042%29.jpg",
+          "width": 960,
+          "height": 458,
+          "title": "File:Ranakpur Jain Temple (54340858042).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Ranakpur_Jain_Temple_(54340858042).jpg",
+          "license": "CC0",
+          "author": "Mustang Joe",
+          "selection": "ai"
+        }
       },
       "india/city-palace-udaipur": {
         "name": "City Palace, Udaipur",
@@ -2710,7 +2908,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9b/Lake_view_of_City_Palace_%28Udaipur%29%2C_Rajasthan%2C_India_-2.jpg/960px-Lake_view_of_City_Palace_%28Udaipur%29%2C_Rajasthan%2C_India_-2.jpg",
+          "width": 960,
+          "height": 636,
+          "title": "File:Lake view of City Palace (Udaipur), Rajasthan, India -2.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Lake_view_of_City_Palace_(Udaipur),_Rajasthan,_India_-2.jpg",
+          "license": "Public domain",
+          "author": "Honzasoukup",
+          "selection": "ai"
+        }
       },
       "india/lake-pichola-boat": {
         "name": "Lake Pichola boat ride",
@@ -2746,7 +2953,16 @@
           "culture"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d9/Saheliyon-ki-Bari%2C_Udaipur%2C_India_%2854345395621%29.jpg/960px-Saheliyon-ki-Bari%2C_Udaipur%2C_India_%2854345395621%29.jpg",
+          "width": 960,
+          "height": 641,
+          "title": "File:Saheliyon-ki-Bari, Udaipur, India (54345395621).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Saheliyon-ki-Bari,_Udaipur,_India_(54345395621).jpg",
+          "license": "CC0",
+          "author": "Mustang Joe",
+          "selection": "ai"
+        }
       },
       "india/monsoon-palace": {
         "name": "Monsoon Palace (Sajjangarh)",
@@ -2758,7 +2974,16 @@
           "relax"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/86/Sunset_on_the_Monsoon_Palace%2C_Udaipur%2C_India_%2854345395706%29.jpg/960px-Sunset_on_the_Monsoon_Palace%2C_Udaipur%2C_India_%2854345395706%29.jpg",
+          "width": 960,
+          "height": 641,
+          "title": "File:Sunset on the Monsoon Palace, Udaipur, India (54345395706).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Sunset_on_the_Monsoon_Palace,_Udaipur,_India_(54345395706).jpg",
+          "license": "CC0",
+          "author": "Mustang Joe",
+          "selection": "ai"
+        }
       },
       "india/udaipur-folk-show": {
         "name": "Folk dance and puppet show",
@@ -2819,7 +3044,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/11/Ghats_of_Varanasi%2C_10.2025.jpg/960px-Ghats_of_Varanasi%2C_10.2025.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Ghats of Varanasi, 10.2025.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Ghats_of_Varanasi,_10.2025.jpg",
+          "license": "CC0",
+          "author": "Dudva",
+          "selection": "ai"
+        }
       },
       "india/sarnath": {
         "name": "Sarnath",
@@ -2830,7 +3064,16 @@
           "relax"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5c/Sarnath_Archaeological_Site%2C_Sarnath.jpg/960px-Sarnath_Archaeological_Site%2C_Sarnath.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Sarnath Archaeological Site, Sarnath.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Sarnath_Archaeological_Site,_Sarnath.jpg",
+          "license": "CC0",
+          "author": "MaximusPrasad",
+          "selection": "ai"
+        }
       },
       "india/fort-kochi": {
         "name": "Fort Kochi heritage walk",
@@ -2853,7 +3096,16 @@
           "authentic_local"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c3/Kochi_Kathakali_2.JPG/960px-Kochi_Kathakali_2.JPG",
+          "width": 960,
+          "height": 735,
+          "title": "File:Kochi Kathakali 2.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Kochi_Kathakali_2.JPG",
+          "license": "Public domain",
+          "author": "Wouter Hagens",
+          "selection": "ai"
+        }
       },
       "india/munnar-tea-plantations": {
         "name": "Munnar tea plantation walk",
@@ -2865,7 +3117,16 @@
           "relax"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/48/Farm_Fields_of_Munnar_%28Unsplash%29.jpg/960px-Farm_Fields_of_Munnar_%28Unsplash%29.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Farm Fields of Munnar (Unsplash).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Farm_Fields_of_Munnar_(Unsplash).jpg",
+          "license": "CC0",
+          "author": "Ravi Pinisetti ravipinisetti",
+          "selection": "ai"
+        }
       },
       "india/munnar-tea-museum": {
         "name": "Munnar tea museum and factory",
@@ -2889,7 +3150,16 @@
           "adventure"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/89/Eravikulam_National_park.jpg/960px-Eravikulam_National_park.jpg",
+          "width": 960,
+          "height": 540,
+          "title": "File:Eravikulam National park.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Eravikulam_National_park.jpg",
+          "license": "CC0",
+          "author": "Photos Worldwide",
+          "selection": "ai"
+        }
       },
       "india/thekkady-spice-plantation": {
         "name": "Spice plantation tour in Thekkady",
@@ -2913,7 +3183,16 @@
           "adventure"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0a/Periyar_Lake_%28193226091%29.jpeg/960px-Periyar_Lake_%28193226091%29.jpeg",
+          "width": 960,
+          "height": 502,
+          "title": "File:Periyar Lake (193226091).jpeg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Periyar_Lake_(193226091).jpeg",
+          "license": "CC0",
+          "author": "Krishna Prasad T",
+          "selection": "ai"
+        }
       },
       "india/kalaripayattu-show": {
         "name": "Kalaripayattu demonstration",
@@ -2937,7 +3216,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/37/Kerala_Houseboat.jpg/960px-Kerala_Houseboat.jpg",
+          "width": 960,
+          "height": 604,
+          "title": "File:Kerala Houseboat.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Kerala_Houseboat.jpg",
+          "license": "Public domain",
+          "author": "P.K.Niyogi",
+          "selection": "ai"
+        }
       },
       "india/backwater-canoe": {
         "name": "Village canoe tour in the backwaters",
@@ -2962,7 +3250,18 @@
       "india/delhi": {
         "name": "Delhi",
         "description": "India's capital, combining the Mughal alleys of Old Delhi with the broad avenues and monuments of New Delhi.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7e/-Red_Fort%2C_Delhi%2C_India-_MET_DP72080.jpg/960px--Red_Fort%2C_Delhi%2C_India-_MET_DP72080.jpg",
+            "width": 960,
+            "height": 726,
+            "title": "File:-Red Fort, Delhi, India- MET DP72080.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:-Red_Fort,_Delhi,_India-_MET_DP72080.jpg",
+            "license": "CC0",
+            "author": "Unknown authorUnknown author",
+            "selection": "ai"
+          }
+        ]
       },
       "india/uttar-pradesh": {
         "name": "Uttar Pradesh",
@@ -2972,47 +3271,146 @@
       "india/agra": {
         "name": "Agra",
         "description": "The Mughal city on the Yamuna that holds the Taj Mahal, a vast red fort and some of the best-preserved Mughal tombs.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/01/Southern_Entrance%2C_Agra_Fort%2C_India_2025.jpg/960px-Southern_Entrance%2C_Agra_Fort%2C_India_2025.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Southern Entrance, Agra Fort, India 2025.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Southern_Entrance,_Agra_Fort,_India_2025.jpg",
+            "license": "CC0",
+            "author": "Dudva",
+            "selection": "ai"
+          }
+        ]
       },
       "india/fatehpur-sikri": {
         "name": "Fatehpur Sikri",
         "description": "A red sandstone Mughal capital abandoned soon after it was built, between Agra and Jaipur.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a7/Fatehpur_Sikri_near_Agra%2C_Uttar_Pradesh.jpg/960px-Fatehpur_Sikri_near_Agra%2C_Uttar_Pradesh.jpg",
+            "width": 960,
+            "height": 540,
+            "title": "File:Fatehpur Sikri near Agra, Uttar Pradesh.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Fatehpur_Sikri_near_Agra,_Uttar_Pradesh.jpg",
+            "license": "CC0",
+            "author": "RndmCrs",
+            "selection": "ai"
+          }
+        ]
       },
       "india/rajasthan": {
         "name": "Rajasthan",
         "description": "India's desert state of hilltop forts, palaces and bazaars, known for its colourful cities.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f4/Rajasthan_India_fort_at_night_with_lights.jpg/960px-Rajasthan_India_fort_at_night_with_lights.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Rajasthan India fort at night with lights.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Rajasthan_India_fort_at_night_with_lights.jpg",
+            "license": "CC0",
+            "author": "Yourusernamewillbepublic2",
+            "selection": "ai"
+          }
+        ]
       },
       "india/jaipur": {
         "name": "Jaipur",
         "description": "The Pink City, a walled capital of palaces, bazaars and a hilltop fort, and the gateway to Rajasthan.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/ce/Street_in_Jaipur_3.jpg/960px-Street_in_Jaipur_3.jpg",
+            "width": 960,
+            "height": 723,
+            "title": "File:Street in Jaipur 3.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Street_in_Jaipur_3.jpg",
+            "license": "CC0",
+            "author": "Dudva",
+            "selection": "ai"
+          }
+        ]
       },
       "india/jodhpur": {
         "name": "Jodhpur",
         "description": "The Blue City, dominated by the vast Mehrangarh Fort above a maze of blue-washed houses.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d7/Jodhpur%2C_the_Blue_City_%2854347548876%29.jpg/960px-Jodhpur%2C_the_Blue_City_%2854347548876%29.jpg",
+            "width": 960,
+            "height": 641,
+            "title": "File:Jodhpur, the Blue City (54347548876).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Jodhpur,_the_Blue_City_(54347548876).jpg",
+            "license": "CC0",
+            "author": "Mustang Joe",
+            "selection": "ai"
+          }
+        ]
       },
       "india/ranakpur": {
         "name": "Ranakpur",
         "description": "A forested valley in the Aravalli hills with a fifteenth-century marble Jain temple, on the route between Jodhpur and Udaipur.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/bb/Ranakpur_Jain_Temple_%2854340858042%29.jpg/960px-Ranakpur_Jain_Temple_%2854340858042%29.jpg",
+            "width": 960,
+            "height": 458,
+            "title": "File:Ranakpur Jain Temple (54340858042).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Ranakpur_Jain_Temple_(54340858042).jpg",
+            "license": "CC0",
+            "author": "Mustang Joe",
+            "selection": "ai"
+          }
+        ]
       },
       "india/udaipur": {
         "name": "Udaipur",
         "description": "The City of Lakes, with palaces on the water, narrow lanes and views from surrounding hills.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/75/Oct2025._Sunset_over_Lake_Pichola%2C_Udaipur%2C_India_05.jpg/960px-Oct2025._Sunset_over_Lake_Pichola%2C_Udaipur%2C_India_05.jpg",
+            "width": 960,
+            "height": 540,
+            "title": "File:Oct2025. Sunset over Lake Pichola, Udaipur, India 05.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Oct2025._Sunset_over_Lake_Pichola,_Udaipur,_India_05.jpg",
+            "license": "CC0",
+            "author": "Ridiculopathy",
+            "selection": "ai"
+          }
+        ]
       },
       "india/varanasi": {
         "name": "Varanasi",
         "description": "The sacred city on the Ganges, where pilgrims bathe on stepped ghats and evening ceremonies light the river.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ec/Benares_%28Varanasi%2C_India%29_-_1922.jpg/960px-Benares_%28Varanasi%2C_India%29_-_1922.jpg",
+            "width": 960,
+            "height": 658,
+            "title": "File:Benares (Varanasi, India) - 1922.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Benares_(Varanasi,_India)_-_1922.jpg",
+            "license": "Public domain",
+            "author": "Unknown authorUnknown author",
+            "selection": "ai"
+          }
+        ]
       },
       "india/sarnath": {
         "name": "Sarnath",
         "description": "The deer park near Varanasi where the Buddha gave his first sermon, with stupas, ruins and a museum.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5c/Sarnath_Archaeological_Site%2C_Sarnath.jpg/960px-Sarnath_Archaeological_Site%2C_Sarnath.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:Sarnath Archaeological Site, Sarnath.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Sarnath_Archaeological_Site,_Sarnath.jpg",
+            "license": "CC0",
+            "author": "MaximusPrasad",
+            "selection": "ai"
+          }
+        ]
       },
       "india/kerala": {
         "name": "Kerala",
@@ -3027,7 +3425,18 @@
       "india/munnar": {
         "name": "Munnar",
         "description": "A hill station in the Western Ghats surrounded by tea plantations, cool and green after the coast.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/48/Farm_Fields_of_Munnar_%28Unsplash%29.jpg/960px-Farm_Fields_of_Munnar_%28Unsplash%29.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:Farm Fields of Munnar (Unsplash).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Farm_Fields_of_Munnar_(Unsplash).jpg",
+            "license": "CC0",
+            "author": "Ravi Pinisetti ravipinisetti",
+            "selection": "ai"
+          }
+        ]
       },
       "india/thekkady": {
         "name": "Thekkady",
@@ -3037,7 +3446,18 @@
       "india/alleppey": {
         "name": "Alleppey",
         "description": "The main gateway to the Kerala backwaters, where houseboats and canoes explore the canals and lagoons.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/76/House_boat_1.JPG/960px-House_boat_1.JPG",
+            "width": 960,
+            "height": 638,
+            "title": "File:House boat 1.JPG",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:House_boat_1.JPG",
+            "license": "Public domain",
+            "author": "Wouter Hagens",
+            "selection": "ai"
+          }
+        ]
       }
     }
   }

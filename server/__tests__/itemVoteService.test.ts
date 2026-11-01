@@ -6,6 +6,7 @@ jest.mock('../src/db');
 describe('applyVoteSummary', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    (db.getStarRatingSummaries as jest.Mock).mockResolvedValue({});
   });
 
   it('returns legacy Needed records as Proposed without changing the saved item', async () => {
@@ -17,11 +18,10 @@ describe('applyVoteSummary', () => {
   });
 
   it('applies saved vote metadata even when the adapter normalizes item id casing', async () => {
-    (db.getItemVoteSummaries as jest.Mock)
-      .mockResolvedValueOnce({
-        'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa': { netVotes: 1, userVote: 1 },
-      })
-      .mockResolvedValueOnce({});
+    (db.getItemVoteSummaries as jest.Mock).mockResolvedValue({
+      'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa': { netVotes: 1, userVote: 1 },
+    });
+    (db.getStarRatingSummaries as jest.Mock).mockResolvedValue({});
 
     const [item] = await applyVoteSummary('user-1', 'trip-1', 'flight', [
       { id: 'AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA', carrier: 'Test Air' },
@@ -31,28 +31,44 @@ describe('applyVoteSummary', () => {
       id: 'AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA',
       netVotes: 1,
       userVote: 1,
+      averageRating: null,
+      ratingCount: 0,
+      userStars: null,
       netRating: 0,
       userRating: null,
     });
   });
 
-  it('applies saved rating metadata through the same normalized lookup', async () => {
-    (db.getItemVoteSummaries as jest.Mock)
-      .mockResolvedValueOnce({})
-      .mockResolvedValueOnce({
-        'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb': { netVotes: -1, userVote: -1 },
-      });
+  it('adds the provider average, the count behind it and the traveler\'s own stars, rounded', async () => {
+    (db.getItemVoteSummaries as jest.Mock).mockResolvedValue({});
+    (db.getStarRatingSummaries as jest.Mock).mockResolvedValue({
+      'act-1': { average: 4.3333333, count: 3, net: 1, userStars: 5 },
+      'act-2': { average: null, count: 0, net: 0, userStars: null },
+    });
 
-    const [item] = await applyVoteSummary('user-1', 'trip-1', 'activity', [
-      { id: 'BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBBBB', name: 'Museum' },
+    const [rated, unrated] = await applyVoteSummary('user-1', 'trip-1', 'activity', [
+      { id: 'act-1', name: 'Museum', catalogId: 'Louvre' },
+      { id: 'act-2', name: 'Walk' },
     ]);
 
-    expect(item).toMatchObject({
-      id: 'BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBBBB',
-      netVotes: 0,
-      userVote: null,
-      netRating: -1,
-      userRating: -1,
+    expect(rated).toMatchObject({ averageRating: 4.33, ratingCount: 3, userStars: 5, netRating: 1, userRating: 1 });
+    expect(unrated).toMatchObject({ averageRating: null, ratingCount: 0, userStars: null, netRating: 0, userRating: null });
+    expect(db.getStarRatingSummaries).toHaveBeenCalledWith('user-1', 'activity', [
+      { itemId: 'act-1', providerKey: 'catalog:louvre' },
+      { itemId: 'act-2', providerKey: 'name:walk' },
+    ]);
+  });
+
+  it('shows builds from before star ratings a thumb: 3 or more stars is up, fewer is down', async () => {
+    (db.getItemVoteSummaries as jest.Mock).mockResolvedValue({});
+    (db.getStarRatingSummaries as jest.Mock).mockResolvedValue({
+      a: { average: 2, count: 1, net: -1, userStars: 2 },
+      b: { average: 3, count: 1, net: 1, userStars: 3 },
     });
+
+    const [low, mid] = await applyVoteSummary('user-1', 'trip-1', 'activity', [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }]);
+
+    expect(low).toMatchObject({ netRating: -1, userRating: -1 });
+    expect(mid).toMatchObject({ netRating: 1, userRating: 1 });
   });
 });

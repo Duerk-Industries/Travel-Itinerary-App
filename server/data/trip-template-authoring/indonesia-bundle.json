@@ -1173,7 +1173,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e0/Rice_terraced_fields_in_Ubud.JPG/960px-Rice_terraced_fields_in_Ubud.JPG",
+          "width": 960,
+          "height": 720,
+          "title": "File:Rice terraced fields in Ubud.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Rice_terraced_fields_in_Ubud.JPG",
+          "license": "CC0",
+          "author": "Rudolph.A,.furtado",
+          "selection": "ai"
+        }
       },
       "indonesia/batur-sunrise": {
         "name": "Mount Batur sunrise trek",
@@ -1209,7 +1218,16 @@
           "food"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a4/Tanah_Lot%2C_Indonesien_%28Unsplash%29.jpg/960px-Tanah_Lot%2C_Indonesien_%28Unsplash%29.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Tanah Lot, Indonesien (Unsplash).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Tanah_Lot,_Indonesien_(Unsplash).jpg",
+          "license": "CC0",
+          "author": "Patrick Schöpflin patrickschoepflin",
+          "selection": "ai"
+        }
       },
       "indonesia/nusa-penida": {
         "name": "Nusa Penida island day trip",
@@ -1221,7 +1239,16 @@
           "outdoors"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/57/Nusa_Penida_%28247339781%29.jpeg/960px-Nusa_Penida_%28247339781%29.jpeg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Nusa Penida (247339781).jpeg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Nusa_Penida_(247339781).jpeg",
+          "license": "CC0",
+          "author": "Artem Kavalerov",
+          "selection": "ai"
+        }
       },
       "indonesia/yogyakarta-kraton": {
         "name": "Yogyakarta Kraton and Malioboro",
@@ -1270,7 +1297,16 @@
           "iconic_landmarks"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f3/Komodo_National_Park%2C_Indonesia_%28ASTER%29.jpg/960px-Komodo_National_Park%2C_Indonesia_%28ASTER%29.jpg",
+          "width": 960,
+          "height": 756,
+          "title": "File:Komodo National Park, Indonesia (ASTER).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Komodo_National_Park,_Indonesia_(ASTER).jpg",
+          "license": "Public domain",
+          "author": "NASA/METI/AIST/Japan Space Systems, and U.S./Japan ASTER Science Team",
+          "selection": "ai"
+        }
       }
     },
     "destinations": {
@@ -1282,7 +1318,18 @@
       "indonesia/bali": {
         "name": "Bali",
         "description": "The island of temples, rice terraces, surf and sunsets.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d8/Reflection_of_the_sky_at_sunrise%2C_Sanur%2C_Bali%2C_Indonesia.jpg/960px-Reflection_of_the_sky_at_sunrise%2C_Sanur%2C_Bali%2C_Indonesia.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:Reflection of the sky at sunrise, Sanur, Bali, Indonesia.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Reflection_of_the_sky_at_sunrise,_Sanur,_Bali,_Indonesia.jpg",
+            "license": "CC0",
+            "author": "Hariyono Suwardi",
+            "selection": "ai"
+          }
+        ]
       },
       "indonesia/ubud": {
         "name": "Ubud",
@@ -1317,7 +1364,18 @@
       "indonesia/labuan-bajo": {
         "name": "Labuan Bajo",
         "description": "The harbour gateway to Komodo National Park.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d9/Labuan_bajo.jpg/960px-Labuan_bajo.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Labuan bajo.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Labuan_bajo.jpg",
+            "license": "CC0",
+            "author": "Lasthib",
+            "selection": "ai"
+          }
+        ]
       }
     }
   }

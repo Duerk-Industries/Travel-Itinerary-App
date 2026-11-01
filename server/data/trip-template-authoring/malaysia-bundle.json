@@ -1138,7 +1138,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/74/Menara_Berkembar_Petronas%2C_Kuala_Lumpur%2C_Malaysia_%28Unsplash%29.jpg/960px-Menara_Berkembar_Petronas%2C_Kuala_Lumpur%2C_Malaysia_%28Unsplash%29.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Menara Berkembar Petronas, Kuala Lumpur, Malaysia (Unsplash).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Menara_Berkembar_Petronas,_Kuala_Lumpur,_Malaysia_(Unsplash).jpg",
+          "license": "CC0",
+          "author": "Vlad Shapochnikov vladshap",
+          "selection": "ai"
+        }
       },
       "malaysia/kl-food": {
         "name": "Jalan Alor and Chinatown street food",
@@ -1175,7 +1184,16 @@
           "relax"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/13/Cameron_Highlands%2C_Malaysia_%28Unsplash%29.jpg/960px-Cameron_Highlands%2C_Malaysia_%28Unsplash%29.jpg",
+          "width": 960,
+          "height": 639,
+          "title": "File:Cameron Highlands, Malaysia (Unsplash).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Cameron_Highlands,_Malaysia_(Unsplash).jpg",
+          "license": "CC0",
+          "author": "Paul-Vincent Roll paviro",
+          "selection": "ai"
+        }
       },
       "malaysia/george-town": {
         "name": "George Town street art and hawker food",
@@ -1213,7 +1231,16 @@
           "outdoors"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/ff/Malaysia_Lankawei.JPG/960px-Malaysia_Lankawei.JPG",
+          "width": 960,
+          "height": 720,
+          "title": "File:Malaysia Lankawei.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Malaysia_Lankawei.JPG",
+          "license": "Public domain",
+          "author": "Shmunmun (Shahnoor Habib Munmun)",
+          "selection": "ai"
+        }
       },
       "malaysia/sepilok-orangutan": {
         "name": "Sepilok Orangutan Rehabilitation Centre",
@@ -1250,7 +1277,18 @@
       "malaysia/kuala-lumpur": {
         "name": "Kuala Lumpur",
         "description": "The skyline capital with food streets and a famous cave temple.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/00/Kuala_Lumpur_Tower_taken_from_the_Ampang_Elevated_Highway.jpg/960px-Kuala_Lumpur_Tower_taken_from_the_Ampang_Elevated_Highway.jpg",
+            "width": 960,
+            "height": 540,
+            "title": "File:Kuala Lumpur Tower taken from the Ampang Elevated Highway.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Kuala_Lumpur_Tower_taken_from_the_Ampang_Elevated_Highway.jpg",
+            "license": "CC0",
+            "author": "Admiralhirohito",
+            "selection": "ai"
+          }
+        ]
       },
       "malaysia/melaka": {
         "name": "Melaka",
@@ -1260,7 +1298,18 @@
       "malaysia/cameron-highlands": {
         "name": "Cameron Highlands",
         "description": "A cool hill station of tea plantations.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/13/Cameron_Highlands%2C_Malaysia_%28Unsplash%29.jpg/960px-Cameron_Highlands%2C_Malaysia_%28Unsplash%29.jpg",
+            "width": 960,
+            "height": 639,
+            "title": "File:Cameron Highlands, Malaysia (Unsplash).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Cameron_Highlands,_Malaysia_(Unsplash).jpg",
+            "license": "CC0",
+            "author": "Paul-Vincent Roll paviro",
+            "selection": "ai"
+          }
+        ]
       },
       "malaysia/penang": {
         "name": "Penang",
@@ -1275,7 +1324,18 @@
       "malaysia/langkawi": {
         "name": "Langkawi",
         "description": "A beach island with a cable car.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b6/Langkawi_Sky_Bridge_%28November_2016%29.jpg/960px-Langkawi_Sky_Bridge_%28November_2016%29.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:Langkawi Sky Bridge (November 2016).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Langkawi_Sky_Bridge_(November_2016).jpg",
+            "license": "CC0",
+            "author": "Engin Akyurt",
+            "selection": "ai"
+          }
+        ]
       },
       "malaysia/sabah": {
         "name": "Sabah",

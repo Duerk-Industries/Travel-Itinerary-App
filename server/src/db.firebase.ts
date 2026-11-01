@@ -2739,6 +2739,7 @@ const deleteAllTripArtifacts = async (tripId: string): Promise<void> => {
   // trip itself is going away).
   await deleteQueryBatch(db.collection('car_rentals').where('tripId', '==', tripId));
   await deleteQueryBatch(db.collection('item_votes').where('tripId', '==', tripId));
+  await deleteQueryBatch(db.collection('item_ratings').where('tripId', '==', tripId));
   await deleteQueryBatch(db.collection('trip_activity').where('tripId', '==', tripId));
   await deleteQueryBatch(db.collection('trip_comments').where('tripId', '==', tripId));
   await deleteQueryBatch(db.collection('trip_followers').where('tripId', '==', tripId));
@@ -5258,6 +5259,154 @@ export const getItemVoteSummaries = async (
     });
   }
   return result;
+};
+
+export type StarRatingItem = { itemId: string; providerKey: string };
+export type StarRatingSummary = { average: number | null; count: number; net: number; userStars: number | null };
+
+const STAR_RATINGS = 'item_star_ratings';
+const starRatingDocId = (userId: string, itemType: string, itemId: string): string => `${userId}__${itemType}__${itemId}`;
+
+/** Saves or changes a traveler's 1-5 star rating of an item, remembering when they last changed it. */
+export const castStarRating = async (
+  userId: string,
+  tripId: string,
+  itemType: VoteItemType,
+  itemId: string,
+  providerKey: string,
+  stars: number,
+  changedAt: Date = new Date()
+): Promise<void> => {
+  const ref = getDb().collection(STAR_RATINGS).doc(starRatingDocId(userId, itemType, itemId));
+  const existing = await ref.get();
+  const now = changedAt.toISOString();
+  await ref.set({
+    userId, itemType, itemId, tripId, providerKey, stars,
+    createdAt: existing.exists ? (existing.data() as any).createdAt ?? now : now,
+    updatedAt: now,
+  });
+};
+
+export type LegacyThumbRating = { id: string; userId: string; tripId: string; itemType: VoteItemType; itemId: string; thumb: 1 | -1; changedAt: Date };
+
+const LEGACY_RATING_TYPES = ['flight:rating', 'lodging:rating', 'activity:rating', 'car_rental:rating'];
+
+/** Thumb ratings from before star ratings, for converting them (a thumb up becomes 5 stars, down becomes 1). */
+export const listLegacyThumbRatings = async (limit = 500): Promise<LegacyThumbRating[]> => {
+  const snap = await getDb().collection('item_votes').where('itemType', 'in', LEGACY_RATING_TYPES).limit(Math.max(1, Math.floor(limit))).get();
+  return snap.docs.map((doc) => {
+    const data = doc.data() as any;
+    const changedAt = new Date(String(data.updatedAt ?? data.createdAt ?? ''));
+    return {
+      id: doc.id,
+      userId: String(data.userId ?? ''),
+      tripId: String(data.tripId ?? ''),
+      itemType: String(data.itemType).replace(':rating', '') as VoteItemType,
+      itemId: String(data.itemId ?? ''),
+      thumb: data.value === -1 ? -1 : 1,
+      changedAt: Number.isNaN(changedAt.getTime()) ? new Date() : changedAt,
+    };
+  });
+};
+
+/** Whether the traveler has already starred this item, so a converted thumb never overwrites a newer star rating. */
+export const hasStarRating = async (userId: string, itemType: VoteItemType, itemId: string): Promise<boolean> =>
+  (await getDb().collection(STAR_RATINGS).doc(starRatingDocId(userId, itemType, itemId)).get()).exists;
+
+export const deleteLegacyThumbRatings = async (ids: string[]): Promise<void> => {
+  const db = getDb();
+  for (let i = 0; i < ids.length; i += 400) {
+    const batch = db.batch();
+    ids.slice(i, i + 400).forEach((id) => batch.delete(db.collection('item_votes').doc(id)));
+    await batch.commit();
+  }
+};
+
+export type LegacyItemRating = { userId: string; tripId: string; itemType: VoteItemType; itemId: string; stars: number; changedAt: Date };
+
+/** Whole-star ratings kept per item in `item_ratings` before ratings were averaged by provider, for moving them over. */
+export const listLegacyItemRatings = async (limit = 500): Promise<LegacyItemRating[]> => {
+  const snap = await getDb().collection('item_ratings').limit(Math.max(1, Math.floor(limit))).get();
+  return snap.docs.map((doc) => {
+    const data = doc.data() as any;
+    const changedAt = new Date(String(data.updatedAt ?? ''));
+    return {
+      userId: String(data.userId ?? ''),
+      tripId: String(data.tripId ?? ''),
+      itemType: String(data.itemType) as VoteItemType,
+      itemId: String(data.itemId ?? ''),
+      stars: Number(data.stars),
+      changedAt: Number.isNaN(changedAt.getTime()) ? new Date() : changedAt,
+    };
+  });
+};
+
+export const deleteLegacyItemRating = async (userId: string, itemType: VoteItemType, itemId: string): Promise<void> => {
+  await getDb().collection('item_ratings').doc(`${itemType}_${itemId}_${userId}`).delete();
+};
+
+export const getStarRatingSummaries = async (
+  userId: string,
+  itemType: VoteItemType,
+  items: StarRatingItem[]
+): Promise<Record<string, StarRatingSummary>> => {
+  const result: Record<string, StarRatingSummary> = {};
+  items.forEach(({ itemId }) => { result[itemId] = { average: null, count: 0, net: 0, userStars: null }; });
+  if (!items.length) return result;
+  const db = getDb();
+  const providerKeys = Array.from(new Set(items.map((item) => item.providerKey)));
+  const totals = new Map<string, { sum: number; count: number; net: number }>();
+  for (let i = 0; i < providerKeys.length; i += 10) {
+    const snap = await db.collection(STAR_RATINGS).where('itemType', '==', itemType).where('providerKey', 'in', providerKeys.slice(i, i + 10)).get();
+    snap.docs.forEach((doc) => {
+      const data = doc.data() as any;
+      const total = totals.get(String(data.providerKey)) ?? { sum: 0, count: 0, net: 0 };
+      total.sum += Number(data.stars) || 0;
+      total.net += Number(data.stars) >= 3 ? 1 : -1;
+      total.count += 1;
+      totals.set(String(data.providerKey), total);
+    });
+  }
+  const ownDocs = await db.getAll(...items.map(({ itemId }) => db.collection(STAR_RATINGS).doc(starRatingDocId(userId, itemType, itemId))));
+  items.forEach(({ itemId, providerKey }, index) => {
+    const total = totals.get(providerKey);
+    const own = ownDocs[index];
+    result[itemId] = {
+      average: total && total.count ? total.sum / total.count : null,
+      count: total?.count ?? 0,
+      net: total?.net ?? 0,
+      userStars: own.exists ? Number((own.data() as any).stars) || null : null,
+    };
+  });
+  return result;
+};
+
+export type ActivityImageCacheEntry = { url: string | null; credit: string; pageUrl: string; checkedAt: Date };
+
+const ACTIVITY_IMAGE_CACHE = 'activity_image_cache';
+// Keys hold arbitrary activity names, so the document id is a hash of the key.
+const activityImageDocId = (key: string): string => createHash('sha1').update(key).digest('hex');
+
+/** What was found for each activity-name key already looked up; a null `url` means nothing suitable was found. */
+export const getActivityImageCache = async (keys: string[]): Promise<Record<string, ActivityImageCacheEntry>> => {
+  const unique = Array.from(new Set(keys.filter(Boolean)));
+  if (!unique.length) return {};
+  const db = getDb();
+  const docs = await db.getAll(...unique.map((key) => db.collection(ACTIVITY_IMAGE_CACHE).doc(activityImageDocId(key))));
+  const result: Record<string, ActivityImageCacheEntry> = {};
+  docs.forEach((doc, index) => {
+    if (!doc.exists) return;
+    const data = doc.data() as any;
+    const checkedAt = new Date(String(data.checkedAt ?? ''));
+    result[unique[index]] = { url: data.url ? String(data.url) : null, credit: String(data.credit ?? ''), pageUrl: String(data.pageUrl ?? ''), checkedAt: Number.isNaN(checkedAt.getTime()) ? new Date(0) : checkedAt };
+  });
+  return result;
+};
+
+export const saveActivityImageCache = async (key: string, image: { url: string; credit: string; pageUrl: string } | null): Promise<void> => {
+  await getDb().collection(ACTIVITY_IMAGE_CACHE).doc(activityImageDocId(key)).set({
+    key, url: image?.url ?? null, credit: image?.credit ?? null, pageUrl: image?.pageUrl ?? null, checkedAt: nowIso(),
+  });
 };
 
 export const getItineraryDetailContext = async (
@@ -9776,6 +9925,34 @@ export const deleteAnalyticsEventsForSubjects = async (subjectIds: string[]): Pr
   return deleted;
 };
 
+/** See the Postgres adapter: Booked items become Completed once the last day they cover is before `beforeDate`. */
+export const completeEndedItineraryItems = async (beforeDate: string): Promise<number> => {
+  const db = getDb();
+  const day = (value: unknown): string => (typeof value === 'string' ? value.slice(0, 10) : '');
+  const targets: Array<[string, (data: any) => string]> = [
+    ['flights', (data) => day(data.arrivalDate) || day(data.departureDate)],
+    ['lodgings', (data) => day(data.check_out_date ?? data.checkOutDate)],
+    ['tours', (data) => day(data.date)],
+    ['car_rentals', (data) => day(data.dropoffDate) || day(data.pickupDate)],
+  ];
+  let completed = 0;
+  for (const [collection, endDate] of targets) {
+    const snap = await db.collection(collection).where('status', '==', 'Booked').get();
+    // Undated items have no end day to wait for, so they stay Booked.
+    const ended = snap.docs.filter((doc) => {
+      const end = endDate(doc.data());
+      return end !== '' && end < beforeDate;
+    });
+    for (let i = 0; i < ended.length; i += 400) {
+      const batch = db.batch();
+      ended.slice(i, i + 400).forEach((doc) => batch.update(doc.ref, { status: 'Completed' }));
+      await batch.commit();
+    }
+    completed += ended.length;
+  }
+  return completed;
+};
+
 export const deleteExpiredAnalyticsEvents = async (nowIsoValue: string): Promise<number> => {
   const snap = await getDb().collection(ANALYTICS_EVENTS).where('expiresAt', '<', nowIsoValue).limit(5_000).get();
   await deleteDocRefsInBatches(snap.docs.map((doc) => doc.ref));
@@ -9938,6 +10115,34 @@ export type TripTemplateRecord = {
   contentHash: string;
   enabled: boolean;
   sortOrder: number;
+};
+
+type GetYourGuideTourRecord = {
+  id: string;
+  url: string;
+  title: string;
+  rating: number;
+  reviewCount: number;
+  city: string;
+  country: string;
+  activities: string[];
+  checkedAt: string;
+};
+
+export const upsertGetYourGuideTour = async (tour: GetYourGuideTourRecord): Promise<void> => {
+  await getDb().collection('getyourguide_tours').doc(tour.id).set({ ...tour, updatedAt: nowIso() });
+};
+
+export const listGetYourGuideTours = async (): Promise<GetYourGuideTourRecord[]> => {
+  const snap = await getDb().collection('getyourguide_tours').get();
+  return snap.docs.map((doc) => {
+    const { updatedAt: _updatedAt, ...tour } = doc.data() as GetYourGuideTourRecord & { updatedAt?: string };
+    return tour;
+  });
+};
+
+export const deleteGetYourGuideTour = async (id: string): Promise<void> => {
+  await getDb().collection('getyourguide_tours').doc(id).delete();
 };
 
 export const upsertTripTemplate = async (template: TripTemplateRecord): Promise<void> => {

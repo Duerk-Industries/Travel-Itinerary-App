@@ -824,7 +824,16 @@
           "photography"
         ],
         "mobility": "H",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0d/Lake_Coatepeque_%281204884%29.jpg/960px-Lake_Coatepeque_%281204884%29.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Lake Coatepeque (1204884).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Lake_Coatepeque_(1204884).jpg",
+          "license": "Public domain",
+          "author": "NASA",
+          "selection": "ai"
+        }
       },
       "el-salvador/santa-ana-city": {
         "name": "Santa Ana city and Metapan",
@@ -872,7 +881,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/10/Surfistas_en_El_Tunco.jpg/960px-Surfistas_en_El_Tunco.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Surfistas en El Tunco.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Surfistas_en_El_Tunco.jpg",
+          "license": "CC0",
+          "author": "Casa Presidencial El Salvador",
+          "selection": "ai"
+        }
       },
       "el-salvador/suchitoto": {
         "name": "Suchitoto colonial town",
@@ -922,7 +940,18 @@
       "el-salvador/el-tunco": {
         "name": "El Tunco",
         "description": "A black-sand surf town.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/10/Surfistas_en_El_Tunco.jpg/960px-Surfistas_en_El_Tunco.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:Surfistas en El Tunco.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Surfistas_en_El_Tunco.jpg",
+            "license": "CC0",
+            "author": "Casa Presidencial El Salvador",
+            "selection": "ai"
+          }
+        ]
       },
       "el-salvador/suchitoto": {
         "name": "Suchitoto",

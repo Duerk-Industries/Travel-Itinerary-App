@@ -1568,6 +1568,7 @@ export const initDb = async (): Promise<void> => {
     await del('itineraries');
     await del('tours');
     await del('car_rentals');
+    await del('item_ratings');
     await del('item_votes');
     await del('lodgings');
     await del('flight_shares');
@@ -5472,6 +5473,156 @@ export const getItemVoteSummaries = async (
     if (String(row.userId) === String(userId)) summary.userVote = value;
   });
   return result;
+};
+
+export type StarRatingItem = { itemId: string; providerKey: string };
+export type StarRatingSummary = {
+  /** Mean stars across every traveler's rating of this item's provider; null until someone has rated it. */
+  average: number | null;
+  /** How many ratings the average is over. Internal: not sent to clients yet. */
+  count: number;
+  /** Ratings of 3 or more stars minus ratings below 3, the net thumbs that builds from before star ratings show. */
+  net: number;
+  /** What the requesting traveler gave this item (1-5), or null. */
+  userStars: number | null;
+};
+
+/** Saves or changes a traveler's 1-5 star rating of an item, remembering when they last changed it. */
+export const castStarRating = async (
+  userId: string,
+  tripId: string,
+  itemType: VoteItemType,
+  itemId: string,
+  providerKey: string,
+  stars: number,
+  changedAt: Date = new Date()
+): Promise<void> => {
+  await getPool().query(
+    `
+      INSERT INTO item_star_ratings (user_id, item_type, item_id, trip_id, provider_key, stars, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $7)
+      ON CONFLICT (user_id, item_type, item_id)
+      DO UPDATE SET stars = EXCLUDED.stars, provider_key = EXCLUDED.provider_key, updated_at = EXCLUDED.updated_at
+    `,
+    [userId, itemType, itemId, tripId, providerKey, stars, changedAt]
+  );
+};
+
+export type LegacyThumbRating = { id: string; userId: string; tripId: string; itemType: VoteItemType; itemId: string; thumb: 1 | -1; changedAt: Date };
+
+const LEGACY_RATING_TYPES = ['flight:rating', 'lodging:rating', 'activity:rating', 'car_rental:rating'];
+
+/** Thumb ratings from before star ratings, for converting them (a thumb up becomes 5 stars, down becomes 1). */
+export const listLegacyThumbRatings = async (limit = 500): Promise<LegacyThumbRating[]> => {
+  const { rows } = await getPool().query(
+    `SELECT id::text as "id", user_id::text as "userId", trip_id::text as "tripId", item_type as "itemType",
+            item_id::text as "itemId", value::int as "value", updated_at as "changedAt"
+     FROM item_votes WHERE item_type IN ($1, $2, $3, $4) LIMIT ${Math.max(1, Math.floor(limit))}`,
+    LEGACY_RATING_TYPES
+  );
+  return rows.map((row: any) => ({
+    id: String(row.id),
+    userId: String(row.userId),
+    tripId: String(row.tripId),
+    itemType: String(row.itemType).replace(':rating', '') as VoteItemType,
+    itemId: String(row.itemId),
+    thumb: Number(row.value) === -1 ? -1 : 1,
+    changedAt: row.changedAt ? new Date(row.changedAt) : new Date(),
+  }));
+};
+
+/** Whether the traveler has already starred this item, so a converted thumb never overwrites a newer star rating. */
+export const hasStarRating = async (userId: string, itemType: VoteItemType, itemId: string): Promise<boolean> => {
+  const { rows } = await getPool().query(
+    'SELECT 1 as "found" FROM item_star_ratings WHERE user_id = $1 AND item_type = $2 AND item_id = $3',
+    [userId, itemType, itemId]
+  );
+  return rows.length > 0;
+};
+
+export const deleteLegacyThumbRatings = async (ids: string[]): Promise<void> => {
+  for (const id of ids) await getPool().query('DELETE FROM item_votes WHERE id = $1', [id]);
+};
+
+export type LegacyItemRating = { userId: string; tripId: string; itemType: VoteItemType; itemId: string; stars: number; changedAt: Date };
+
+/** Whole-star ratings kept per item in `item_ratings` before ratings were averaged by provider, for moving them over. */
+export const listLegacyItemRatings = async (limit = 500): Promise<LegacyItemRating[]> => {
+  const { rows } = await getPool().query(
+    `SELECT user_id::text as "userId", trip_id::text as "tripId", item_type as "itemType", item_id::text as "itemId",
+            stars::int as "stars", updated_at as "changedAt"
+     FROM item_ratings LIMIT ${Math.max(1, Math.floor(limit))}`
+  );
+  return rows.map((row: any) => ({
+    userId: String(row.userId),
+    tripId: String(row.tripId),
+    itemType: String(row.itemType) as VoteItemType,
+    itemId: String(row.itemId),
+    stars: Number(row.stars),
+    changedAt: row.changedAt ? new Date(row.changedAt) : new Date(),
+  }));
+};
+
+export const deleteLegacyItemRating = async (userId: string, itemType: VoteItemType, itemId: string): Promise<void> => {
+  await getPool().query('DELETE FROM item_ratings WHERE user_id = $1 AND item_type = $2 AND item_id = $3', [userId, itemType, itemId]);
+};
+
+export const getStarRatingSummaries = async (
+  userId: string,
+  itemType: VoteItemType,
+  items: StarRatingItem[]
+): Promise<Record<string, StarRatingSummary>> => {
+  const result: Record<string, StarRatingSummary> = {};
+  items.forEach(({ itemId }) => { result[itemId] = { average: null, count: 0, net: 0, userStars: null }; });
+  if (!items.length) return result;
+  const p = getPool();
+  const providerKeys = Array.from(new Set(items.map((item) => item.providerKey)));
+  const providerMarks = providerKeys.map((_, index) => `$${index + 2}`).join(', ');
+  const { rows: providerRows } = await p.query(
+    `SELECT provider_key as "providerKey", AVG(stars)::float as "average", COUNT(*)::int as "count",
+            SUM(CASE WHEN stars >= 3 THEN 1 ELSE -1 END)::int as "net"
+     FROM item_star_ratings WHERE item_type = $1 AND provider_key IN (${providerMarks}) GROUP BY provider_key`,
+    [itemType, ...providerKeys]
+  );
+  const byProvider = new Map<string, { average: number; count: number; net: number }>(
+    providerRows.map((row: any) => [String(row.providerKey), { average: Number(row.average), count: Number(row.count), net: Number(row.net) }])
+  );
+  const itemIds = items.map((item) => item.itemId);
+  const itemMarks = itemIds.map((_, index) => `$${index + 3}`).join(', ');
+  const { rows: ownRows } = await p.query(
+    `SELECT item_id as "itemId", stars::int as "stars" FROM item_star_ratings WHERE item_type = $1 AND user_id = $2 AND item_id IN (${itemMarks})`,
+    [itemType, userId, ...itemIds]
+  );
+  const own = new Map<string, number>(ownRows.map((row: any) => [String(row.itemId), Number(row.stars)]));
+  items.forEach(({ itemId, providerKey }) => {
+    const provider = byProvider.get(providerKey);
+    result[itemId] = { average: provider?.average ?? null, count: provider?.count ?? 0, net: provider?.net ?? 0, userStars: own.get(itemId) ?? null };
+  });
+  return result;
+};
+
+export type ActivityImageCacheEntry = { url: string | null; credit: string; pageUrl: string; checkedAt: Date };
+
+/** What was found for each activity-name key already looked up; a null `url` means nothing suitable was found. */
+export const getActivityImageCache = async (keys: string[]): Promise<Record<string, ActivityImageCacheEntry>> => {
+  const unique = Array.from(new Set(keys.filter(Boolean)));
+  if (!unique.length) return {};
+  const { rows } = await getPool().query(
+    `SELECT cache_key as "key", image_url as "url", credit, page_url as "pageUrl", checked_at as "checkedAt"
+     FROM activity_image_cache WHERE cache_key IN (${unique.map((_, index) => `$${index + 1}`).join(', ')})`,
+    unique
+  );
+  return Object.fromEntries(rows.map((row: any) => [String(row.key), {
+    url: row.url ? String(row.url) : null, credit: String(row.credit ?? ''), pageUrl: String(row.pageUrl ?? ''), checkedAt: new Date(row.checkedAt),
+  }]));
+};
+
+export const saveActivityImageCache = async (key: string, image: { url: string; credit: string; pageUrl: string } | null): Promise<void> => {
+  await getPool().query(
+    `INSERT INTO activity_image_cache (cache_key, image_url, credit, page_url, checked_at) VALUES ($1, $2, $3, $4, $5)
+     ON CONFLICT (cache_key) DO UPDATE SET image_url = EXCLUDED.image_url, credit = EXCLUDED.credit, page_url = EXCLUDED.page_url, checked_at = EXCLUDED.checked_at`,
+    [key, image?.url ?? null, image?.credit ?? null, image?.pageUrl ?? null, new Date()]
+  );
 };
 
 export const getItineraryDetailContext = async (
@@ -13885,6 +14036,27 @@ export const deleteAnalyticsEventsForSubjects = async (subjectIds: string[]): Pr
   return result.rowCount ?? 0;
 };
 
+/**
+ * Marks Booked items Completed once the last day they cover is before `beforeDate` (YYYY-MM-DD): a flight or
+ * transfer ends on its arrival date, a lodging on check-out, a car rental on drop-off, an activity on its date.
+ * Only Booked moves on; Proposed, Needs Booking and Cancelled are left alone. Returns how many were completed.
+ */
+export const completeEndedItineraryItems = async (beforeDate: string): Promise<number> => {
+  const pool = getPool();
+  const targets = [
+    ['flights', 'COALESCE(arrival_date, departure_date)'],
+    ['lodgings', 'check_out_date'],
+    ['tours', 'date'],
+    ['car_rentals', 'COALESCE(dropoff_date, pickup_date)'],
+  ] as const;
+  let completed = 0;
+  for (const [table, endDate] of targets) {
+    const result = await pool.query(`UPDATE ${table} SET status = 'Completed' WHERE status = 'Booked' AND ${endDate} < $1::date`, [beforeDate]);
+    completed += result.rowCount ?? 0;
+  }
+  return completed;
+};
+
 /** Retention: delete events whose expiry has passed. */
 export const deleteExpiredAnalyticsEvents = async (nowIso: string): Promise<number> => {
   const result = await getPool().query(`DELETE FROM analytics_events WHERE expires_at < $1`, [nowIso]);
@@ -14098,6 +14270,47 @@ const TRIP_TEMPLATE_SELECT = `SELECT id, title, summary, days, route, image_quer
   COALESCE(countries, '[]'::jsonb) AS countries, COALESCE(cities, '[]'::jsonb) AS cities,
   COALESCE(highlights, '[]'::jsonb) AS highlights, content_hash AS "contentHash", enabled, sort_order AS "sortOrder"
   FROM trip_templates`;
+
+export type GetYourGuideTourRecord = {
+  id: string;
+  url: string;
+  title: string;
+  rating: number;
+  reviewCount: number;
+  city: string;
+  country: string;
+  activities: string[];
+  checkedAt: string;
+};
+
+export const upsertGetYourGuideTour = async (tour: GetYourGuideTourRecord): Promise<void> => {
+  const p = getPool();
+  const values = [tour.id, tour.url, tour.title, tour.rating, tour.reviewCount, tour.city, tour.country, JSON.stringify(tour.activities), tour.checkedAt];
+  const updated = await p.query(
+    `UPDATE getyourguide_tours SET url = $2, title = $3, rating = $4, review_count = $5, city = $6, country = $7, activities = $8::jsonb, checked_at = $9, updated_at = NOW()
+     WHERE id = $1`,
+    values
+  );
+  if (updated.rowCount) return;
+  await p.query(
+    `INSERT INTO getyourguide_tours (id, url, title, rating, review_count, city, country, activities, checked_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9)`,
+    values
+  );
+};
+
+export const listGetYourGuideTours = async (): Promise<GetYourGuideTourRecord[]> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `SELECT id, url, title, rating, review_count as "reviewCount", city, country, activities, checked_at as "checkedAt" FROM getyourguide_tours`
+  );
+  return rows.map((row: any) => ({ ...row, rating: Number(row.rating), reviewCount: Number(row.reviewCount) }));
+};
+
+export const deleteGetYourGuideTour = async (id: string): Promise<void> => {
+  const p = getPool();
+  await p.query('DELETE FROM getyourguide_tours WHERE id = $1', [id]);
+};
 
 export const upsertTripTemplate = async (template: TripTemplateRecord): Promise<void> => {
   const p = getPool();

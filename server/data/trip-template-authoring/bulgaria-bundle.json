@@ -1142,7 +1142,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7b/Saint_Alexander_Nevsky_Cathedral%2C_Fa%C3%A7ade_from_Northeast.jpg/960px-Saint_Alexander_Nevsky_Cathedral%2C_Fa%C3%A7ade_from_Northeast.jpg",
+          "width": 960,
+          "height": 605,
+          "title": "File:Saint Alexander Nevsky Cathedral, Façade from Northeast.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Saint_Alexander_Nevsky_Cathedral,_Fa%C3%A7ade_from_Northeast.jpg",
+          "license": "Public domain",
+          "author": "Julian Lupyan",
+          "selection": "ai"
+        }
       },
       "bulgaria/boyana-vitosha": {
         "name": "Boyana Church and Vitosha mountain",
@@ -1153,7 +1162,16 @@
           "outdoors"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/11/Boyana_Church_13.jpg/960px-Boyana_Church_13.jpg",
+          "width": 960,
+          "height": 650,
+          "title": "File:Boyana Church 13.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Boyana_Church_13.jpg",
+          "license": "CC0",
+          "author": "Ivano Giambattista",
+          "selection": "ai"
+        }
       },
       "bulgaria/rila-monastery": {
         "name": "Rila Monastery",
@@ -1177,7 +1195,16 @@
           "adventure"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e9/Lake_%C2%ABBabreka%C2%BB_from_the_Seven_Rila_Lakes.jpg/960px-Lake_%C2%ABBabreka%C2%BB_from_the_Seven_Rila_Lakes.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Lake «Babreka» from the Seven Rila Lakes.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Lake_%C2%ABBabreka%C2%BB_from_the_Seven_Rila_Lakes.jpg",
+          "license": "Public domain",
+          "author": "Лорд Бъмбъри",
+          "selection": "ai"
+        }
       },
       "bulgaria/melnik": {
         "name": "Melnik wine village",
@@ -1202,7 +1229,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ac/Plovdiv_Klianti_house.jpg/960px-Plovdiv_Klianti_house.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Plovdiv Klianti house.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Plovdiv_Klianti_house.jpg",
+          "license": "CC0",
+          "author": "Whitepixels",
+          "selection": "ai"
+        }
       },
       "bulgaria/kapana": {
         "name": "Kapana creative quarter, Plovdiv",
@@ -1226,7 +1262,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/37/View_of_the_Patriarchal_Cathedral_and_the_fortress_walls_of_Tsarevets_in_Veliko_Tarnovo%2C_Bulgaria.jpg/960px-View_of_the_Patriarchal_Cathedral_and_the_fortress_walls_of_Tsarevets_in_Veliko_Tarnovo%2C_Bulgaria.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:View of the Patriarchal Cathedral and the fortress walls of Tsarevets in Veliko Tarnovo, Bulgaria.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:View_of_the_Patriarchal_Cathedral_and_the_fortress_walls_of_Tsarevets_in_Veliko_Tarnovo,_Bulgaria.jpg",
+          "license": "CC0",
+          "author": "Salwa Farwaneh Dameh",
+          "selection": "ai"
+        }
       },
       "bulgaria/arbanasi": {
         "name": "Arbanasi village",
@@ -1250,7 +1295,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/70/%D0%96%D0%B8%D0%B2_%D0%9C%D1%83%D0%B7%D0%B5%D0%B9.jpg/960px-%D0%96%D0%B8%D0%B2_%D0%9C%D1%83%D0%B7%D0%B5%D0%B9.jpg",
+          "width": 960,
+          "height": 540,
+          "title": "File:Жив Музей.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:%D0%96%D0%B8%D0%B2_%D0%9C%D1%83%D0%B7%D0%B5%D0%B9.jpg",
+          "license": "CC0",
+          "author": "Luxferuer",
+          "selection": "ai"
+        }
       },
       "bulgaria/rose-valley": {
         "name": "Rose Valley and Kazanlak",
@@ -1303,7 +1357,18 @@
       "bulgaria/blagoevgrad": {
         "name": "Blagoevgrad",
         "description": "The south-west province of Rila, Melnik and the Pirin mountains.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3b/Blagoevgrad.Downtown.jpg/960px-Blagoevgrad.Downtown.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Blagoevgrad.Downtown.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Blagoevgrad.Downtown.jpg",
+            "license": "Public domain",
+            "author": "Georgi Nikolchev, Bulgaria",
+            "selection": "ai"
+          }
+        ]
       },
       "bulgaria/melnik": {
         "name": "Melnik",
@@ -1313,12 +1378,34 @@
       "bulgaria/plovdiv": {
         "name": "Plovdiv",
         "description": "A city of Roman ruins, an old town and a creative quarter.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/6b/Bulgaria-plovdiv-amphitheatre.jpg/960px-Bulgaria-plovdiv-amphitheatre.jpg",
+            "width": 960,
+            "height": 684,
+            "title": "File:Bulgaria-plovdiv-amphitheatre.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Bulgaria-plovdiv-amphitheatre.jpg",
+            "license": "Public domain",
+            "author": "Pb1618",
+            "selection": "ai"
+          }
+        ]
       },
       "bulgaria/veliko-tarnovo": {
         "name": "Veliko Tarnovo",
         "description": "The medieval capital on a cliff above a river bend.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/ba/Veliko_Tarnovo_landscape_Bulgaria.jpg/960px-Veliko_Tarnovo_landscape_Bulgaria.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Veliko Tarnovo landscape Bulgaria.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Veliko_Tarnovo_landscape_Bulgaria.jpg",
+            "license": "CC0",
+            "author": "Salwa Farwaneh Dameh",
+            "selection": "ai"
+          }
+        ]
       },
       "bulgaria/varna": {
         "name": "Varna",

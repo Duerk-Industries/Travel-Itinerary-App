@@ -989,7 +989,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/30/Puerta_de_la_Misericordia_2020.jpg/960px-Puerta_de_la_Misericordia_2020.jpg",
+          "width": 960,
+          "height": 540,
+          "title": "File:Puerta de la Misericordia 2020.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Puerta_de_la_Misericordia_2020.jpg",
+          "license": "CC0",
+          "author": "Rossdesing",
+          "selection": "ai"
+        }
       },
       "dominican-republic/los-tres-ojos": {
         "name": "Los Tres Ojos caves",
@@ -1000,7 +1009,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a7/LosTresOjos.JPG/960px-LosTresOjos.JPG",
+          "width": 960,
+          "height": 638,
+          "title": "File:LosTresOjos.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:LosTresOjos.JPG",
+          "license": "Public domain",
+          "author": "Swatigsood",
+          "selection": "ai"
+        }
       },
       "dominican-republic/jarabacoa-adventures": {
         "name": "Jarabacoa waterfalls and rafting",
@@ -1106,7 +1124,16 @@
           "outdoors"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/73/Natura_Park_beach%2C_view_towards_the_southeast%2C_Punta_Cana%2C_2004.jpg/960px-Natura_Park_beach%2C_view_towards_the_southeast%2C_Punta_Cana%2C_2004.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Natura Park beach, view towards the southeast, Punta Cana, 2004.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Natura_Park_beach,_view_towards_the_southeast,_Punta_Cana,_2004.jpg",
+          "license": "CC0",
+          "author": "DimiTalen",
+          "selection": "ai"
+        }
       },
       "dominican-republic/altos-de-chavon": {
         "name": "Altos de Chavon",
@@ -1117,7 +1144,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0d/Altos_de_Chavon_4.jpg/960px-Altos_de_Chavon_4.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Altos de Chavon 4.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Altos_de_Chavon_4.jpg",
+          "license": "Public domain",
+          "author": "Andreas Volkmer",
+          "selection": "ai"
+        }
       }
     },
     "destinations": {
@@ -1144,7 +1180,18 @@
       "dominican-republic/samana": {
         "name": "Samana",
         "description": "A peninsula of palm beaches and whale-watching in winter.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d5/Las_Galeras_Samana_Dominican_Republic_Caribbean.jpg/960px-Las_Galeras_Samana_Dominican_Republic_Caribbean.jpg",
+            "width": 960,
+            "height": 655,
+            "title": "File:Las Galeras Samana Dominican Republic Caribbean.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Las_Galeras_Samana_Dominican_Republic_Caribbean.jpg",
+            "license": "CC0",
+            "author": "Einfach-Eve",
+            "selection": "ai"
+          }
+        ]
       },
       "dominican-republic/punta-cana": {
         "name": "Punta Cana",

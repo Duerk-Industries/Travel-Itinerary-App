@@ -2723,7 +2723,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/35/Senso-Ji_Temple_%28Unsplash%29.jpg/960px-Senso-Ji_Temple_%28Unsplash%29.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Senso-Ji Temple (Unsplash).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Senso-Ji_Temple_(Unsplash).jpg",
+          "license": "CC0",
+          "author": "Redd Angelo reddangelo16",
+          "selection": "ai"
+        }
       },
       "japan/tokyo-national-museum": {
         "name": "Tokyo National Museum",
@@ -2734,7 +2743,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/70/Tokyo_National_Museum_20240821_2.jpg/960px-Tokyo_National_Museum_20240821_2.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Tokyo National Museum 20240821 2.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Tokyo_National_Museum_20240821_2.jpg",
+          "license": "CC0",
+          "author": "Eugene Ormandy",
+          "selection": "ai"
+        }
       },
       "japan/ueno-park": {
         "name": "Ueno Park",
@@ -2757,7 +2775,16 @@
           "authentic_local"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f5/Shop_signs_flood_in_Akihabara_%282016-05-21_05.19_by_guillermo_gavilla_%40Pixabay_1424672%29.jpg/960px-Shop_signs_flood_in_Akihabara_%282016-05-21_05.19_by_guillermo_gavilla_%40Pixabay_1424672%29.jpg",
+          "width": 960,
+          "height": 638,
+          "title": "File:Shop signs flood in Akihabara (2016-05-21 05.19 by guillermo gavilla @Pixabay 1424672).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Shop_signs_flood_in_Akihabara_(2016-05-21_05.19_by_guillermo_gavilla_@Pixabay_1424672).jpg",
+          "license": "CC0",
+          "author": "guillermo gavilla",
+          "selection": "ai"
+        }
       },
       "japan/shibuya-crossing": {
         "name": "Shibuya Crossing",
@@ -2768,7 +2795,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d1/Shibuya_scramble_crossing_during_Halloween_2023%2C_actually_less_crowded_than_usual%2C_high_police_presence_2.jpg/960px-Shibuya_scramble_crossing_during_Halloween_2023%2C_actually_less_crowded_than_usual%2C_high_police_presence_2.jpg",
+          "width": 960,
+          "height": 595,
+          "title": "File:Shibuya scramble crossing during Halloween 2023, actually less crowded than usual, high police presence 2.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Shibuya_scramble_crossing_during_Halloween_2023,_actually_less_crowded_than_usual,_high_police_presence_2.jpg",
+          "license": "CC0",
+          "author": "Syced",
+          "selection": "ai"
+        }
       },
       "japan/tokyo-izakaya-dinner": {
         "name": "Izakaya dinner in Shinjuku",
@@ -2804,7 +2840,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/de/Takeshita_Street_2020-04-19.jpg/960px-Takeshita_Street_2020-04-19.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Takeshita Street 2020-04-19.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Takeshita_Street_2020-04-19.jpg",
+          "license": "CC0",
+          "author": "Asanagi",
+          "selection": "ai"
+        }
       },
       "japan/tokyo-government-observatory": {
         "name": "Tokyo Metropolitan Government Building observatory",
@@ -2815,7 +2860,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/cb/August_2007_view_from_Cafe_202_in_Tokyo_Metropolitan_Government_Office_45F_5.jpg/960px-August_2007_view_from_Cafe_202_in_Tokyo_Metropolitan_Government_Office_45F_5.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:August 2007 view from Cafe 202 in Tokyo Metropolitan Government Office 45F 5.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:August_2007_view_from_Cafe_202_in_Tokyo_Metropolitan_Government_Office_45F_5.jpg",
+          "license": "CC0",
+          "author": "Syced",
+          "selection": "ai"
+        }
       },
       "japan/tsukiji-outer-market": {
         "name": "Tsukiji Outer Market",
@@ -2851,7 +2905,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c1/Nikk%C5%8D_T%C5%8Dsh%C5%8D-g%C5%AB_2.jpg/960px-Nikk%C5%8D_T%C5%8Dsh%C5%8D-g%C5%AB_2.jpg",
+          "width": 960,
+          "height": 615,
+          "title": "File:Nikkō Tōshō-gū 2.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Nikk%C5%8D_T%C5%8Dsh%C5%8D-g%C5%AB_2.jpg",
+          "license": "CC0",
+          "author": "Marco Almbauer",
+          "selection": "ai"
+        }
       },
       "japan/kamakura": {
         "name": "Kamakura",
@@ -2887,7 +2950,16 @@
           "relax"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b7/Lake_Ashi_and_Hakone_volcano_20101204.jpg/960px-Lake_Ashi_and_Hakone_volcano_20101204.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Lake Ashi and Hakone volcano 20101204.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Lake_Ashi_and_Hakone_volcano_20101204.jpg",
+          "license": "Public domain",
+          "author": "Batholith",
+          "selection": "ai"
+        }
       },
       "japan/owakudani": {
         "name": "Owakudani",
@@ -2899,7 +2971,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c7/Owakudani%2C_Hakone_July_2018.jpg/960px-Owakudani%2C_Hakone_July_2018.jpg",
+          "width": 960,
+          "height": 540,
+          "title": "File:Owakudani, Hakone July 2018.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Owakudani,_Hakone_July_2018.jpg",
+          "license": "CC0",
+          "author": "Alvinz",
+          "selection": "ai"
+        }
       },
       "japan/hakone-onsen": {
         "name": "Hakone onsen bathing",
@@ -2922,7 +3003,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/66/Mount_Fuji_at_sunset%2C_March_2025.jpg/960px-Mount_Fuji_at_sunset%2C_March_2025.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Mount Fuji at sunset, March 2025.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Mount_Fuji_at_sunset,_March_2025.jpg",
+          "license": "CC0",
+          "author": "Romain Guy from San Francisco, USA",
+          "selection": "ai"
+        }
       },
       "japan/fushimi-inari": {
         "name": "Fushimi Inari Taisha",
@@ -2935,7 +3025,16 @@
           "outdoors"
         ],
         "mobility": "H",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8a/20181110_Fushimi_Inari_Torii_12.jpg/960px-20181110_Fushimi_Inari_Torii_12.jpg",
+          "width": 960,
+          "height": 622,
+          "title": "File:20181110 Fushimi Inari Torii 12.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:20181110_Fushimi_Inari_Torii_12.jpg",
+          "license": "CC0",
+          "author": "Balon Greyjoy",
+          "selection": "ai"
+        }
       },
       "japan/kiyomizu-dera": {
         "name": "Kiyomizu-dera",
@@ -2959,7 +3058,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/67/Streets_of_Gion%2C_Kyoto_-_Gion7709.jpg/960px-Streets_of_Gion%2C_Kyoto_-_Gion7709.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Streets of Gion, Kyoto - Gion7709.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Streets_of_Gion,_Kyoto_-_Gion7709.jpg",
+          "license": "CC0",
+          "author": "lumoplank",
+          "selection": "ai"
+        }
       },
       "japan/nishiki-market": {
         "name": "Nishiki Market",
@@ -2983,7 +3091,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/79/Kinkaku-ji_Temple_in_Kyoto%2C_Japan%3B_2014.jpg/960px-Kinkaku-ji_Temple_in_Kyoto%2C_Japan%3B_2014.jpg",
+          "width": 960,
+          "height": 540,
+          "title": "File:Kinkaku-ji Temple in Kyoto, Japan; 2014.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Kinkaku-ji_Temple_in_Kyoto,_Japan;_2014.jpg",
+          "license": "CC0",
+          "author": "Joe deSousa",
+          "selection": "ai"
+        }
       },
       "japan/ryoan-ji": {
         "name": "Ryoan-ji",
@@ -2994,7 +3111,16 @@
           "relax"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/13/Ry%C5%8Dan-ji_rock_garden_with_silhouettes_of_tourists%2C_Kyoto%2C_2016.jpg/960px-Ry%C5%8Dan-ji_rock_garden_with_silhouettes_of_tourists%2C_Kyoto%2C_2016.jpg",
+          "width": 960,
+          "height": 638,
+          "title": "File:Ryōan-ji rock garden with silhouettes of tourists, Kyoto, 2016.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Ry%C5%8Dan-ji_rock_garden_with_silhouettes_of_tourists,_Kyoto,_2016.jpg",
+          "license": "CC0",
+          "author": "DimiTalen",
+          "selection": "ai"
+        }
       },
       "japan/arashiyama-bamboo-grove": {
         "name": "Arashiyama bamboo grove",
@@ -3006,7 +3132,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f7/Sagano_Bamboo_forest_2.jpg/960px-Sagano_Bamboo_forest_2.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Sagano Bamboo forest 2.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Sagano_Bamboo_forest_2.jpg",
+          "license": "CC0",
+          "author": "Marco Almbauer",
+          "selection": "ai"
+        }
       },
       "japan/kyoto-tea-ceremony": {
         "name": "Kyoto tea ceremony",
@@ -3030,7 +3165,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/09/Japan_Spring_Down_the_Philosopher%27s_Path_%2814164491752%29.jpg/960px-Japan_Spring_Down_the_Philosopher%27s_Path_%2814164491752%29.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Japan Spring Down the Philosopher's Path (14164491752).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Japan_Spring_Down_the_Philosopher%27s_Path_(14164491752).jpg",
+          "license": "CC0",
+          "author": "Yiannis Theologos Michellis",
+          "selection": "ai"
+        }
       },
       "japan/nara-todai-ji": {
         "name": "Todai-ji",
@@ -3041,7 +3185,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a6/20190121_T%C5%8Ddai-ji_Great_Buddha_Hall-1.jpg/960px-20190121_T%C5%8Ddai-ji_Great_Buddha_Hall-1.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:20190121 Tōdai-ji Great Buddha Hall-1.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:20190121_T%C5%8Ddai-ji_Great_Buddha_Hall-1.jpg",
+          "license": "CC0",
+          "author": "Balon Greyjoy",
+          "selection": "ai"
+        }
       },
       "japan/nara-deer-park": {
         "name": "Nara Park",
@@ -3065,7 +3218,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c8/20190121_Osaka_Castle-1.jpg/960px-20190121_Osaka_Castle-1.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:20190121 Osaka Castle-1.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:20190121_Osaka_Castle-1.jpg",
+          "license": "CC0",
+          "author": "Balon Greyjoy",
+          "selection": "ai"
+        }
       },
       "japan/dotonbori": {
         "name": "Dotonbori",
@@ -3077,7 +3239,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4b/Dotonbori_ao_02.jpg/960px-Dotonbori_ao_02.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Dotonbori ao 02.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Dotonbori_ao_02.jpg",
+          "license": "CC0",
+          "author": "Sakai Yayoi",
+          "selection": "ai"
+        }
       },
       "japan/kuromon-market": {
         "name": "Kuromon Ichiba Market",
@@ -3088,7 +3259,16 @@
           "authentic_local"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/42/%E9%BB%92%E9%96%80%E5%B8%82%E5%A0%B4_2024%281%29.jpg/960px-%E9%BB%92%E9%96%80%E5%B8%82%E5%A0%B4_2024%281%29.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:黒門市場 2024(1).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:%E9%BB%92%E9%96%80%E5%B8%82%E5%A0%B4_2024(1).jpg",
+          "license": "CC0",
+          "author": "ほっきー",
+          "selection": "ai"
+        }
       },
       "japan/umeda-sky-building": {
         "name": "Umeda Sky Building",
@@ -3099,7 +3279,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/45/Osaka_Umeda_Sky_Building_3.jpg/960px-Osaka_Umeda_Sky_Building_3.jpg",
+          "width": 960,
+          "height": 540,
+          "title": "File:Osaka Umeda Sky Building 3.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Osaka_Umeda_Sky_Building_3.jpg",
+          "license": "CC0",
+          "author": "Brücke-Osteuropa",
+          "selection": "ai"
+        }
       },
       "japan/hiroshima-peace-park": {
         "name": "Hiroshima Peace Memorial Park",
@@ -3110,7 +3299,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4f/Hiroshima_Peace_Memorial_Park_-_HiroshimaPeace132.jpg/960px-Hiroshima_Peace_Memorial_Park_-_HiroshimaPeace132.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Hiroshima Peace Memorial Park - HiroshimaPeace132.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Hiroshima_Peace_Memorial_Park_-_HiroshimaPeace132.jpg",
+          "license": "CC0",
+          "author": "lumoplank",
+          "selection": "ai"
+        }
       },
       "japan/miyajima-itsukushima": {
         "name": "Miyajima and Itsukushima Shrine",
@@ -3123,7 +3321,16 @@
           "outdoors"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/db/20181111_Itsukushima_Shrine_torii-2.jpg/960px-20181111_Itsukushima_Shrine_torii-2.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:20181111 Itsukushima Shrine torii-2.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:20181111_Itsukushima_Shrine_torii-2.jpg",
+          "license": "CC0",
+          "author": "Balon Greyjoy",
+          "selection": "ai"
+        }
       },
       "japan/hiroshima-okonomiyaki": {
         "name": "Hiroshima-style okonomiyaki",
@@ -3147,7 +3354,16 @@
           "relax"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a9/View_towards_Hanami-bashi_with_sakura%2C_Kenroku-en%2C_Kanazawa%2C_2016.jpg/960px-View_towards_Hanami-bashi_with_sakura%2C_Kenroku-en%2C_Kanazawa%2C_2016.jpg",
+          "width": 960,
+          "height": 638,
+          "title": "File:View towards Hanami-bashi with sakura, Kenroku-en, Kanazawa, 2016.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:View_towards_Hanami-bashi_with_sakura,_Kenroku-en,_Kanazawa,_2016.jpg",
+          "license": "CC0",
+          "author": "DimiTalen",
+          "selection": "ai"
+        }
       },
       "japan/higashi-chaya": {
         "name": "Higashi Chaya District",
@@ -3159,7 +3375,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/59/Higashiyamahigashi_-_Kanazawa%2C_Japan_-_DSC00117.jpg/960px-Higashiyamahigashi_-_Kanazawa%2C_Japan_-_DSC00117.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Higashiyamahigashi - Kanazawa, Japan - DSC00117.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Higashiyamahigashi_-_Kanazawa,_Japan_-_DSC00117.jpg",
+          "license": "CC0",
+          "author": "Daderot",
+          "selection": "ai"
+        }
       },
       "japan/omicho-market": {
         "name": "Omicho Market",
@@ -3170,7 +3395,16 @@
           "authentic_local"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3a/Oumityou_ichiba.jpg/960px-Oumityou_ichiba.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Oumityou ichiba.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Oumityou_ichiba.jpg",
+          "license": "Public domain",
+          "author": "Unknown",
+          "selection": "ai"
+        }
       },
       "japan/kanazawa-21st-century-museum": {
         "name": "21st Century Museum of Contemporary Art",
@@ -3181,7 +3415,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9a/21st_Century_Museum_260123.jpg/960px-21st_Century_Museum_260123.jpg",
+          "width": 960,
+          "height": 540,
+          "title": "File:21st Century Museum 260123.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:21st_Century_Museum_260123.jpg",
+          "license": "CC0",
+          "author": "Aspere",
+          "selection": "ai"
+        }
       },
       "japan/takayama-old-town": {
         "name": "Takayama old town",
@@ -3225,7 +3468,18 @@
       "japan": {
         "name": "Japan",
         "description": "An island country pairing dense, fast-moving cities with temple towns, mountain hot springs and one of the world's best rail networks.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4e/Kyushu-Japan-ISS-Space.png/960px-Kyushu-Japan-ISS-Space.png",
+            "width": 960,
+            "height": 540,
+            "title": "File:Kyushu-Japan-ISS-Space.png",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Kyushu-Japan-ISS-Space.png",
+            "license": "Public domain",
+            "author": "NASA, International Space Station",
+            "selection": "ai"
+          }
+        ]
       },
       "japan/tokyo": {
         "name": "Tokyo",
@@ -3245,7 +3499,18 @@
       "japan/nara": {
         "name": "Nara",
         "description": "Japan's eighth-century capital, with a giant bronze Buddha, early temples and a park where wild deer roam freely.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/60/August_2009_Nara_tourism_-79088.jpeg/960px-August_2009_Nara_tourism_-79088.jpeg",
+            "width": 960,
+            "height": 720,
+            "title": "File:August 2009 Nara tourism -79088.jpeg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:August_2009_Nara_tourism_-79088.jpeg",
+            "license": "CC0",
+            "author": "Syced",
+            "selection": "ai"
+          }
+        ]
       },
       "japan/kanagawa": {
         "name": "Kanagawa",
@@ -3265,17 +3530,50 @@
       "japan/nikko": {
         "name": "Nikko",
         "description": "A mountain town north of Tokyo whose elaborately decorated shrines and temples sit among tall cedar forest.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9f/October_2008_tourism_in_Nikko_16.jpg/960px-October_2008_tourism_in_Nikko_16.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:October 2008 tourism in Nikko 16.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:October_2008_tourism_in_Nikko_16.jpg",
+            "license": "CC0",
+            "author": "Syced",
+            "selection": "ai"
+          }
+        ]
       },
       "japan/hakone": {
         "name": "Hakone",
         "description": "A hot spring area in the caldera of a volcano south-west of Tokyo, with a lake, sulphur vents and Mount Fuji views in clear weather.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/bb/Hakone-jinja_torii_-_Hakone%2C_Japan_-DSC05709.jpg/960px-Hakone-jinja_torii_-_Hakone%2C_Japan_-DSC05709.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:Hakone-jinja torii - Hakone, Japan -DSC05709.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Hakone-jinja_torii_-_Hakone,_Japan_-DSC05709.jpg",
+            "license": "CC0",
+            "author": "Daderot",
+            "selection": "ai"
+          }
+        ]
       },
       "japan/hiroshima": {
         "name": "Hiroshima",
         "description": "A rebuilt city on the Seto Inland Sea, centred on the memorial park marking the 1945 atomic bombing and the island shrine of Miyajima.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d8/Hiroshima_Peace_Memorial_Park_cenotaph.jpg/960px-Hiroshima_Peace_Memorial_Park_cenotaph.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:Hiroshima Peace Memorial Park cenotaph.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Hiroshima_Peace_Memorial_Park_cenotaph.jpg",
+            "license": "CC0",
+            "author": "TimMilesWright",
+            "selection": "ai"
+          }
+        ]
       },
       "japan/gifu": {
         "name": "Gifu",
@@ -3285,7 +3583,18 @@
       "japan/takayama": {
         "name": "Takayama",
         "description": "A mountain town in Gifu with preserved Edo-period merchant streets, morning markets and long-established sake breweries.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fa/Looking_down_Kamisannomachi%2C_Takayama%2C_2016.jpg/960px-Looking_down_Kamisannomachi%2C_Takayama%2C_2016.jpg",
+            "width": 960,
+            "height": 638,
+            "title": "File:Looking down Kamisannomachi, Takayama, 2016.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Looking_down_Kamisannomachi,_Takayama,_2016.jpg",
+            "license": "CC0",
+            "author": "DimiTalen",
+            "selection": "ai"
+          }
+        ]
       },
       "japan/ishikawa": {
         "name": "Ishikawa",
@@ -3295,7 +3604,18 @@
       "japan/kanazawa": {
         "name": "Kanazawa",
         "description": "A former castle town on the Sea of Japan, with one of the country's most celebrated gardens, preserved teahouse districts and a seafood market.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/59/Higashiyamahigashi_-_Kanazawa%2C_Japan_-_DSC00117.jpg/960px-Higashiyamahigashi_-_Kanazawa%2C_Japan_-_DSC00117.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:Higashiyamahigashi - Kanazawa, Japan - DSC00117.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Higashiyamahigashi_-_Kanazawa,_Japan_-_DSC00117.jpg",
+            "license": "CC0",
+            "author": "Daderot",
+            "selection": "ai"
+          }
+        ]
       }
     }
   }

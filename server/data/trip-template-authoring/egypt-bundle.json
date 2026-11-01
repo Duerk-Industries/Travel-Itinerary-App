@@ -2444,7 +2444,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/32/Khan_el-Khalili%2C_Old_Cairo%2C_al-Q%C4%81hirah%2C_CG%2C_EGY_%2847122173924%29.jpg/960px-Khan_el-Khalili%2C_Old_Cairo%2C_al-Q%C4%81hirah%2C_CG%2C_EGY_%2847122173924%29.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Khan el-Khalili, Old Cairo, al-Qāhirah, CG, EGY (47122173924).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Khan_el-Khalili,_Old_Cairo,_al-Q%C4%81hirah,_CG,_EGY_(47122173924).jpg",
+          "license": "CC0",
+          "author": "Warren LeMay from Cincinnati, OH, United States",
+          "selection": "ai"
+        }
       },
       "egypt/koshari-dinner": {
         "name": "Koshari dinner",
@@ -2468,7 +2477,16 @@
           "outdoors"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/34/Pyramids_in_Giza_-_Egypt.jpg/960px-Pyramids_in_Giza_-_Egypt.jpg",
+          "width": 960,
+          "height": 459,
+          "title": "File:Pyramids in Giza - Egypt.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Pyramids_in_Giza_-_Egypt.jpg",
+          "license": "CC0",
+          "author": "Walkerssk",
+          "selection": "ai"
+        }
       },
       "egypt/grand-egyptian-museum": {
         "name": "Grand Egyptian Museum",
@@ -2526,7 +2544,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2d/Cairo_Citadel_0088.jpg/960px-Cairo_Citadel_0088.jpg",
+          "width": 960,
+          "height": 529,
+          "title": "File:Cairo Citadel 0088.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Cairo_Citadel_0088.jpg",
+          "license": "CC0",
+          "author": "سها القاضي",
+          "selection": "ai"
+        }
       },
       "egypt/islamic-cairo": {
         "name": "Islamic Cairo and Al-Muizz Street",
@@ -2538,7 +2565,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a1/Cairo%2C_Islamic_Cairo%2C_19th_century_pictures%2C_photo_34_of_52_-_Archivio_fotografico_Museo_Egizio%2C_Turin_Album2_016.jpg/960px-Cairo%2C_Islamic_Cairo%2C_19th_century_pictures%2C_photo_34_of_52_-_Archivio_fotografico_Museo_Egizio%2C_Turin_Album2_016.jpg",
+          "width": 960,
+          "height": 759,
+          "title": "File:Cairo, Islamic Cairo, 19th century pictures, photo 34 of 52 - Archivio fotografico Museo Egizio, Turin Album2 016.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Cairo,_Islamic_Cairo,_19th_century_pictures,_photo_34_of_52_-_Archivio_fotografico_Museo_Egizio,_Turin_Album2_016.jpg",
+          "license": "CC0",
+          "author": "Unknown",
+          "selection": "ai"
+        }
       },
       "egypt/national-museum-egyptian-civilization": {
         "name": "National Museum of Egyptian Civilization",
@@ -2561,7 +2597,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/80/EWUG_visit_to_the_Citadel_of_Qaitbay_-_by_Sohila_18.jpg/960px-EWUG_visit_to_the_Citadel_of_Qaitbay_-_by_Sohila_18.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:EWUG visit to the Citadel of Qaitbay - by Sohila 18.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:EWUG_visit_to_the_Citadel_of_Qaitbay_-_by_Sohila_18.jpg",
+          "license": "Public domain",
+          "author": "Sohilaali869",
+          "selection": "ai"
+        }
       },
       "egypt/bibliotheca-alexandrina": {
         "name": "Bibliotheca Alexandrina",
@@ -2572,7 +2617,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0e/Bibliotheca_Alexandrina_%28GLAM_tour_I%29_02.jpg/960px-Bibliotheca_Alexandrina_%28GLAM_tour_I%29_02.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Bibliotheca Alexandrina (GLAM tour I) 02.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Bibliotheca_Alexandrina_(GLAM_tour_I)_02.jpg",
+          "license": "Public domain",
+          "author": "Sohilaali869",
+          "selection": "ai"
+        }
       },
       "egypt/alexandria-catacombs": {
         "name": "Catacombs of Kom el-Shoqafa and Pompey's Pillar",
@@ -2618,7 +2672,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/30/-Valley_of_the_Kings%2C_Thebes-_MET_DP116369.jpg/960px--Valley_of_the_Kings%2C_Thebes-_MET_DP116369.jpg",
+          "width": 960,
+          "height": 761,
+          "title": "File:-Valley of the Kings, Thebes- MET DP116369.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:-Valley_of_the_Kings,_Thebes-_MET_DP116369.jpg",
+          "license": "CC0",
+          "author": "Francis Frith / Francis Frith",
+          "selection": "ai"
+        }
       },
       "egypt/hatshepsut-temple": {
         "name": "Temple of Hatshepsut",
@@ -2630,7 +2693,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e8/The_mortuary_temple_of_Hatshepsut%2C_Egypt_01.jpg/960px-The_mortuary_temple_of_Hatshepsut%2C_Egypt_01.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:The mortuary temple of Hatshepsut, Egypt 01.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:The_mortuary_temple_of_Hatshepsut,_Egypt_01.jpg",
+          "license": "Public domain",
+          "author": "ولاء",
+          "selection": "ai"
+        }
       },
       "egypt/colossi-of-memnon": {
         "name": "Colossi of Memnon",
@@ -2641,7 +2713,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c6/Colossi_of_Memnon%2C_Egypt_27.jpg/960px-Colossi_of_Memnon%2C_Egypt_27.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Colossi of Memnon, Egypt 27.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Colossi_of_Memnon,_Egypt_27.jpg",
+          "license": "Public domain",
+          "author": "ولاء",
+          "selection": "ai"
+        }
       },
       "egypt/karnak-temple": {
         "name": "Karnak Temple Complex",
@@ -2653,7 +2734,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/61/Karnak_Temple_Complex%2C_Egypt18.jpg/960px-Karnak_Temple_Complex%2C_Egypt18.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Karnak Temple Complex, Egypt18.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Karnak_Temple_Complex,_Egypt18.jpg",
+          "license": "Public domain",
+          "author": "ولاء",
+          "selection": "ai"
+        }
       },
       "egypt/luxor-temple": {
         "name": "Luxor Temple",
@@ -2665,7 +2755,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/cf/Luxor_Temple_Courtyard_of_Rameses_II_%289794773266%29.jpg/960px-Luxor_Temple_Courtyard_of_Rameses_II_%289794773266%29.jpg",
+          "width": 960,
+          "height": 680,
+          "title": "File:Luxor Temple Courtyard of Rameses II (9794773266).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Luxor_Temple_Courtyard_of_Rameses_II_(9794773266).jpg",
+          "license": "CC0",
+          "author": "Gary Todd from Xinzheng, China",
+          "selection": "ai"
+        }
       },
       "egypt/dendera-temple": {
         "name": "Dendera Temple",
@@ -2676,7 +2775,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e6/Dendera_Temple_%D9%85%D8%B9%D8%A8%D8%AF_%D8%AF%D9%86%D8%AF%D8%B1%D8%A9_%2849%29.jpg/960px-Dendera_Temple_%D9%85%D8%B9%D8%A8%D8%AF_%D8%AF%D9%86%D8%AF%D8%B1%D8%A9_%2849%29.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Dendera Temple معبد دندرة (49).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Dendera_Temple_%D9%85%D8%B9%D8%A8%D8%AF_%D8%AF%D9%86%D8%AF%D8%B1%D8%A9_(49).jpg",
+          "license": "Public domain",
+          "author": "ولاء",
+          "selection": "ai"
+        }
       },
       "egypt/nile-cruise": {
         "name": "Nile cruise",
@@ -2688,7 +2796,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f0/Sunset_on_the_Nile_River.jpg/960px-Sunset_on_the_Nile_River.jpg",
+          "width": 960,
+          "height": 641,
+          "title": "File:Sunset on the Nile River.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Sunset_on_the_Nile_River.jpg",
+          "license": "CC0",
+          "author": "Mustang Joe",
+          "selection": "ai"
+        }
       },
       "egypt/edfu-temple": {
         "name": "Temple of Horus at Edfu",
@@ -2700,7 +2817,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8c/Edfu%2C_Temple_of_Horus%2C_19th_century_pictures%2C_F._Bonfils%2C_photo_12_of_29_-_Archivio_fotografico_Museo_Egizio%2C_Turin_INV06_008.jpg/960px-Edfu%2C_Temple_of_Horus%2C_19th_century_pictures%2C_F._Bonfils%2C_photo_12_of_29_-_Archivio_fotografico_Museo_Egizio%2C_Turin_INV06_008.jpg",
+          "width": 960,
+          "height": 710,
+          "title": "File:Edfu, Temple of Horus, 19th century pictures, F. Bonfils, photo 12 of 29 - Archivio fotografico Museo Egizio, Turin INV06 008.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Edfu,_Temple_of_Horus,_19th_century_pictures,_F._Bonfils,_photo_12_of_29_-_Archivio_fotografico_Museo_Egizio,_Turin_INV06_008.jpg",
+          "license": "CC0",
+          "author": "Félix Bonfils",
+          "selection": "ai"
+        }
       },
       "egypt/kom-ombo-temple": {
         "name": "Temple of Kom Ombo",
@@ -2711,7 +2837,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a0/Temple_of_Sobek%2C_Kom_Ombo%2C_Egypt_%289797663614%29.jpg/960px-Temple_of_Sobek%2C_Kom_Ombo%2C_Egypt_%289797663614%29.jpg",
+          "width": 960,
+          "height": 706,
+          "title": "File:Temple of Sobek, Kom Ombo, Egypt (9797663614).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Temple_of_Sobek,_Kom_Ombo,_Egypt_(9797663614).jpg",
+          "license": "CC0",
+          "author": "Gary Todd from Xinzheng, China",
+          "selection": "ai"
+        }
       },
       "egypt/philae-temple": {
         "name": "Philae Temple",
@@ -2723,7 +2858,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/ca/Egypt._Assuan_and_Philae._Temple_of_Isis_at_Philae_LOC_matpc.23082.jpg/960px-Egypt._Assuan_and_Philae._Temple_of_Isis_at_Philae_LOC_matpc.23082.jpg",
+          "width": 960,
+          "height": 655,
+          "title": "File:Egypt. Assuan and Philae. Temple of Isis at Philae LOC matpc.23082.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Egypt._Assuan_and_Philae._Temple_of_Isis_at_Philae_LOC_matpc.23082.jpg",
+          "license": "Public domain",
+          "author": "Matson Collection",
+          "selection": "ai"
+        }
       },
       "egypt/aswan-felucca": {
         "name": "Felucca sail around Elephantine Island",
@@ -2747,7 +2891,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ae/Nubian_House%2C_Nagaa_Suhayl_Gharb%2C_AG%2C_EGY_%2848026608526%29.jpg/960px-Nubian_House%2C_Nagaa_Suhayl_Gharb%2C_AG%2C_EGY_%2848026608526%29.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Nubian House, Nagaa Suhayl Gharb, AG, EGY (48026608526).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Nubian_House,_Nagaa_Suhayl_Gharb,_AG,_EGY_(48026608526).jpg",
+          "license": "CC0",
+          "author": "Warren LeMay from Chicago, IL, United States",
+          "selection": "ai"
+        }
       },
       "egypt/aswan-souq": {
         "name": "Aswan souq",
@@ -2771,7 +2924,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8f/Abu_Simbel_Temples%2C_Abu_Simbel%2C_AG%2C_EGY_%2848017152218%29.jpg/960px-Abu_Simbel_Temples%2C_Abu_Simbel%2C_AG%2C_EGY_%2848017152218%29.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Abu Simbel Temples, Abu Simbel, AG, EGY (48017152218).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Abu_Simbel_Temples,_Abu_Simbel,_AG,_EGY_(48017152218).jpg",
+          "license": "CC0",
+          "author": "Warren LeMay from Cullowhee, NC, United States",
+          "selection": "ai"
+        }
       },
       "egypt/hurghada-beach": {
         "name": "Red Sea beach day in Hurghada",
@@ -2782,7 +2944,16 @@
           "outdoors"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1d/Red_sea_coast%2C_Makadi_bay.jpg/960px-Red_sea_coast%2C_Makadi_bay.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Red sea coast, Makadi bay.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Red_sea_coast,_Makadi_bay.jpg",
+          "license": "CC0",
+          "author": "Dirgela",
+          "selection": "ai"
+        }
       },
       "egypt/giftun-snorkel": {
         "name": "Boat trip and snorkelling at Giftun Island",
@@ -2830,7 +3001,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2f/Coral_reef_in_Ras_Muhammad_nature_park.JPG/960px-Coral_reef_in_Ras_Muhammad_nature_park.JPG",
+          "width": 960,
+          "height": 720,
+          "title": "File:Coral reef in Ras Muhammad nature park.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Coral_reef_in_Ras_Muhammad_nature_park.JPG",
+          "license": "Public domain",
+          "author": "ssr (talk)",
+          "selection": "ai"
+        }
       },
       "egypt/mount-sinai": {
         "name": "Mount Sinai and St Catherine's Monastery",
@@ -2865,17 +3045,50 @@
       "egypt/cairo": {
         "name": "Cairo",
         "description": "Egypt's vast capital on the Nile, with medieval bazaars, a hilltop citadel and the pyramids on its western edge.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5e/Cairo%2C_Islamic_Cairo%2C_19th_century_pictures%2C_1870%2C_photo_8_of_52_-_Archivio_fotografico_Museo_Egizio%2C_Turin_Album1_019.jpg/960px-Cairo%2C_Islamic_Cairo%2C_19th_century_pictures%2C_1870%2C_photo_8_of_52_-_Archivio_fotografico_Museo_Egizio%2C_Turin_Album1_019.jpg",
+            "width": 960,
+            "height": 753,
+            "title": "File:Cairo, Islamic Cairo, 19th century pictures, 1870, photo 8 of 52 - Archivio fotografico Museo Egizio, Turin Album1 019.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Cairo,_Islamic_Cairo,_19th_century_pictures,_1870,_photo_8_of_52_-_Archivio_fotografico_Museo_Egizio,_Turin_Album1_019.jpg",
+            "license": "CC0",
+            "author": "Rodolfo Vittorio Lanzone",
+            "selection": "ai"
+          }
+        ]
       },
       "egypt/giza": {
         "name": "Giza",
         "description": "The area west of Cairo across the Nile, home to the great pyramids, the Sphinx and the Grand Egyptian Museum.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fb/US_paratroopers_and_partner_nations_jump_of_Giza_Pyramids_%289305138%29.jpg/960px-US_paratroopers_and_partner_nations_jump_of_Giza_Pyramids_%289305138%29.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:US paratroopers and partner nations jump of Giza Pyramids (9305138).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:US_paratroopers_and_partner_nations_jump_of_Giza_Pyramids_(9305138).jpg",
+            "license": "Public domain",
+            "author": "U.S. Army photo by Sgt. Grace Nechanicky",
+            "selection": "ai"
+          }
+        ]
       },
       "egypt/saqqara": {
         "name": "Saqqara",
         "description": "The ancient burial ground of Memphis south of Giza, holding the Step Pyramid of Djoser and many painted tombs.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9a/Saqqara%2C_Pyramid_of_Djoser_and_nearby_tombs%2C_Pictures%2C_F._Bonfils%2C_photo_3_of_8_-_Archivio_fotografico_Museo_Egizio%2C_Turin_INV01_002.jpg/960px-Saqqara%2C_Pyramid_of_Djoser_and_nearby_tombs%2C_Pictures%2C_F._Bonfils%2C_photo_3_of_8_-_Archivio_fotografico_Museo_Egizio%2C_Turin_INV01_002.jpg",
+            "width": 960,
+            "height": 721,
+            "title": "File:Saqqara, Pyramid of Djoser and nearby tombs, Pictures, F. Bonfils, photo 3 of 8 - Archivio fotografico Museo Egizio, Turin INV01 002.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Saqqara,_Pyramid_of_Djoser_and_nearby_tombs,_Pictures,_F._Bonfils,_photo_3_of_8_-_Archivio_fotografico_Museo_Egizio,_Turin_INV01_002.jpg",
+            "license": "CC0",
+            "author": "Félix Bonfils",
+            "selection": "ai"
+          }
+        ]
       },
       "egypt/alexandria": {
         "name": "Alexandria",
@@ -2885,37 +3098,114 @@
       "egypt/luxor": {
         "name": "Luxor",
         "description": "A Nile town built over ancient Thebes, with Karnak and Luxor Temples on the east bank and the royal tombs of the west bank.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3f/Luxor_Temple%2C_Luxor%2C_Egypt_%2853723849499%29.jpg/960px-Luxor_Temple%2C_Luxor%2C_Egypt_%2853723849499%29.jpg",
+            "width": 960,
+            "height": 688,
+            "title": "File:Luxor Temple, Luxor, Egypt (53723849499).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Luxor_Temple,_Luxor,_Egypt_(53723849499).jpg",
+            "license": "CC0",
+            "author": "Mustang Joe",
+            "selection": "ai"
+          }
+        ]
       },
       "egypt/dendera": {
         "name": "Dendera",
         "description": "A village north of Luxor that holds the Ptolemaic Temple of Hathor, one of Egypt's best-preserved temple complexes.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e6/Dendera_Temple_%D9%85%D8%B9%D8%A8%D8%AF_%D8%AF%D9%86%D8%AF%D8%B1%D8%A9_%2849%29.jpg/960px-Dendera_Temple_%D9%85%D8%B9%D8%A8%D8%AF_%D8%AF%D9%86%D8%AF%D8%B1%D8%A9_%2849%29.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Dendera Temple معبد دندرة (49).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Dendera_Temple_%D9%85%D8%B9%D8%A8%D8%AF_%D8%AF%D9%86%D8%AF%D8%B1%D8%A9_(49).jpg",
+            "license": "Public domain",
+            "author": "ولاء",
+            "selection": "ai"
+          }
+        ]
       },
       "egypt/nile-cruise": {
         "name": "Nile cruise",
         "description": "A river cruise between Luxor and Aswan, stopping at temples along the Nile over several nights.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f0/Sunset_on_the_Nile_River.jpg/960px-Sunset_on_the_Nile_River.jpg",
+            "width": 960,
+            "height": 641,
+            "title": "File:Sunset on the Nile River.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Sunset_on_the_Nile_River.jpg",
+            "license": "CC0",
+            "author": "Mustang Joe",
+            "selection": "ai"
+          }
+        ]
       },
       "egypt/edfu": {
         "name": "Edfu",
         "description": "A Nile town between Luxor and Aswan, home to the Temple of Horus, among the best-preserved ancient temples in Egypt.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8c/Edfu%2C_Temple_of_Horus%2C_19th_century_pictures%2C_F._Bonfils%2C_photo_12_of_29_-_Archivio_fotografico_Museo_Egizio%2C_Turin_INV06_008.jpg/960px-Edfu%2C_Temple_of_Horus%2C_19th_century_pictures%2C_F._Bonfils%2C_photo_12_of_29_-_Archivio_fotografico_Museo_Egizio%2C_Turin_INV06_008.jpg",
+            "width": 960,
+            "height": 710,
+            "title": "File:Edfu, Temple of Horus, 19th century pictures, F. Bonfils, photo 12 of 29 - Archivio fotografico Museo Egizio, Turin INV06 008.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Edfu,_Temple_of_Horus,_19th_century_pictures,_F._Bonfils,_photo_12_of_29_-_Archivio_fotografico_Museo_Egizio,_Turin_INV06_008.jpg",
+            "license": "CC0",
+            "author": "Félix Bonfils",
+            "selection": "ai"
+          }
+        ]
       },
       "egypt/kom-ombo": {
         "name": "Kom Ombo",
         "description": "A small Nile town between Edfu and Aswan, known for its riverside double temple to Sobek and Horus.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/61/Kom_Ombo_11_977.PNG/960px-Kom_Ombo_11_977.PNG",
+            "width": 960,
+            "height": 720,
+            "title": "File:Kom Ombo 11 977.PNG",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Kom_Ombo_11_977.PNG",
+            "license": "Public domain",
+            "author": "Ijanderson977",
+            "selection": "ai"
+          }
+        ]
       },
       "egypt/aswan": {
         "name": "Aswan",
         "description": "A relaxed southern Nile city among granite islands, with Nubian villages, a souq and the road to Abu Simbel.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/50/Elephantine_Island%2C_Aswan%2C_AG%2C_EGY_%2848025286316%29.jpg/960px-Elephantine_Island%2C_Aswan%2C_AG%2C_EGY_%2848025286316%29.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Elephantine Island, Aswan, AG, EGY (48025286316).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Elephantine_Island,_Aswan,_AG,_EGY_(48025286316).jpg",
+            "license": "CC0",
+            "author": "Warren LeMay from Cullowhee, NC, United States",
+            "selection": "ai"
+          }
+        ]
       },
       "egypt/abu-simbel": {
         "name": "Abu Simbel",
         "description": "A remote site on Lake Nasser with Ramesses II's great rock-cut temples, moved to higher ground in the 1960s.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8f/Abu_Simbel_Temples%2C_Abu_Simbel%2C_AG%2C_EGY_%2848017152218%29.jpg/960px-Abu_Simbel_Temples%2C_Abu_Simbel%2C_AG%2C_EGY_%2848017152218%29.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Abu Simbel Temples, Abu Simbel, AG, EGY (48017152218).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Abu_Simbel_Temples,_Abu_Simbel,_AG,_EGY_(48017152218).jpg",
+            "license": "CC0",
+            "author": "Warren LeMay from Cullowhee, NC, United States",
+            "selection": "ai"
+          }
+        ]
       },
       "egypt/red-sea": {
         "name": "Red Sea",
@@ -2925,12 +3215,34 @@
       "egypt/hurghada": {
         "name": "Hurghada",
         "description": "A long strip of Red Sea resorts, used as a base for snorkelling and diving trips to offshore reefs and islands.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/07/Hurghada_port_mosque.jpg/960px-Hurghada_port_mosque.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:Hurghada port mosque.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Hurghada_port_mosque.jpg",
+            "license": "CC0",
+            "author": "reesorts.com",
+            "selection": "ai"
+          }
+        ]
       },
       "egypt/south-sinai": {
         "name": "South Sinai",
         "description": "The southern tip of the Sinai Peninsula, taking in Red Sea reefs, desert mountains and St Catherine's Monastery.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/af/ISS035-E-007148_Nile_-_Sinai_-_Dead_Sea_-_Wide_Angle_View.jpg/960px-ISS035-E-007148_Nile_-_Sinai_-_Dead_Sea_-_Wide_Angle_View.jpg",
+            "width": 960,
+            "height": 639,
+            "title": "File:ISS035-E-007148 Nile - Sinai - Dead Sea - Wide Angle View.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:ISS035-E-007148_Nile_-_Sinai_-_Dead_Sea_-_Wide_Angle_View.jpg",
+            "license": "Public domain",
+            "author": "Expedition 35 Crew Image courtesy of the NASA Johnson Space Center, Image Science & Analysis Laboratory Derivative work including grading, noise reduction, lens distortion and vignetting correction and dust spot removal: Julian Herzog",
+            "selection": "ai"
+          }
+        ]
       },
       "egypt/sharm-el-sheikh": {
         "name": "Sharm el-Sheikh",

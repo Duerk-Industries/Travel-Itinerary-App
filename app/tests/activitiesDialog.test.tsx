@@ -26,6 +26,7 @@ jest.mock('react-native', () => {
     SectionList: 'SectionList',
     Switch: 'Switch',
     Modal: 'Modal',
+    Keyboard: { dismiss: jest.fn() },
     KeyboardAvoidingView: 'KeyboardAvoidingView',
     SafeAreaView: 'SafeAreaView',
     ActivityIndicator: 'ActivityIndicator',
@@ -100,8 +101,9 @@ const sampleTour: Tour = {
   travelerIds: ['member-1'],
   netVotes: 2,
   userVote: 1,
-  netRating: 3,
-  userRating: 1,
+  averageRating: 4.5,
+  ratingCount: 2,
+  userStars: 5,
 };
 
 const renderActivityHarness = (
@@ -109,6 +111,7 @@ const renderActivityHarness = (
   defaultActivityDate?: string | null,
   featureStandardizedItemDialogs = false,
   theme?: any,
+  compactActivityCards = false,
 ) => {
   const Harness = () => {
     const [tours, setTours] = useState<Tour[]>(initialTours);
@@ -137,6 +140,7 @@ const renderActivityHarness = (
         defaultActivityDate={defaultActivityDate}
         featureStandardizedItemDialogs={featureStandardizedItemDialogs}
         theme={theme}
+        compactActivityCards={compactActivityCards}
       />
     );
   };
@@ -145,6 +149,23 @@ const renderActivityHarness = (
 };
 
 describe('Activity dialog layout', () => {
+  it('uses itinerary summaries on mobile and opens activity details instead of the editor', () => {
+    const screen = renderActivityHarness([sampleTour], undefined, false, undefined, true);
+    expect(screen.getByTestId('activity-summary-list')).toBeTruthy();
+    expect(screen.queryByTestId('activity-table-header')).toBeNull();
+    expect(screen.getByText('10:00 · Old Town · 2h')).toBeTruthy();
+    expect(screen.getByText(sampleTour.notes!)).toBeTruthy();
+    fireEvent.press(screen.getByTestId('activity-details-tour-1'));
+    expect(screen.getByTestId('activity-details-modal')).toBeTruthy();
+    expect(screen.queryByTestId('activity-form-modal')).toBeNull();
+  });
+
+  it('keeps the table on larger screens', () => {
+    const screen = renderActivityHarness([sampleTour]);
+    expect(screen.getByTestId('activity-table-header')).toBeTruthy();
+    expect(screen.queryByTestId('activity-summary-list')).toBeNull();
+  });
+
   it.each([
     ['light', { mode: 'light', colors: { text: '#111827', textMuted: '#6B7280', border: '#E6ECEF', surface: '#FFFFFF', link: '#45B7C6' } }],
     ['dark', { mode: 'dark', colors: { text: '#E6ECEF', textMuted: '#B8C2CC', border: '#385266', surface: '#243647', link: '#5FD2E0' } }],

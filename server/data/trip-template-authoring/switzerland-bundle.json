@@ -1079,7 +1079,16 @@
           "relax"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ae/Chapel_Bridge_and_view_of_Pilatus%2C_Lucerne%2C_Switzerland-LCCN2001703043.jpg/960px-Chapel_Bridge_and_view_of_Pilatus%2C_Lucerne%2C_Switzerland-LCCN2001703043.jpg",
+          "width": 960,
+          "height": 719,
+          "title": "File:Chapel Bridge and view of Pilatus, Lucerne, Switzerland-LCCN2001703043.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Chapel_Bridge_and_view_of_Pilatus,_Lucerne,_Switzerland-LCCN2001703043.jpg",
+          "license": "Public domain",
+          "author": "Photochrom Print Collection",
+          "selection": "ai"
+        }
       },
       "switzerland/interlaken-lauterbrunnen": {
         "name": "Interlaken, Lauterbrunnen and Trummelbach Falls",
@@ -1092,7 +1101,16 @@
           "iconic_landmarks"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8c/Berglandschap_met_de_spoorweg_van_Interlaken_naar_Lauterbrunnen%2C_RP-F-F01131-CH.jpg/960px-Berglandschap_met_de_spoorweg_van_Interlaken_naar_Lauterbrunnen%2C_RP-F-F01131-CH.jpg",
+          "width": 960,
+          "height": 683,
+          "title": "File:Berglandschap met de spoorweg van Interlaken naar Lauterbrunnen, RP-F-F01131-CH.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Berglandschap_met_de_spoorweg_van_Interlaken_naar_Lauterbrunnen,_RP-F-F01131-CH.jpg",
+          "license": "CC0",
+          "author": "Rijksmuseum",
+          "selection": "ai"
+        }
       },
       "switzerland/jungfraujoch": {
         "name": "Jungfraujoch Top of Europe",
@@ -1104,7 +1122,16 @@
           "adventure"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2c/Top_of_Europe.jpg/960px-Top_of_Europe.jpg",
+          "width": 960,
+          "height": 545,
+          "title": "File:Top of Europe.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Top_of_Europe.jpg",
+          "license": "Public domain",
+          "author": "Jackph",
+          "selection": "ai"
+        }
       },
       "switzerland/grindelwald-first": {
         "name": "Grindelwald First Cliff Walk",
@@ -1129,7 +1156,16 @@
           "adventure"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/97/Le_Cervin_depuis_le_Gornergrat_-_A6172.jpg/960px-Le_Cervin_depuis_le_Gornergrat_-_A6172.jpg",
+          "width": 960,
+          "height": 712,
+          "title": "File:Le Cervin depuis le Gornergrat - A6172.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Le_Cervin_depuis_le_Gornergrat_-_A6172.jpg",
+          "license": "CC0",
+          "author": "Léon Auguste",
+          "selection": "ai"
+        }
       },
       "switzerland/glacier-express": {
         "name": "Glacier Express",
@@ -1141,7 +1177,16 @@
           "relax"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/14/Glacier_Express_in_der_Vorderrheinschlucht.jpg/960px-Glacier_Express_in_der_Vorderrheinschlucht.jpg",
+          "width": 960,
+          "height": 649,
+          "title": "File:Glacier Express in der Vorderrheinschlucht.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Glacier_Express_in_der_Vorderrheinschlucht.jpg",
+          "license": "Public domain",
+          "author": "Kabelleger / David Gubler (http://www.bahnbilder.ch)",
+          "selection": "ai"
+        }
       },
       "switzerland/montreux-chillon": {
         "name": "Montreux, Chillon Castle and Lavaux vineyards",
@@ -1154,7 +1199,16 @@
           "food"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/95/Chillon_1900.jpg/960px-Chillon_1900.jpg",
+          "width": 960,
+          "height": 686,
+          "title": "File:Chillon 1900.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Chillon_1900.jpg",
+          "license": "Public domain",
+          "author": "Unknown authorUnknown author",
+          "selection": "ai"
+        }
       },
       "switzerland/bern-old-town": {
         "name": "Bern old town and the bear park",
@@ -1166,7 +1220,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/04/Bern%2C_view_of_the_B%C3%A4rengraben_and_the_Old_Town%2C_around_1880.jpg/960px-Bern%2C_view_of_the_B%C3%A4rengraben_and_the_Old_Town%2C_around_1880.jpg",
+          "width": 960,
+          "height": 590,
+          "title": "File:Bern, view of the Bärengraben and the Old Town, around 1880.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Bern,_view_of_the_B%C3%A4rengraben_and_the_Old_Town,_around_1880.jpg",
+          "license": "Public domain",
+          "author": "Unknown artistUnknown artist",
+          "selection": "ai"
+        }
       }
     },
     "destinations": {
@@ -1178,27 +1241,82 @@
       "switzerland/zurich": {
         "name": "Zurich",
         "description": "The largest city, on a lake with an old town.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/42/Zurich_city_center.jpg/960px-Zurich_city_center.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Zurich city center.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Zurich_city_center.jpg",
+            "license": "CC0",
+            "author": "Lovasoa",
+            "selection": "ai"
+          }
+        ]
       },
       "switzerland/lucerne": {
         "name": "Lucerne",
         "description": "A lake city with a wooden bridge.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/05/Lucerne%2C_Switzerland_%2851991228874%29.jpg/960px-Lucerne%2C_Switzerland_%2851991228874%29.jpg",
+            "width": 960,
+            "height": 674,
+            "title": "File:Lucerne, Switzerland (51991228874).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Lucerne,_Switzerland_(51991228874).jpg",
+            "license": "CC0",
+            "author": "crash71100",
+            "selection": "ai"
+          }
+        ]
       },
       "switzerland/interlaken": {
         "name": "Interlaken",
         "description": "The gateway to the Bernese Oberland.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1b/Interlaken%2C_Kursall%2C_Bernese_Oberland%2C_Switzerland-LCCN2001701188.jpg/960px-Interlaken%2C_Kursall%2C_Bernese_Oberland%2C_Switzerland-LCCN2001701188.jpg",
+            "width": 960,
+            "height": 725,
+            "title": "File:Interlaken, Kursall, Bernese Oberland, Switzerland-LCCN2001701188.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Interlaken,_Kursall,_Bernese_Oberland,_Switzerland-LCCN2001701188.jpg",
+            "license": "Public domain",
+            "author": "Photochrom Print Collection",
+            "selection": "ai"
+          }
+        ]
       },
       "switzerland/zermatt": {
         "name": "Zermatt",
         "description": "A car-free village under the Matterhorn.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/54/Zermatt%2C_Switzerland_%28Unsplash_l6juNKOlzvs%29.jpg/960px-Zermatt%2C_Switzerland_%28Unsplash_l6juNKOlzvs%29.jpg",
+            "width": 960,
+            "height": 640,
+            "title": "File:Zermatt, Switzerland (Unsplash l6juNKOlzvs).jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Zermatt,_Switzerland_(Unsplash_l6juNKOlzvs).jpg",
+            "license": "CC0",
+            "author": "Joshua Earle joshuaearle",
+            "selection": "ai"
+          }
+        ]
       },
       "switzerland/montreux": {
         "name": "Montreux",
         "description": "A Swiss Riviera town on Lake Geneva.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d0/Montreux%2C_and_Clarens%2C_Geneva_Lake%2C_Switzerland-LCCN2001702461.jpg/960px-Montreux%2C_and_Clarens%2C_Geneva_Lake%2C_Switzerland-LCCN2001702461.jpg",
+            "width": 960,
+            "height": 716,
+            "title": "File:Montreux, and Clarens, Geneva Lake, Switzerland-LCCN2001702461.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Montreux,_and_Clarens,_Geneva_Lake,_Switzerland-LCCN2001702461.jpg",
+            "license": "Public domain",
+            "author": "Photochrom Print Collection",
+            "selection": "ai"
+          }
+        ]
       }
     }
   }

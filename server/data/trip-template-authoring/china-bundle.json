@@ -1184,7 +1184,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1a/Forbidden_City_View_of_Tiananmen_Square_%289862820565%29.jpg/960px-Forbidden_City_View_of_Tiananmen_Square_%289862820565%29.jpg",
+          "width": 960,
+          "height": 640,
+          "title": "File:Forbidden City View of Tiananmen Square (9862820565).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Forbidden_City_View_of_Tiananmen_Square_(9862820565).jpg",
+          "license": "CC0",
+          "author": "Gary Todd from Xinzheng, China",
+          "selection": "ai"
+        }
       },
       "china/mutianyu-great-wall": {
         "name": "Great Wall at Mutianyu",
@@ -1197,7 +1206,16 @@
           "adventure"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e9/Great_wall_of_china-mutianyu_4.JPG/960px-Great_wall_of_china-mutianyu_4.JPG",
+          "width": 960,
+          "height": 720,
+          "title": "File:Great wall of china-mutianyu 4.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Great_wall_of_china-mutianyu_4.JPG",
+          "license": "Public domain",
+          "author": "Ahazan",
+          "selection": "ai"
+        }
       },
       "china/temple-of-heaven": {
         "name": "Temple of Heaven and Summer Palace",
@@ -1221,7 +1239,16 @@
           "culture"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8c/Some_Hutong_in_Beijing_in_2026_-_1.jpg/960px-Some_Hutong_in_Beijing_in_2026_-_1.jpg",
+          "width": 960,
+          "height": 540,
+          "title": "File:Some Hutong in Beijing in 2026 - 1.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Some_Hutong_in_Beijing_in_2026_-_1.jpg",
+          "license": "CC0",
+          "author": "Renek78",
+          "selection": "ai"
+        }
       },
       "china/terracotta-army": {
         "name": "Terracotta Army",
@@ -1233,7 +1260,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/43/Qin_Shihuang_Terracotta_Army%2C_Pit_1.jpg/960px-Qin_Shihuang_Terracotta_Army%2C_Pit_1.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Qin Shihuang Terracotta Army, Pit 1.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Qin_Shihuang_Terracotta_Army,_Pit_1.jpg",
+          "license": "CC0",
+          "author": "Gary Todd",
+          "selection": "ai"
+        }
       },
       "china/xian-city-wall": {
         "name": "Xi an City Wall and Muslim Quarter",
@@ -1258,7 +1294,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/82/Chengdu_Panda_Breeding_Research_Center%2C_Chengdu%2C_China_%28Unsplash%29.jpg/960px-Chengdu_Panda_Breeding_Research_Center%2C_Chengdu%2C_China_%28Unsplash%29.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Chengdu Panda Breeding Research Center, Chengdu, China (Unsplash).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Chengdu_Panda_Breeding_Research_Center,_Chengdu,_China_(Unsplash).jpg",
+          "license": "CC0",
+          "author": "Chester Ho chesterho",
+          "selection": "ai"
+        }
       },
       "china/leshan-buddha": {
         "name": "Leshan Giant Buddha",
@@ -1270,7 +1315,16 @@
           "photography"
         ],
         "mobility": "M",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/46/Leshan_Giant_Buddha_1.jpg/960px-Leshan_Giant_Buddha_1.jpg",
+          "width": 960,
+          "height": 638,
+          "title": "File:Leshan Giant Buddha 1.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Leshan_Giant_Buddha_1.jpg",
+          "license": "CC0",
+          "author": "fannyss",
+          "selection": "ai"
+        }
       },
       "china/sichuan-food": {
         "name": "Sichuan hotpot and opera",
@@ -1282,7 +1336,16 @@
           "authentic_local"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0a/Yuanyang_Chongqing_Hotpot_Box_Hill.jpg/960px-Yuanyang_Chongqing_Hotpot_Box_Hill.jpg",
+          "width": 960,
+          "height": 540,
+          "title": "File:Yuanyang Chongqing Hotpot Box Hill.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Yuanyang_Chongqing_Hotpot_Box_Hill.jpg",
+          "license": "CC0",
+          "author": "Akira CA",
+          "selection": "ai"
+        }
       },
       "china/li-river-cruise": {
         "name": "Li River cruise",
@@ -1295,7 +1358,16 @@
           "outdoors"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0c/2025_Li_River_Cruise_07.jpg/960px-2025_Li_River_Cruise_07.jpg",
+          "width": 960,
+          "height": 540,
+          "title": "File:2025 Li River Cruise 07.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:2025_Li_River_Cruise_07.jpg",
+          "license": "CC0",
+          "author": "Renek78",
+          "selection": "ai"
+        }
       },
       "china/yangshuo-countryside": {
         "name": "Yangshuo countryside by bike",
@@ -1320,7 +1392,16 @@
           "culture"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/33/Pudong%2C_Shanghai%2C_with_river_traffic.jpg/960px-Pudong%2C_Shanghai%2C_with_river_traffic.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Pudong, Shanghai, with river traffic.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Pudong,_Shanghai,_with_river_traffic.jpg",
+          "license": "Public domain",
+          "author": "Brian Kell",
+          "selection": "ai"
+        }
       },
       "china/yu-garden-old-city": {
         "name": "Yu Garden and Shanghai old city",
@@ -1332,7 +1413,16 @@
           "photography"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3c/Shanghai%2C_Yu_Garden_5.jpg/960px-Shanghai%2C_Yu_Garden_5.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Shanghai, Yu Garden 5.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Shanghai,_Yu_Garden_5.jpg",
+          "license": "CC0",
+          "author": "Nikolamikovic82",
+          "selection": "ai"
+        }
       },
       "china/zhujiajiao": {
         "name": "Zhujiajiao water town",
@@ -1351,7 +1441,18 @@
       "china": {
         "name": "China",
         "description": "An ancient civilisation of imperial capitals, karst landscapes, pandas and sprawling modern cities.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ef/China_100.78713E_35.63718N.jpg/960px-China_100.78713E_35.63718N.jpg",
+            "width": 960,
+            "height": 719,
+            "title": "File:China 100.78713E 35.63718N.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:China_100.78713E_35.63718N.jpg",
+            "license": "Public domain",
+            "author": "Unknown",
+            "selection": "ai"
+          }
+        ]
       },
       "china/beijing": {
         "name": "Beijing",
@@ -1386,12 +1487,34 @@
       "china/yangshuo": {
         "name": "Yangshuo",
         "description": "A river town among limestone hills, ideal for cycling and cruises.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/53/Li_River_and_mountains_in_Yangshuo_County%2C_Guilin52.jpg/960px-Li_River_and_mountains_in_Yangshuo_County%2C_Guilin52.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Li River and mountains in Yangshuo County, Guilin52.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Li_River_and_mountains_in_Yangshuo_County,_Guilin52.jpg",
+            "license": "CC0",
+            "author": "Huangdan2060",
+            "selection": "ai"
+          }
+        ]
       },
       "china/shanghai": {
         "name": "Shanghai",
         "description": "The biggest city in China, with a colonial waterfront and a futuristic skyline.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/bc/Shanghai_skyline_waterfront_pudong_5166168_69_70.jpg/960px-Shanghai_skyline_waterfront_pudong_5166168_69_70.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Shanghai skyline waterfront pudong 5166168 69 70.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Shanghai_skyline_waterfront_pudong_5166168_69_70.jpg",
+            "license": "CC0",
+            "author": "Ermell",
+            "selection": "ai"
+          }
+        ]
       }
     }
   }

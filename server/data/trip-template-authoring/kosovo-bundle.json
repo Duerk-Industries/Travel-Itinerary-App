@@ -990,7 +990,16 @@
           "food"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ad/Street_in_the_Old_Bazaar_of_Gjakova%2C_2025.jpg/960px-Street_in_the_Old_Bazaar_of_Gjakova%2C_2025.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Street in the Old Bazaar of Gjakova, 2025.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Street_in_the_Old_Bazaar_of_Gjakova,_2025.jpg",
+          "license": "CC0",
+          "author": "Bdx",
+          "selection": "ai"
+        }
       },
       "kosovo/decani-monastery": {
         "name": "Visoki Decani Monastery",
@@ -1001,7 +1010,16 @@
           "iconic_landmarks"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/46/De%C4%8Dani.jpg/960px-De%C4%8Dani.jpg",
+          "width": 960,
+          "height": 722,
+          "title": "File:Dečani.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:De%C4%8Dani.jpg",
+          "license": "Public domain",
+          "author": "Unknown authorUnknown author",
+          "selection": "ai"
+        }
       },
       "kosovo/peja-patriarchate": {
         "name": "Peja and the Patriarchate of Pec",
@@ -1025,7 +1043,16 @@
           "photography"
         ],
         "mobility": "H",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/35/Rugova_Canyon_Kosovo2.jpg/960px-Rugova_Canyon_Kosovo2.jpg",
+          "width": 960,
+          "height": 720,
+          "title": "File:Rugova Canyon Kosovo2.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Rugova_Canyon_Kosovo2.jpg",
+          "license": "CC0",
+          "author": "Tom Turbo",
+          "selection": "ai"
+        }
       },
       "kosovo/mitrovica-prekaz": {
         "name": "Mitrovica bridge and Prekaz memorial",
@@ -1036,7 +1063,16 @@
           "authentic_local"
         ],
         "mobility": "L",
-        "image": null
+        "image": {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/71/Pont_%22AUSTERLITZ%22_Mitrovica.JPG/960px-Pont_%22AUSTERLITZ%22_Mitrovica.JPG",
+          "width": 960,
+          "height": 720,
+          "title": "File:Pont \"AUSTERLITZ\" Mitrovica.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Pont_%22AUSTERLITZ%22_Mitrovica.JPG",
+          "license": "Public domain",
+          "author": "jicégé",
+          "selection": "ai"
+        }
       }
     },
     "destinations": {
@@ -1053,7 +1089,18 @@
       "kosovo/prizren": {
         "name": "Prizren",
         "description": "An Ottoman riverside town beneath a hilltop fortress.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/71/Ansicht_Altstadt_von_Prizren_2.jpg/960px-Ansicht_Altstadt_von_Prizren_2.jpg",
+            "width": 960,
+            "height": 720,
+            "title": "File:Ansicht Altstadt von Prizren 2.jpg",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Ansicht_Altstadt_von_Prizren_2.jpg",
+            "license": "CC0",
+            "author": "Elmie",
+            "selection": "ai"
+          }
+        ]
       },
       "kosovo/gjakova": {
         "name": "Gjakova",
@@ -1063,7 +1110,18 @@
       "kosovo/peja": {
         "name": "Peja",
         "description": "A town at the foot of the Accursed Mountains, near the Rugova Gorge.",
-        "images": []
+        "images": [
+          {
+            "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b8/Peje_roundabout.JPG/960px-Peje_roundabout.JPG",
+            "width": 960,
+            "height": 720,
+            "title": "File:Peje roundabout.JPG",
+            "pageUrl": "https://commons.wikimedia.org/wiki/File:Peje_roundabout.JPG",
+            "license": "CC0",
+            "author": "Jan Pešula",
+            "selection": "ai"
+          }
+        ]
       }
     }
   }

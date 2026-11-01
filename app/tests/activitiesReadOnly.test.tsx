@@ -56,8 +56,9 @@ const tour: Tour = {
   travelerIds: ['member-1'],
   netVotes: 0,
   userVote: null,
-  netRating: 0,
-  userRating: null,
+  averageRating: null,
+  ratingCount: 0,
+  userStars: null,
 };
 
 const groupMembers = [
