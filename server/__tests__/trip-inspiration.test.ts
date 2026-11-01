@@ -8,9 +8,12 @@ import { registerAndLoginWebUser, seedTiersForTest } from './helpers';
 
 /** Provider-neutral HTTP contracts: also run with server's test:firestore runner. */
 describe('Trips like this and credited activity copies', () => {
-  const suffix = randomUUID().slice(0, 8), day = '2027-05-02';
+  const day = '2027-05-02';
   let owner = '', ownerId = '', visitor = '', outsider = '', sourceTrip = '', targetTrip = '', otherDestination = '', activityId = '';
-  const username = `inspire-${suffix}`, slug = 'paris';
+  let username = '', catalogId = '';
+  const slug = 'paris';
+  const publicActivity = () => ({ id: activityId, catalogId, name: 'Public Garden', activityType: 'Sights & Landmarks',
+    duration: '90 min', lat: 48.86, lng: 2.33, sourceUrl: 'https://en.wikipedia.org/wiki/Paris' });
   const auth = (token = visitor) => ({ Authorization: `Bearer ${token}` });
   const browse = (tripId = targetTrip, token = visitor) => request(app).get(`/api/trips/${tripId}/similar-trips`).set(auth(token));
   const sharing = (enabled: boolean, token = owner) => request(app).put(`/api/trips/${sourceTrip}/activity-sharing`).set(auth(token)).send({ enabled });
@@ -24,6 +27,10 @@ describe('Trips like this and credited activity copies', () => {
   };
   beforeAll(async () => {
     await db.initDb(); await seedTiersForTest();
+  });
+  beforeEach(async () => {
+    const suffix = randomUUID().slice(0, 8);
+    username = `inspire-${suffix}`;
     ({ token: owner, userId: ownerId } = await registerAndLoginWebUser({ firstName: 'Source', lastName: 'Author', email: `inspiration-owner-${suffix}@example.com`, password: 'secret123' }));
     ({ token: visitor } = await registerAndLoginWebUser({ firstName: 'Visitor', lastName: 'Traveler', email: `inspiration-visitor-${suffix}@example.com`, password: 'secret123' }));
     ({ token: outsider } = await registerAndLoginWebUser({ firstName: 'Other', lastName: 'Traveler', email: `inspiration-other-${suffix}@example.com`, password: 'secret123' }));
@@ -36,31 +43,35 @@ describe('Trips like this and credited activity copies', () => {
     await insertPublicAlias(sourceTrip, ownerId, username, slug);
     if (db.getCurrentDbProvider() === 'firebase') await (await firestore()).collection('trip_blogs').doc(sourceTrip).update({ visibilityEpoch: 42, indexingEnabled: true });
     else await sql('UPDATE trip_blogs SET visibility_epoch=42,indexing_enabled=TRUE WHERE trip_id=$1', [sourceTrip]);
-    const catalogId = randomUUID();
+    // Keep the private cost's digits in a public identifier to catch substring-based privacy assertions.
+    catalogId = `${randomUUID().slice(0, -3)}777`;
     const payload = { destinationKey: 'paris', destinationDisplayName: 'Paris', activityType: 'Sights & Landmarks', lat: 48.86, lon: 2.33, sourceUrl: 'https://en.wikipedia.org/wiki/Paris', sourceLabel: 'Wikipedia' };
     if (db.getCurrentDbProvider() === 'firebase') await (await firestore()).collection('locations').doc(catalogId).set({ name: 'Public Garden', sourceType: 'attraction', category: 'attraction', searchName: 'public garden paris', payload });
     else await sql("INSERT INTO locations(id,name,source_type,category,search_name,payload) VALUES($1,'Public Garden','attraction','attraction','public garden paris',$2)", [catalogId, JSON.stringify(payload)]);
     activityId = (await request(app).post('/api/activities').set(auth(owner)).set('Idempotency-Key', randomUUID()).send({ tripId: sourceTrip, date: day, catalogId }).expect(201)).body.id;
     await db.updateActivity(activityId, ownerId, { name: 'Private traveler name', notes: 'Secret notes', reference: 'SECRET-BOOKING', startLocation: 'Private lodging address', cost: 777 });
     await request(app).post('/api/activities').set(auth(owner)).send({ tripId: sourceTrip, date: day, name: 'Private manual activity', startLocation: 'Hidden address', duration: '1h', cost: 50 }).expect(201);
+    await sharing(true).expect(200);
+  });
+  afterEach(async () => {
+    await db.setFeatureFlag('planning_trip_inspiration', true, null);
+    clearFeatureFlagCacheForTesting();
+    // A previous test's public Paris trip must not become another test's recommendation.
+    await sharing(false).expect(200);
   });
 
   it('requires explicit sharing and previews only catalog allowlisted fields', async () => {
+    await sharing(false).expect(200);
     expect((await browse().expect(200)).body.trips).toEqual([]);
     const preview = await request(app).get(`/api/trips/${sourceTrip}/activity-sharing`).set(auth(owner)).expect(200);
-    expect(preview.body.enabled).toBe(false);
-    expect(preview.body.activities).toHaveLength(1);
-    expect(preview.body.activities[0]).toMatchObject({ id: activityId, name: 'Public Garden', lat: 48.86, lng: 2.33 });
-    expect(JSON.stringify(preview.body)).not.toMatch(/Secret|SECRET|Private|777|Hidden/);
+    expect(preview.body).toEqual({ enabled: false, activities: [publicActivity()] });
     await copy().expect(409);
-    await sharing(true).expect(200);
   });
   it('recommends only the same destination and returns no private source data', async () => {
     const response = await browse().expect(200);
     expect(response.headers['cache-control']).toBe('private, no-store');
-    expect(response.body.trips).toHaveLength(1);
-    expect(response.body.trips[0]).toMatchObject({ username, tripSlug: slug, title: 'Shared Paris ideas', sourcePath: `/${username}/${slug}` });
-    expect(JSON.stringify(response.body)).not.toMatch(/Secret|SECRET|Private|777|Hidden|userId|paidBy|travelerIds|reference|notes/);
+    expect(response.body.trips).toEqual([{ username, tripSlug: slug, title: 'Shared Paris ideas',
+      sourcePath: `/${username}/${slug}`, activities: [publicActivity()] }]);
     expect((await browse(otherDestination).expect(200)).body.trips).toEqual([]);
     expect((await browse(sourceTrip, owner).expect(200)).body.trips).toEqual([]);
   });
