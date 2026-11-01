@@ -114,6 +114,16 @@ export const syncTemplateImageMirror = async (options: { pauseMs?: number } = {}
   return copied;
 };
 
+/** Syncs again straight away while a sweep hit its cap, so a large backlog (a new batch of pictures) clears in one go. */
+export const drainTemplateImageMirror = async (options: { pauseMs?: number } = {}): Promise<number> => {
+  let total = 0;
+  for (;;) {
+    const copied = await syncTemplateImageMirror(options);
+    total += copied;
+    if (copied < MAX_COPIES_PER_SWEEP) return total;
+  }
+};
+
 /** Our copy of a picture, for serving; null when there is none. */
 export const openTemplateImage = async (key: string): Promise<{ stream: Readable; contentType: string; size: number | null } | null> => {
   if (!isMirrorKey(key)) return null;
@@ -136,7 +146,7 @@ let handle: ReturnType<typeof setInterval> | null = null;
 
 export const startTemplateImageMirror = (): boolean => {
   if (handle || process.env.NODE_ENV === 'test' || !getEnvFlag('TEMPLATE_IMAGE_MIRROR', { defaultValue: true })) return false;
-  const run = () => syncTemplateImageMirror().catch((err) => logError('[template-images] sweep failed', err));
+  const run = () => drainTemplateImageMirror().catch((err) => logError('[template-images] sweep failed', err));
   void run();
   handle = setInterval(run, SWEEP_INTERVAL_MS);
   handle.unref();
