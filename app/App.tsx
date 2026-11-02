@@ -3397,7 +3397,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const renderSharedPageScroll = (content: React.ReactNode) => (
     <ScrollView
       style={styles.pageScroll}
-      contentContainerStyle={[styles.pageScrollContent, iosSafariContentInsetStyle]}
+      contentContainerStyle={[styles.pageScrollContent, iosSafariContentInsetStyle, showBottomTabs && activeTripId ? styles.pageViewportInnerFabClearance : null]}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
       nestedScrollEnabled
@@ -3410,7 +3410,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 
   const renderBoundedPage = (content: React.ReactNode) => (
     <View style={styles.pageViewport}>
-      <View style={[styles.pageViewportInner, iosSafariContentInsetStyle]}>{content}</View>
+      <View style={[styles.pageViewportInner, iosSafariContentInsetStyle, showBottomTabs && activeTripId ? styles.pageViewportInnerFabClearance : null]}>{content}</View>
     </View>
   );
 
@@ -3498,7 +3498,13 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               <Text style={styles.backButtonText}>{'>'}</Text>
             </TouchableOpacity>
           ) : null}
-          <Image source={TOP_BANNER_ICON} style={styles.brandIcon} accessibilityLabel="WanderBunnies logo" />
+          {showBottomTabs ? (
+            <TouchableOpacity onPress={() => requestPageChange('home')} accessibilityRole="button" accessibilityLabel="Home" testID="topbar-logo-home" hitSlop={hitSlop.small}>
+              <Image source={TOP_BANNER_ICON} style={styles.brandIcon} accessibilityLabel="WanderBunnies logo" />
+            </TouchableOpacity>
+          ) : (
+            <Image source={TOP_BANNER_ICON} style={styles.brandIcon} accessibilityLabel="WanderBunnies logo" />
+          )}
           <Text
             style={[styles.title, isPhoneLayout && styles.titleNarrow]}
             numberOfLines={isPhoneLayout ? 2 : 1}
@@ -3547,7 +3553,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   <IconText style={styles.userNameButtonText}>👤</IconText>
                 </TouchableOpacity>
               )}
-              {userRole === 'admin' ? (
+              {/* On phones, Admin lives on the Profile tab so the header stays one short row. */}
+              {userRole === 'admin' && !showBottomTabs ? (
                 <TouchableOpacity
                   style={[styles.button, styles.smallButton, styles.topBarActionButton]}
                   onPress={() => openAdminSection('overview')}
@@ -3875,6 +3882,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                 <AccountTab
                   backendUrl={backendUrl}
                   onLogout={showBottomTabs ? requestLogout : undefined}
+                  onOpenAdmin={showBottomTabs && userRole === 'admin' ? () => openAdminSection('overview') : undefined}
                   privacy={privacy}
                   userToken={userToken}
                   activePage={activePage}

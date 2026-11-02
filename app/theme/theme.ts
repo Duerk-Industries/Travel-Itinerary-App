@@ -4196,7 +4196,7 @@ const styleFactories = {
   // components/PublicTripBlogPage.tsx
   components_PublicTripBlogPage_1: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }),
   // components/PublicTripBlogPage.tsx
-  components_PublicTripBlogPage_2: (_theme: AppTheme, { selectedReaction, emoji }: ThemeStyleValues): any => ({ flexDirection: 'row', alignItems: 'center', marginRight: 8, marginBottom: 6, paddingHorizontal: 8, paddingVertical: 5, borderRadius: 16, borderWidth: 1, borderColor: selectedReaction === emoji ? _theme.colors.accentBorder : _theme.colors.border, backgroundColor: selectedReaction === emoji ? _theme.colors.surfaceMuted : _theme.colors.surface }),
+  components_PublicTripBlogPage_2: (_theme: AppTheme, { selectedReaction, emoji }: ThemeStyleValues): any => ({ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', minWidth: 44, minHeight: 44, marginRight: 8, marginBottom: 6, paddingHorizontal: 8, paddingVertical: 5, borderRadius: 16, borderWidth: 1, borderColor: selectedReaction === emoji ? _theme.colors.accentBorder : _theme.colors.border, backgroundColor: selectedReaction === emoji ? _theme.colors.surfaceMuted : _theme.colors.surface }),
   // components/PublicTripBlogPage.tsx
   components_PublicTripBlogPage_3: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ fontSize: 16 }),
   // components/PublicTripBlogPage.tsx
@@ -7658,6 +7658,11 @@ export const buildStyles = (theme: AppTheme) => StyleSheet.create(solidBackgroun
     minHeight: 0,
     maxWidth: 1200,
     overflow: 'hidden',
+  }),
+  // The floating chat buttons sit over the bottom of the page on a phone; this keeps the last content clear of them
+  // (their 56px height plus the 24px gap above the bottom bar).
+  pageViewportInnerFabClearance: ({
+    paddingBottom: 80,
   }),
   card: ({
     width: '100%',

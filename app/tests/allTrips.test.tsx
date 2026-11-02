@@ -63,6 +63,8 @@ describe('All trips page', () => {
         onSelectFollowedTrip={jest.fn()} onDeleteTrip={onDeleteTrip} onBack={jest.fn()} />);
       await waitFor(() => expect(screen.getByText('Theirs')).toBeTruthy());
       expect(screen.queryByTestId('all-trips-row-delete-followed')).toBeNull();
+      expect(screen.queryByTestId('all-trips-row-delete-mine')).toBeNull(); // behind the menu until it is opened
+      fireEvent.press(screen.getByTestId('all-trips-row-menu-mine'));
       fireEvent.press(screen.getByTestId('all-trips-row-delete-mine'));
       expect(onDeleteTrip).toHaveBeenCalledWith({ id: 'mine', name: 'Mine' });
       expect(onSelectTrip).not.toHaveBeenCalled();
@@ -85,6 +87,7 @@ describe('All trips page', () => {
       const onUnfollowTrip = jest.fn().mockResolvedValue(null);
       const { screen, onSelectFollowedTrip } = await renderFollowed(onUnfollowTrip);
       expect(screen.queryByTestId('all-trips-row-unfollow-mine')).toBeNull();
+      fireEvent.press(screen.getByTestId('all-trips-row-menu-followed'));
       fireEvent.press(screen.getByTestId('all-trips-row-unfollow-followed'));
       expect(onUnfollowTrip).not.toHaveBeenCalled();
       expect(onSelectFollowedTrip).not.toHaveBeenCalled();
@@ -95,6 +98,7 @@ describe('All trips page', () => {
 
     it('keeps the dialog open with the reason when unfollowing fails', async () => {
       const { screen } = await renderFollowed(jest.fn().mockResolvedValue('Unable to unfollow trip'));
+      fireEvent.press(screen.getByTestId('all-trips-row-menu-followed'));
       fireEvent.press(screen.getByTestId('all-trips-row-unfollow-followed'));
       fireEvent.press(within(screen.getByTestId('all-trips-unfollow-dialog')).getByText('Unfollow'));
       await waitFor(() => expect(screen.getByText('Unable to unfollow trip')).toBeTruthy());

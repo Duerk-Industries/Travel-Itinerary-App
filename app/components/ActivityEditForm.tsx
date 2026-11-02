@@ -218,7 +218,7 @@ const ActivityEditForm: React.FC<ActivityEditFormProps> = ({
             <TextInput
               style={styles.input}
               placeholder="Cost"
-              keyboardType="numeric"
+              keyboardType="decimal-pad"
               value={draft.cost}
               onChangeText={(text: string) => onChange((prev) => ({ ...prev, cost: sanitizeCostInput(text) }))}
             />

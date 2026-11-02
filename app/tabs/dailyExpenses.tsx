@@ -899,7 +899,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                   <DraftTextInput
                     style={amountFieldStyle}
                     placeholder="Amount"
-                    keyboardType="numeric"
+                    keyboardType="decimal-pad"
                     value={draftAmount}
                     onChangeText={(value: string) => setDraftAmount(sanitizeCostInput(value))}
                     commitOnBlur={false}

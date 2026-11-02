@@ -2866,7 +2866,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const renderDayBar = (activeDate: string | null) => (
     <ScrollView
       horizontal
-      showsHorizontalScrollIndicator
+      // Swipe scrolling stays; a desktop-style scrollbar under the day tabs does not belong on a phone.
+      showsHorizontalScrollIndicator={!isPhoneLayout}
       nestedScrollEnabled
       style={themeStyle('tabs_overview_14', {  }, (theme ?? _styleTheme))}
       contentContainerStyle={themeStyle('tabs_overview_15', {  }, (theme ?? _styleTheme))}

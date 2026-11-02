@@ -163,6 +163,8 @@ interface AccountTabProps {
   backendUrl: string;
   /** Shows a Log out button on the main Account page (phones, where the header has none). */
   onLogout?: () => void;
+  /** Opens the admin area from the Account page (phones, where the header has no Admin button). */
+  onOpenAdmin?: () => void;
   privacy?: PrivacyController;
   userToken: string | null;
   activePage: string;
@@ -210,6 +212,7 @@ export type AccountPage = 'account' | 'account-fellow-travelers' | 'account-pack
 const AccountTab: React.FC<AccountTabProps> = ({
   backendUrl,
   onLogout,
+  onOpenAdmin,
   privacy,
   userToken,
   activePage,
@@ -399,6 +402,16 @@ const AccountTab: React.FC<AccountTabProps> = ({
         systemColorScheme={colorScheme}
       /> : null}
       {!isSubPage ? renderProfileLinks() : null}
+      {!isSubPage && onOpenAdmin ? (
+        <TouchableOpacity
+          style={[styles.secondaryButton, themeStyle('tabs_account_24', {  }, _styleTheme)]}
+          onPress={onOpenAdmin}
+          accessibilityRole="button"
+          testID="account-admin"
+        >
+          <Text style={styles.secondaryButtonText}>Admin</Text>
+        </TouchableOpacity>
+      ) : null}
       {!isSubPage && onLogout ? (
         <TouchableOpacity
           style={[styles.secondaryButton, themeStyle('tabs_account_24', {  }, _styleTheme)]}

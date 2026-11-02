@@ -685,4 +685,13 @@ describe('DailyExpensesTab', () => {
       global.fetch = originalFetch;
     }
   });
+
+  it('asks for the decimal keypad on the Amount field, so 8.50 can be typed on a phone (R8)', () => {
+    const screen = render(
+      <DailyExpensesTab backendUrl="http://example.test" theme={theme} headers={{}} jsonHeaders={{}} trip={trip}
+        groupMembers={groupMembers} expenses={expenses} setExpenses={() => {}} defaultPayerId="m1" styles={styles} costTrackingAllowed />
+    );
+    fireEvent.press(screen.getByTestId('expense-add-button'));
+    expect(screen.getByPlaceholderText('Amount').props.keyboardType).toBe('decimal-pad');
+  });
 });

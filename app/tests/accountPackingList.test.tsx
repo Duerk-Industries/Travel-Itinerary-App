@@ -136,4 +136,16 @@ describe('Account profile links', () => {
     view.rerender(<AccountTab {...defaultProps} activePage="account-travel-profile" aiItineraryGenerationEnabled />);
     expect(view.getByTestId('account-traits')).toBeTruthy();
   });
+
+  test('puts Admin and Log out on the Profile page when the header does not carry them (phones)', () => {
+    const onOpenAdmin = jest.fn();
+    const onLogout = jest.fn();
+    const view = render(<AccountTab {...defaultProps} onNavigate={jest.fn()} onOpenAdmin={onOpenAdmin} onLogout={onLogout} />);
+    fireEvent.press(view.getByTestId('account-admin'));
+    fireEvent.press(view.getByTestId('account-logout'));
+    expect(onOpenAdmin).toHaveBeenCalledTimes(1);
+    expect(onLogout).toHaveBeenCalledTimes(1);
+    view.rerender(<AccountTab {...defaultProps} onNavigate={jest.fn()} onLogout={onLogout} />);
+    expect(view.queryByTestId('account-admin')).toBeNull();
+  });
 });

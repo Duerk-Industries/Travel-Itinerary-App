@@ -2718,7 +2718,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                 placeholder="Total cost"
                 accessibilityLabel="Total cost"
                 value={editingWizardLodging.totalCost}
-                keyboardType="numeric"
+                keyboardType="decimal-pad"
                 onChangeText={(text: any) => setEditingWizardLodging((prev) => (prev ? { ...prev, totalCost: text } : prev))}
               />
               <Text style={styles.modalLabel}>Cost per night</Text>

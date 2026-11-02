@@ -470,7 +470,7 @@ const TransferEditingForm: React.FC<FlightEditingFormProps> = ({
             style={styles.input}
             testID="flight-modal-cost"
             value={flight.cost}
-            keyboardType="numeric"
+            keyboardType="decimal-pad"
             onChangeText={(text: string) =>
               setFlight((prev) => (prev ? { ...prev, cost: sanitizeCostInput(text) } : prev))
             }
