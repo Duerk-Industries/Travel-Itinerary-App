@@ -197,4 +197,21 @@ describe('AuthForm', () => {
     expect(typeof updater).toBe('function');
     expect(updater(emptyForm)).toEqual({ ...emptyForm, email: 'alice@example.com' });
   });
+
+  it('submits a login when Enter is pressed in the password field', () => {
+    const props = buildProps({ authMode: 'login' });
+    const { getByPlaceholderText } = render(<AuthForm {...props} />);
+    fireEvent(getByPlaceholderText('Password'), 'submitEditing');
+    expect(props.mocks.loginWithPassword).toHaveBeenCalledTimes(1);
+    expect(props.mocks.register).not.toHaveBeenCalled();
+  });
+
+  it('submits a registration from the confirm field, not from the first password field', () => {
+    const props = buildProps({ authMode: 'register' });
+    const { getByPlaceholderText } = render(<AuthForm {...props} />);
+    fireEvent(getByPlaceholderText('Password'), 'submitEditing');
+    expect(props.mocks.register).not.toHaveBeenCalled();
+    fireEvent(getByPlaceholderText('Confirm password'), 'submitEditing');
+    expect(props.mocks.register).toHaveBeenCalledTimes(1);
+  });
 });

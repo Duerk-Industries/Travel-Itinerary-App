@@ -109,6 +109,7 @@ const ADD_OPTION_PAGE: Record<AddOptionKey, Page> = {
   share: 'overview',
 };
 import { FloatingInsetContext } from './contexts/FloatingInsetContext';
+import { nextFirstSignInDialog } from './utils/firstSignInDialogs';
 import { FOLLOWED_TRIP_HIDDEN_PAGES, shouldAllowPageChange, shouldDisableTab } from './utils/wizardGuard';
 import * as WebBrowser from 'expo-web-browser';
 import {
@@ -579,6 +580,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [externalCarRentalEditId, setExternalCarRentalEditId] = useState<string | null>(null);
   const [pendingInviteModalOpen, setPendingInviteModalOpen] = useState(false);
   const [premiumTrialWelcomeVisible, setPremiumTrialWelcomeVisible] = useState(false);
+  // True once the account profile request has answered (either way), so the tier is as known as it will get.
+  const [accountProfileSettled, setAccountProfileSettled] = useState(false);
   const [premiumPlanComparisonVisible, setPremiumPlanComparisonVisible] = useState(false);
   const [ageVerificationRequired, setAgeVerificationRequired] = useState(false);
   const [ageVerifiedReloadKey, setAgeVerifiedReloadKey] = useState(0);
@@ -805,6 +808,17 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     setInvitesLoaded,
     setPendingTripShareInvites,
   } = useGroupInvites({ backendUrl, userToken });
+  // First sign-in shows one dialog at a time: date of birth, then pending invites, then the Premium offer. The offer waits
+  // for the account's tier to be known and is never made to an account that already pays or administers.
+  const trialUpsellAllowed =
+    nextFirstSignInDialog({
+      ageVerificationRequired,
+      invitesLoaded,
+      hasPendingInvites: pendingInviteModalOpen,
+      profileSettled: accountProfileSettled,
+      tierKey: accountProfile.tierKey,
+      userRole,
+    }) === 'premium';
 
   const {
     followedTrips,
@@ -1565,6 +1579,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     setGroupAddRelationship({});
     clearTraitsState();
     clearAccountProfile();
+    setAccountProfileSettled(false);
     clearAccountSidecars();
     setRequirePasswordSetup(false);
     setPasswordSetupLoading(false);
@@ -1610,7 +1625,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 
   const loadAccountProfile = useCallback(
     (token?: string) =>
-      fetchAccountProfile({
+      Promise.resolve(fetchAccountProfile({
         backendUrl,
         token: token ?? userToken,
         logout,
@@ -1619,7 +1634,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         setAppearancePreference: updateAppearancePreference,
         setUserName,
         setUserEmail,
-      }),
+      })).finally(() => setAccountProfileSettled(true)),
     [backendUrl, logout, setAccountProfile, setUserEmail, setUserName, updateAppearancePreference, updateMapPreference, userToken]
   );
 
@@ -4432,7 +4447,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         <PrivacyChoiceDialog privacy={privacy} backendUrl={backendUrl} theme={theme} />
       ) : null}
       <PremiumTrialWelcomeDialog
-        visible={Boolean(userToken && premiumTrialWelcomeVisible && !ageVerificationRequired && arePremiumTrialsEnabled())}
+        visible={Boolean(userToken && premiumTrialWelcomeVisible && trialUpsellAllowed && arePremiumTrialsEnabled())}
         styles={styles}
         onViewPlans={openPremiumPlansFromWelcome}
         onDismiss={dismissPremiumTrialWelcome}
@@ -4446,7 +4461,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       />
       {userToken ? (
         <PendingInvitesModal
-          visible={pendingInviteModalOpen}
+          visible={pendingInviteModalOpen && !ageVerificationRequired}
           onClose={() => setPendingInviteModalOpen(false)}
           invites={invites}
           pendingTripShareInvites={pendingTripShareInvites}
