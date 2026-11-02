@@ -2211,7 +2211,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], t
               />
               {capabilities.trip_blog_spend_summary && !readOnly ? (
                 <View testID="trip-blog-spend-summary" style={themeStyle('tabs_tripBlog_172', { borderColor: borderColor, inputColor: inputColor }, (theme ?? _styleTheme))}>
-                  <Text style={themeStyle('tabs_tripBlog_173', { textColor: textColor }, (theme ?? _styleTheme))}>Trip spend: {new Intl.NumberFormat(undefined, { style: 'currency', currency: tripCurrency }).format(spendTotal)}</Text>
+                  <Text style={themeStyle('tabs_tripBlog_173', { textColor: textColor }, (theme ?? _styleTheme))}>Trip spend: {new Intl.NumberFormat(undefined, { style: 'currency', currency: tripCurrency }).format(spendTotal)}{allExpenses.some(e => e.conversionStatus === 'unresolved') ? ' · Incomplete: conversion unavailable' : ''}</Text>
                   <Text style={themeStyle('tabs_tripBlog_174', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>Calculated on this device from the trip's expenses.</Text>
                 </View>
               ) : null}

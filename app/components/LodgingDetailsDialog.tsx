@@ -1,3 +1,4 @@
+import { formatMoney } from '../../packages/domain/src/money';
 import IconText from './IconText';
 import { resolveComponentTheme as resolveStyleTheme, themeStyle, getAppTheme as getStyleTheme, type AppTheme } from '../theme/theme';
 
@@ -138,7 +139,7 @@ const LodgingDetailsDialogComponent: React.FC<LodgingDetailsDialogProps> = ({
         })
         .join(', ')
     : 'Not set';
-  const totalCostLabel = lodging.totalCost ? `$${lodging.totalCost}` : 'Not set';
+  const totalCostLabel = lodging.totalCost ? formatMoney(Number(lodging.totalCost), lodging.currency ?? 'USD') : 'Not set';
   const placeDetailsRows = useMemo<DetailRow[]>(() => {
     if (!placeDetails?.details) return [];
     const details = placeDetails.details as any;
@@ -219,7 +220,7 @@ const LodgingDetailsDialogComponent: React.FC<LodgingDetailsDialogProps> = ({
                 { label: 'Paid by', value: lodging.paidBy?.length ? lodging.paidBy.map(payerName).join(', ') : 'Not set' },
                 { label: 'Travelers', value: travelersLabel },
                 { label: 'Total cost', value: totalCostLabel },
-                { label: 'Cost per night', value: lodging.costPerNight ? `$${lodging.costPerNight}` : '$0' },
+                { label: 'Cost per night', value: lodging.costPerNight ? formatMoney(Number(lodging.costPerNight), lodging.currency ?? 'USD') : formatMoney(0, lodging.currency ?? 'USD') },
                 { label: 'Features', value: lodging.features?.length ? lodging.features.join(', ') : 'None listed' },
                 { label: 'Notes', value: lodging.notes || 'None' },
                 { label: 'Your rating', value: null, content: <ItemRating status={lodging.status} averageRating={lodging.averageRating} ratingCount={lodging.ratingCount} userStars={lodging.userStars} readOnly={readOnly} onRate={onRate} name={lodging.name} testID={`lodging-details-rating-${lodging.id}`} theme={theme} /> },

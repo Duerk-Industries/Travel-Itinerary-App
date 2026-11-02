@@ -1,3 +1,4 @@
+process.env.EXCHANGE_RATES_DISABLED = '1';
 import fs from 'fs';
 import path from 'path';
 

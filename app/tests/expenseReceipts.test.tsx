@@ -76,7 +76,7 @@ describe('DailyExpensesTab receipts', () => {
       <DailyExpensesTab backendUrl="http://api" theme={getAppTheme('auto', null)} headers={{}} jsonHeaders={{}} trip={trip as any} groupMembers={groupMembers}
         expenses={[expense('e1', 'Cafe Nero'), expense('e2', 'Bakery')] as any} setExpenses={() => {}} defaultPayerId="m1" styles={styles} costTrackingAllowed readOnly />
     );
-    fireEvent.press(getAllByText('$24.00')[0]);
+    fireEvent.press(getAllByText('€24.00')[0]);
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('http://api/api/expenses/receipts?tripId=t1', { headers: {} }));
     expect(await findByTestId('expense-receipt-e1')).toBeTruthy();
     expect(() => getByTestId('expense-receipt-e2')).toThrow(); // read-only viewers cannot attach one

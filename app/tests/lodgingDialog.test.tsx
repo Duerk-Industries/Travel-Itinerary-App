@@ -179,7 +179,7 @@ describe('Lodging Dialogs', () => {
 
     expect(getByText('Test Hotel')).toBeTruthy();
     expect(getAllByText('123 Main St').length).toBeGreaterThan(0);
-    expect(getByText('$200')).toBeTruthy();
+    expect(getByText('$200.00')).toBeTruthy();
   });
 
   test('LodgingDetailsDialog calls onEdit when edit button is pressed', () => {

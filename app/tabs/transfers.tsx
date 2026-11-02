@@ -1,3 +1,4 @@
+import { formatMoney, amountInTripCurrency } from '../../packages/domain/src/money';
 import IconText from '../components/IconText';
 import { useLayoutBreakpoints } from '../hooks/useLayoutBreakpoints';
 import TransferSummaryCard from '../components/TransferSummaryCard';
@@ -46,6 +47,11 @@ import {
 } from '../utils/itineraryStatus';
 
 export interface Flight {
+  conversionCurrency?: string | null;
+  conversionStatus?: 'converted' | 'unresolved';
+  amountInTripCurrency?: number | null;
+  exchangeRateToTripCurrency?: number | null;
+  currency?: string | null;
   departureLat?: number | null; departureLng?: number | null; arrivalLat?: number | null; arrivalLng?: number | null;
   id: string;
   status?: ItineraryStatus;
@@ -755,7 +761,8 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     };
   };
 
-  const flightsTotal = useMemo(() => flights.reduce((sum, f) => sum + (Number(f.cost) || 0), 0), [flights]);
+  const tripCurrency = findActiveTrip()?.currency ?? 'USD';
+  const flightsTotal = useMemo(() => flights.reduce((sum, f) => sum + (amountInTripCurrency({ ...f, amount: f.cost }, tripCurrency) ?? 0), 0), [flights, tripCurrency]);
 
   const userMembers = useMemo(
     () => groupMembers.filter((m) => !m.guestName && m.status !== 'removed'),
@@ -931,11 +938,11 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
         return formatTravelerListDisplay(ids, baseDisplay, groupMembers) || baseDisplay;
       }
       case 'cost':
-        return `$${value}`;
+        return formatMoney(Number(value) || 0, item.currency ?? findActiveTrip()?.currency ?? 'USD');
       case 'costPerPerson': {
         const count = Array.isArray(item.passenger_ids) ? item.passenger_ids.length : 0;
         const per = count ? (Number(item.cost) || 0) / count : Number(item.cost) || 0;
-        return `$${per.toFixed(2)}`;
+        return formatMoney(per, item.currency ?? findActiveTrip()?.currency ?? 'USD');
       }
       case 'booking_reference':
         return baseDisplay.toUpperCase();
@@ -1743,7 +1750,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                         isLast && styles.lastCell,
                       ]}
                     >
-                      <Text style={styles.cellText}>{`$${per.toFixed(2)}`}</Text>
+                      <Text style={styles.cellText}>{formatMoney(per, findActiveTrip()?.currency ?? 'USD')}</Text>
                     </View>
                   );
                 }
@@ -1962,7 +1969,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       </HorizontalTableScroll>
       </> : null}
       <View style={styles.totalRow}>
-        <Text style={styles.flightTitle}>Total {transferScope === 'ground' ? 'ground transfer' : transferScope === 'all' ? 'transfer' : 'flight'} cost: ${flightsTotal.toFixed(2)}</Text>
+        <Text style={styles.flightTitle}>Total {transferScope === 'ground' ? 'ground transfer' : transferScope === 'all' ? 'transfer' : 'flight'} cost: {formatMoney(flightsTotal, findActiveTrip()?.currency ?? 'USD')}</Text>
       </View>
         </>
       ) : null}

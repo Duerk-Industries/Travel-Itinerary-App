@@ -4858,6 +4858,7 @@ export const listLodgings = async (userId: string, tripId?: string | null): Prom
 };
 
 export const insertLodging = async (lodging: {
+  currency?: string | null;
   userId: string;
   tripId: string;
   status?: string;
@@ -10282,3 +10283,5 @@ export const listTripTemplates = async (options: { enabledOnly?: boolean } = {})
     .filter((template) => !options.enabledOnly || template.enabled)
     .sort((a, b) => a.sortOrder - b.sortOrder || a.id.localeCompare(b.id));
 };
+
+export { getTripMoneyMetadata, saveTripMoneyMetadata, getLastExpenseCurrency, setLastExpenseCurrency } from './services/moneyMetadataFirebase';

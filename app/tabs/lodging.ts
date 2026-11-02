@@ -14,6 +14,11 @@ import {
 } from '../utils/itineraryStatus';
 
 export type Lodging = PlanningCoordinates & {
+  currency?: string | null;
+  conversionCurrency?: string | null;
+  conversionStatus?: 'converted' | 'unresolved';
+  amountInTripCurrency?: number | null;
+  exchangeRateToTripCurrency?: number | null;
   id: string;
   userId: string;
   tripId: string;
@@ -94,6 +99,11 @@ export const calculateNights = (checkIn: string, checkOut: string): number => {
 // Firebase returns snake_case (plus camelCase); the Postgres/in-memory adapters return camelCase
 // only, so accept both or lodging costs/dates silently read as empty.
 export const normalizeLodgingFromApi = (l: any): Lodging => ({
+  currency: l.currency,
+    conversionCurrency: l.conversionCurrency,
+    conversionStatus: l.conversionStatus,
+    amountInTripCurrency: l.amountInTripCurrency,
+    exchangeRateToTripCurrency: l.exchangeRateToTripCurrency,
   id: l.id,
   lat: l.lat, lng: l.lng, geoCity: l.geoCity ?? l.geo_city, coordinateSource: l.coordinateSource ?? l.coordinate_source,
   userId: l.user_id ?? l.userId,

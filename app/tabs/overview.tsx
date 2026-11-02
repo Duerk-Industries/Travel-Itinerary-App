@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { formatMoney } from '../../packages/domain/src/money';
 import ActivitySummaryCard from '../components/ActivitySummaryCard';
 import IconText from '../components/IconText';
 import TransferSummaryCard from '../components/TransferSummaryCard';
@@ -161,6 +162,7 @@ type GroupView = {
 };
 
 type Lodging = {
+  currency?: string | null;
   id: string;
   status?: string;
   name: string;
@@ -175,6 +177,7 @@ type Lodging = {
 };
 
 type Tour = {
+  currency?: string | null;
   nearLodgingId?: import('../../server/src/types').Activity['nearLodgingId'];
   id: string;
   status?: string;
@@ -2386,7 +2389,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             { label: 'Check-out', value: formatFriendlyDate(selectedLodging.checkOutDate) || selectedLodging.checkOutDate },
             { label: 'Rooms', value: selectedLodging.rooms || '-' },
             { label: 'Refund by', value: selectedLodging.refundBy || '-' },
-            { label: 'Total cost', value: selectedLodging.totalCost ? `$${selectedLodging.totalCost}` : '-' },
+            { label: 'Total cost', value: selectedLodging.totalCost ? formatMoney(Number(selectedLodging.totalCost), selectedLodging.currency ?? 'USD') : '-' },
             { label: 'Address', value: selectedLodging.address || '-', onPress: selectedLodging.address ? () => onOpenAddress(selectedLodging.address) : undefined },
           ]}
           styles={styles}

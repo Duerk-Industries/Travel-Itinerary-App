@@ -1,3 +1,4 @@
+import { amountInTripCurrency, formatMoney } from '../packages/domain/src/money';
 import IconText from './components/IconText';
 import { getStandaloneTheme, applyDocumentLayout, buildStyles, rootErrorStyles, themeStyle, getAppTheme, hitSlop } from './theme/theme';
 
@@ -962,19 +963,19 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   );
 
   const flightsTotal = useMemo(
-    () => flights.reduce((sum, f) => sum + (Number(f.cost) || 0), 0),
-    [flights]
+    () => flights.reduce((sum, f) => sum + (amountInTripCurrency({ ...f, amount: f.cost }, activeTrip?.currency ?? 'USD') ?? 0), 0),
+    [flights, activeTrip?.currency]
   );
 
   const lodgingTotal = useMemo(
-    () => lodgings.reduce((sum, l) => sum + (Number(l.totalCost) || 0), 0),
-    [lodgings]
+    () => lodgings.reduce((sum, l) => sum + (amountInTripCurrency({ ...l, amount: l.totalCost }, activeTrip?.currency ?? 'USD') ?? 0), 0),
+    [lodgings, activeTrip?.currency]
   );
 
-  const toursTotal = useMemo(() => tours.reduce((sum, t) => sum + (Number(t.cost) || 0), 0), [tours]);
+  const toursTotal = useMemo(() => tours.reduce((sum, t) => sum + (amountInTripCurrency({ ...t, amount: t.cost }, activeTrip?.currency ?? 'USD') ?? 0), 0), [tours, activeTrip?.currency]);
   const tourPayerTotals = useMemo(
-    () => computePayerTotals(tours, (t) => Number(t.cost) || 0, (t) => t.paidBy, memberIds, { fallbackOnEmpty: true }),
-    [tours, memberIds]
+    () => computePayerTotals(tours, (t) => amountInTripCurrency({ ...t, amount: t.cost }, activeTrip?.currency ?? 'USD') ?? 0, (t) => t.paidBy, memberIds, { fallbackOnEmpty: true }),
+    [tours, memberIds, activeTrip?.currency]
   );
 
   const expenseCategories = useMemo(
@@ -986,8 +987,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     [expenses, expenseCategories]
   );
   const getExpenseAmount = useCallback(
-    (expense: Expense) => Number(expense.amountInTripCurrency ?? expense.amount) || 0,
-    []
+    (expense: Expense) => amountInTripCurrency(expense, activeTrip?.currency ?? 'USD') ?? 0,
+    [activeTrip?.currency]
   );
   const expenseTotalsByCategory = useMemo(() => {
     const totals: Record<string, number> = {};
@@ -1004,8 +1005,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     [expenseCategories, expenseTotalsByCategory]
   );
   const carRentalsTotal = useMemo(
-    () => carRentals.reduce((sum, rental) => sum + (Number(rental.cost) || 0), 0),
-    [carRentals]
+    () => carRentals.reduce((sum, rental) => sum + (amountInTripCurrency({ ...rental, amount: rental.cost }, activeTrip?.currency ?? 'USD') ?? 0), 0),
+    [carRentals, activeTrip?.currency]
   );
 
   // updateMapPreference + updateAppearancePreference are now provided by useAccountProfile.
@@ -3615,6 +3616,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   jsonHeaders={jsonHeaders}
                   payerTotals={tourPayerTotals}
                   toursTotal={toursTotal}
+                  tripCurrency={activeTrip?.currency ?? 'USD'}
                   styles={styles}
                   theme={theme}
                   fetchTours={fetchTours}
@@ -3653,6 +3655,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               jsonHeaders={jsonHeaders}
               payerTotals={tourPayerTotals}
               toursTotal={toursTotal}
+                  tripCurrency={activeTrip?.currency ?? 'USD'}
               styles={styles}
               theme={theme}
               fetchTours={fetchTours}
@@ -3669,6 +3672,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           {activePage === 'expenses'
             ? renderSharedPageScroll(
                 <DailyExpensesTab
+                  currentUserId={userId}
                   autoOpenAdd={pendingExpenseAdd}
                   onAutoOpenAddHandled={() => setPendingExpenseAdd(false)}
                   theme={theme}
@@ -3704,6 +3708,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           {activePage === 'ledger'
             ? renderSharedPageScroll(
                 <LedgerTab
+                  unresolvedConversions={allExpenses.filter(e => e.conversionStatus === 'unresolved').length}
                   trip={activeTripForHome ?? activeTrip}
                   groupMembers={groupMembers}
                   reportableMembers={reportableMembers}
@@ -3792,7 +3797,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                 </View>
               </View>
               <Text style={styles.helperText}>Combined totals by category and user.</Text>
+              {allExpenses.some(e => e.conversionStatus === 'unresolved') ? <Text style={styles.helperText}>Totals incomplete: some currency conversions are unavailable.</Text> : null}
               <CostReportTable
+                currency={activeTrip?.currency ?? 'USD'}
                 rows={costReportRows}
                 members={reportableMembers}
                 overallShares={ledgerPaidTotals}

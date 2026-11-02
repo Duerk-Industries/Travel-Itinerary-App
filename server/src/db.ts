@@ -1,3 +1,4 @@
+import { bookingCurrency, quoteExpense, resolveExpenses, saveExpenseMoney } from './services/tripMoneyService';
 import { getCurrentDbProvider as getProvider, getDbAdapter, resetDbAdapter, type DbProvider } from './db.providers';
 import type { Pool } from 'pg';
 import type {
@@ -134,11 +135,17 @@ export const deleteWebUserAndCleanup = async (...args: Parameters<ReturnType<typ
 export const deleteAllUsers = async (...args: Parameters<ReturnType<typeof adapter>['deleteAllUsers']>) =>
   adapter().deleteAllUsers(...args);
 export const insertFlight = async (...args: Parameters<ReturnType<typeof adapter>['insertFlight']>) =>
-  adapter().insertFlight(...args);
+{
+  const item = await adapter().insertFlight(...args);
+  return item ? bookingCurrency('flight', item, args[0].currency) : item;
+};
 export const deleteFlight = async (...args: Parameters<ReturnType<typeof adapter>['deleteFlight']>) =>
   adapter().deleteFlight(...args);
 export const updateFlight = async (...args: Parameters<ReturnType<typeof adapter>['updateFlight']>) =>
-  adapter().updateFlight(...args);
+{
+  const item = await adapter().updateFlight(...args);
+  return item ? bookingCurrency('flight', item, args[2].currency) : item;
+};
 export const ensureUserInTrip = async (...args: Parameters<ReturnType<typeof adapter>['ensureUserInTrip']>) =>
   adapter().ensureUserInTrip(...args);
 export const ensureUserCanReadTrip = async (...args: Parameters<ReturnType<typeof adapter>['ensureUserCanReadTrip']>) =>
@@ -151,8 +158,15 @@ export const getTripGroupId = async (...args: Parameters<ReturnType<typeof adapt
   adapter().getTripGroupId(...args);
 export const getTripById = async (...args: Parameters<ReturnType<typeof adapter>['getTripById']>) =>
   adapter().getTripById(...args);
-export const updateTripDetails = async (...args: Parameters<ReturnType<typeof adapter>['updateTripDetails']>) =>
-  adapter().updateTripDetails(...args);
+export const updateTripDetails = async (...args: Parameters<ReturnType<typeof adapter>['updateTripDetails']>) => {
+  const [userId, tripId, updates] = args;
+  const previous = await adapter().getTripById(tripId);
+  if (updates.currency && updates.currency !== previous?.currency && await adapter().ensureUserInTrip(tripId, userId)) {
+    // Capture legacy originals and quotes while the old home currency is still known.
+    await Promise.all([listFlights(userId, tripId), listLodgings(userId, tripId), listActivities(userId, tripId), listCarRentals(userId, tripId), listExpenses(userId, tripId)]);
+  }
+  return adapter().updateTripDetails(...args);
+};
 export const getTripCovering = async (...args: Parameters<ReturnType<typeof adapter>['getTripCovering']>) =>
   adapter().getTripCovering(...args);
 export const updateTripCovering = async (...args: Parameters<ReturnType<typeof adapter>['updateTripCovering']>) =>
@@ -206,29 +220,47 @@ export const replaceUniversalPackingList = async (...args: Parameters<ReturnType
 export const getFlightForUser = async (...args: Parameters<ReturnType<typeof adapter>['getFlightForUser']>) =>
   adapter().getFlightForUser(...args);
 export const listFlights = async (...args: Parameters<ReturnType<typeof adapter>['listFlights']>): Promise<Flight[]> =>
-  adapter().listFlights(...args);
+  Promise.all((await adapter().listFlights(...args)).map(item => bookingCurrency('flight', item)));
 export const listLodgings = async (...args: Parameters<ReturnType<typeof adapter>['listLodgings']>): Promise<Lodging[]> =>
-  adapter().listLodgings(...args);
+  Promise.all((await adapter().listLodgings(...args)).map(item => bookingCurrency('lodging', item)));
 export const insertLodging = async (...args: Parameters<ReturnType<typeof adapter>['insertLodging']>) =>
-  adapter().insertLodging(...args);
+{
+  const item = await adapter().insertLodging(...args);
+  return item ? bookingCurrency('lodging', item, args[0].currency) : item;
+};
 export const deleteLodging = async (...args: Parameters<ReturnType<typeof adapter>['deleteLodging']>) =>
   adapter().deleteLodging(...args);
 export const updateLodging = async (...args: Parameters<ReturnType<typeof adapter>['updateLodging']>) =>
-  adapter().updateLodging(...args);
+{
+  const item = await adapter().updateLodging(...args);
+  return item ? bookingCurrency('lodging', item, args[2].currency) : item;
+};
 export const listActivities = async (...args: Parameters<ReturnType<typeof adapter>['listActivities']>): Promise<Activity[]> =>
-  adapter().listActivities(...args);
+  Promise.all((await adapter().listActivities(...args)).map(item => bookingCurrency('activity', item)));
 export const listCarRentals = async (...args: Parameters<ReturnType<typeof adapter>['listCarRentals']>): Promise<CarRental[]> =>
-  adapter().listCarRentals(...args);
+  Promise.all((await adapter().listCarRentals(...args)).map(item => bookingCurrency('car_rental', item)));
 export const insertActivity = async (...args: Parameters<ReturnType<typeof adapter>['insertActivity']>) =>
-  adapter().insertActivity(...args);
+{
+  const item = await adapter().insertActivity(...args);
+  return item ? bookingCurrency('activity', item, args[0].currency) : item;
+};
 export const insertCarRental = async (...args: Parameters<ReturnType<typeof adapter>['insertCarRental']>) =>
-  adapter().insertCarRental(...args);
+{
+  const item = await adapter().insertCarRental(...args);
+  return item ? bookingCurrency('car_rental', item, args[0].currency) : item;
+};
 export const setItemCoordinates = async (...args: Parameters<ReturnType<typeof adapter>['setItemCoordinates']>) =>
   adapter().setItemCoordinates(...args);
 export const updateActivity = async (...args: Parameters<ReturnType<typeof adapter>['updateActivity']>) =>
-  adapter().updateActivity(...args);
+{
+  const item = await adapter().updateActivity(...args);
+  return item ? bookingCurrency('activity', item, args[2].currency) : item;
+};
 export const updateCarRental = async (...args: Parameters<ReturnType<typeof adapter>['updateCarRental']>) =>
-  adapter().updateCarRental(...args);
+{
+  const item = await adapter().updateCarRental(...args);
+  return item ? bookingCurrency('car_rental', item, args[2].currency) : item;
+};
 export const deleteActivity = async (...args: Parameters<ReturnType<typeof adapter>['deleteActivity']>) =>
   adapter().deleteActivity(...args);
 export const deleteCarRental = async (...args: Parameters<ReturnType<typeof adapter>['deleteCarRental']>) =>
@@ -418,18 +450,36 @@ export const listTraitsForGroupTrip = async (...args: Parameters<ReturnType<type
 export const getUserDemographics = async (...args: Parameters<ReturnType<typeof adapter>['getUserDemographics']>) =>
   adapter().getUserDemographics(...args);
 
+export const getTripMoneyMetadata = async (...args: Parameters<ReturnType<typeof adapter>['getTripMoneyMetadata']>) => adapter().getTripMoneyMetadata(...args);
+export const saveTripMoneyMetadata = async (...args: Parameters<ReturnType<typeof adapter>['saveTripMoneyMetadata']>) => adapter().saveTripMoneyMetadata(...args);
+export const getLastExpenseCurrency = async (...args: Parameters<ReturnType<typeof adapter>['getLastExpenseCurrency']>) => adapter().getLastExpenseCurrency(...args);
+export const setLastExpenseCurrency = async (...args: Parameters<ReturnType<typeof adapter>['setLastExpenseCurrency']>) => adapter().setLastExpenseCurrency(...args);
 export const listExpenses = async (...args: Parameters<ReturnType<typeof adapter>['listExpenses']>): Promise<Expense[]> =>
-  adapter().listExpenses(...args);
-export const insertExpense = async (...args: Parameters<ReturnType<typeof adapter>['insertExpense']>) =>
-  adapter().insertExpense(...args);
-export const reorderActivitiesForDay = async (...args: Parameters<ReturnType<typeof adapter>['reorderActivitiesForDay']>) =>
-  adapter().reorderActivitiesForDay(...args);
-export const insertExpenseIdempotent = async (...args: Parameters<ReturnType<typeof adapter>['insertExpenseIdempotent']>) =>
-  adapter().insertExpenseIdempotent(...args);
-export const updateExpense = async (...args: Parameters<ReturnType<typeof adapter>['updateExpense']>) =>
-  adapter().updateExpense(...args);
-export const upsertExpenseForSource = async (...args: Parameters<ReturnType<typeof adapter>['upsertExpenseForSource']>) =>
-  adapter().upsertExpenseForSource(...args);
+  resolveExpenses(await adapter().listExpenses(...args));
+export const insertExpense = async (expense: Parameters<ReturnType<typeof adapter>['insertExpense']>[0]) => {
+  const quote = await quoteExpense(expense);
+  const created = await adapter().insertExpense({ ...expense, ...quote });
+  return saveExpenseMoney({ ...created, ...quote }, true);
+};
+export const reorderActivitiesForDay = async (...args: Parameters<ReturnType<typeof adapter>['reorderActivitiesForDay']>) => adapter().reorderActivitiesForDay(...args);
+export const insertExpenseIdempotent = async (expense: Parameters<ReturnType<typeof adapter>['insertExpenseIdempotent']>[0], key: string) => {
+  const quote = await quoteExpense(expense);
+  const result = await adapter().insertExpenseIdempotent({ ...expense, ...quote }, key);
+  if (result.replayed) return { ...result, expense: (await resolveExpenses([result.expense]))[0] };
+  return { ...result, expense: await saveExpenseMoney({ ...result.expense, ...quote }, true) };
+};
+export const updateExpense = async (id: string, userId: string, expense: Parameters<ReturnType<typeof adapter>['updateExpense']>[2]) => {
+  const existing = (await adapter().listExpenses(userId, expense.tripId)).find(e => e.id === id);
+  const quote = await quoteExpense({ ...expense, currency: expense.currency ?? existing?.currency });
+  const updated = await adapter().updateExpense(id, userId, { ...expense, ...quote });
+  return updated ? saveExpenseMoney({ ...updated, ...quote }, true) : null;
+};
+export const upsertExpenseForSource = async (expense: Parameters<ReturnType<typeof adapter>['upsertExpenseForSource']>[0]) => {
+  const metadata = await adapter().getTripMoneyMetadata(expense.sourceType as 'flight', [expense.sourceId]);
+  const quote = await quoteExpense({ ...expense, currency: expense.currency ?? metadata[0]?.currency });
+  const created = await adapter().upsertExpenseForSource({ ...expense, ...quote });
+  return created ? saveExpenseMoney({ ...created, ...quote }) : created;
+};
 export const deleteExpense = async (...args: Parameters<ReturnType<typeof adapter>['deleteExpense']>) =>
   adapter().deleteExpense(...args);
 export const deleteExpenseForSource = async (...args: Parameters<ReturnType<typeof adapter>['deleteExpenseForSource']>) =>

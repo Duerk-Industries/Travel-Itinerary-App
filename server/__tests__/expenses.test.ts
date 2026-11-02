@@ -154,6 +154,19 @@ describe('Expenses API', () => {
     });
   });
 
+  it('ignores fabricated conversion values and remembers the original currency per traveler and trip', async () => {
+    const created = await request(app).post('/api/expenses').set('Authorization', `Bearer ${token}`)
+      .send({ tripId, expenseDate: '2025-02-01', category: 'Lunch', amount: 60, currency: 'EUR',
+        amountInTripCurrency: 60, exchangeRateToTripCurrency: 1, payerIds: [memberId], forIds: [memberId] }).expect(201);
+    expect(created.body).toMatchObject({ amount: 60, currency: 'EUR', amountInTripCurrency: null, conversionCurrency: 'USD', conversionStatus: 'unresolved' });
+    const preferences = await request(app).get(`/api/expenses/preferences?tripId=${tripId}`).set('Authorization', `Bearer ${token}`).expect(200);
+    expect(preferences.body.currency).toBe('EUR');
+    const otherTrip = await request(app).post('/api/trips').set('Authorization', `Bearer ${token}`).send({ name: 'Preference scope', groupId }).expect(201);
+    const otherPreferences = await request(app).get(`/api/expenses/preferences?tripId=${otherTrip.body.id}`).set('Authorization', `Bearer ${token}`).expect(200);
+    expect(otherPreferences.body.currency).toBeNull();
+    await request(app).delete(`/api/expenses/${created.body.id}`).set('Authorization', `Bearer ${token}`).expect(204);
+  });
+
   it('reserves receipt scanning for Premium and Pro users', async () => {
     const res = await request(app)
       .post('/api/expenses/receipt/parse')

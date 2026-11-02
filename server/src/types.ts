@@ -313,6 +313,11 @@ export interface WebUser {
 }
 
 export interface Flight {
+  conversionCurrency?: string | null;
+  conversionStatus?: 'converted' | 'unresolved';
+  amountInTripCurrency?: number | null;
+  exchangeRateToTripCurrency?: number | null;
+  currency?: string | null;
   departureLat?: number | null;
   departureLng?: number | null;
   arrivalLat?: number | null;
@@ -637,6 +642,11 @@ export type ImportReviewSuggestion = {
 };
 
 export interface Lodging extends PlanningCoordinates {
+  conversionCurrency?: string | null;
+  conversionStatus?: 'converted' | 'unresolved';
+  amountInTripCurrency?: number | null;
+  exchangeRateToTripCurrency?: number | null;
+  currency?: string | null;
   id: string;
   user_id: string;
   trip_id: string;
@@ -666,6 +676,11 @@ export interface Lodging extends PlanningCoordinates {
 }
 
 export interface Activity extends PlanningCoordinates {
+  conversionCurrency?: string | null;
+  conversionStatus?: 'converted' | 'unresolved';
+  amountInTripCurrency?: number | null;
+  exchangeRateToTripCurrency?: number | null;
+  currency?: string | null;
   /** Nearby lodging for an undated optional activity. */
   nearLodgingId?: string | null;
   catalogId?: string | null;
@@ -715,6 +730,11 @@ export type PublicActivityCopy = {
 export type Tour = Activity;
 
 export interface CarRental extends PlanningCoordinates {
+  conversionCurrency?: string | null;
+  conversionStatus?: 'converted' | 'unresolved';
+  amountInTripCurrency?: number | null;
+  exchangeRateToTripCurrency?: number | null;
+  currency?: string | null;
   dropoffLat?: number | null;
   dropoffLng?: number | null;
   id: string;
@@ -979,6 +999,8 @@ export interface Expense {
   amountInTripCurrency?: number | null;
   exchangeRateToTripCurrency?: number | null;
   exchangeRateDate?: string | null;
+  conversionCurrency?: string | null;
+  conversionStatus?: 'converted' | 'unresolved';
   payerIds: string[];
   forIds: string[];
   /** Weight per traveler in forIds for an uneven split (2 = double portion); absent or null means an equal split. */
@@ -987,6 +1009,20 @@ export interface Expense {
   sourceId?: string | null;
   notes?: string | null;
   createdAt: string;
+}
+
+/** Currency and saved quote metadata shared by both storage adapters. */
+export interface TripMoneyMetadata {
+  recordType: 'expense' | 'flight' | 'lodging' | 'activity' | 'car_rental';
+  recordId: string;
+  expenseDate?: string | null;
+  tripId: string;
+  currency: string;
+  amount: number | null;
+  conversionCurrency: string | null;
+  amountInTripCurrency: number | null;
+  exchangeRateToTripCurrency: number | null;
+  exchangeRateDate: string | null;
 }
 
 export interface TripPayment {

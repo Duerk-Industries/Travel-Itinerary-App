@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { formatMoney } from '../../packages/domain/src/money';
 import IconText from '../components/IconText';
 import { useLayoutBreakpoints } from '../hooks/useLayoutBreakpoints';
 import { needsHotelChoice } from '../utils/lodgingPlaceholder';
@@ -31,7 +32,7 @@ type LodgingTabProps = {
   backendUrl: string;
   jsonHeaders: Record<string, string>,
   requestHeaders: Record<string, string>,
-  trip: { id: string, startDate?: string | null, endDate?: string | null } | null;
+  trip: { currency?: string | null, id: string, startDate?: string | null, endDate?: string | null } | null;
   lodgings: Lodging[];
   groupMembers: any[];
   defaultPayerId: string | null;
@@ -231,7 +232,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
               </View>
               <Text style={styles.helperText}>
                 {formatShortDate(lodging.checkInDate)} → {formatShortDate(lodging.checkOutDate)}
-                {cost > 0 ? ` · $${cost.toLocaleString('en-US', { maximumFractionDigits: 2 })}` : ''}
+                {cost > 0 ? ` · ${formatMoney(cost, lodging.currency ?? trip?.currency ?? 'USD')}` : ''}
               </Text>
               {needsHotelChoice(lodging) ? <Text testID={`lodging-choose-hotel-${lodging.id}`} style={themeStyle('tabs_LodgingTab_nudge', {  }, (theme ?? _styleTheme))}>Choose your hotel: tap to add yours</Text> : null}
 
@@ -490,8 +491,8 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
             { label: 'Address', value: selectedLodging.address || '-', onPress: selectedLodging.address ? () => onOpenMap(selectedLodging.address) : undefined },
             { label: 'Paid by', value: selectedLodging.paidBy?.length ? selectedLodging.paidBy.map(payerName).join(', ') : '-' },
             { label: 'Travelers', value: selectedLodging.travelerIds?.length ? selectedLodging.travelerIds.map(travelerName).join(', ') : '-' },
-            { label: 'Total cost', value: selectedLodging.totalCost ? `$${selectedLodging.totalCost}` : '-' },
-            { label: 'Cost per night', value: selectedLodging.costPerNight ? `$${selectedLodging.costPerNight}` : '-' },
+            { label: 'Total cost', value: selectedLodging.totalCost ? formatMoney(Number(selectedLodging.totalCost), selectedLodging.currency ?? 'USD') : '-' },
+            { label: 'Cost per night', value: selectedLodging.costPerNight ? formatMoney(Number(selectedLodging.costPerNight), selectedLodging.currency ?? 'USD') : '-' },
             { label: 'Rating', value: null, content: <ItemRating status={selectedLodging.status} averageRating={selectedLodging.averageRating} ratingCount={selectedLodging.ratingCount} userStars={selectedLodging.userStars} readOnly={readOnly} onRate={(stars) => rateOnLodging(selectedLodging.id, stars)} name={selectedLodging.name} testID={`lodging-details-rating-${selectedLodging.id}`} theme={theme} /> },
           ]}
           styles={styles}

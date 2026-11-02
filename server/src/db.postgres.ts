@@ -1574,6 +1574,8 @@ export const initDb = async (): Promise<void> => {
     await del('flight_shares');
     await del('flights');
     await del('expenses');
+    await del('trip_money_metadata');
+    await del('trip_expense_preferences');
     await del('trips');
     await del('place_details_cache');
     await del('place_lookup_cache');
@@ -4545,6 +4547,7 @@ export const getLodgingById = async (lodgingId: string): Promise<(Lodging & { tr
 };
 
 export const insertLodging = async (lodging: {
+  currency?: string | null;
   userId: string;
   tripId: string;
   status: string;
@@ -14426,3 +14429,5 @@ export const listTripTemplates = async (options: { enabledOnly?: boolean } = {})
   const { rows } = await getPool().query(`${TRIP_TEMPLATE_SELECT}${options.enabledOnly ? ' WHERE enabled = TRUE' : ''} ORDER BY sort_order, id`);
   return rows.map((row: any) => ({ ...row, days: Number(row.days), sortOrder: Number(row.sortOrder) }));
 };
+
+export { getTripMoneyMetadata, saveTripMoneyMetadata, getLastExpenseCurrency, setLastExpenseCurrency } from './services/moneyMetadataPostgres';

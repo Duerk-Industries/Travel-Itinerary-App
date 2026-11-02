@@ -1,3 +1,4 @@
+import { amountInTripCurrency, formatMoney, formatExpenseMoney } from '../../packages/domain/src/money';
 import IconText from '../components/IconText';
 import { useLayoutBreakpoints } from '../hooks/useLayoutBreakpoints';
 import { resolveComponentTheme as resolveStyleTheme, themeStyle, getAppTheme as getStyleTheme, type AppTheme } from '../theme/theme';
@@ -20,7 +21,7 @@ import SelectField, { type SelectFieldOption } from '../components/SelectField';
 import DateField from '../components/DateField';
 import { formatLocalDateOnly, localTodayDateOnly, parseLocalDateOnly } from '../utils/dateOnly';
 import { normalizeDateString } from '../utils/normalizeDateString';
-import { fetchExchangeRate, getLocalDateString } from '../utils/exchangeRates';
+import { getLocalDateString } from '../utils/exchangeRates';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import { formatMemberDisplayName } from '../utils/memberDisplay';
 import { formatDateLong } from '../utils/formatDateLong';
@@ -62,6 +63,8 @@ type Expense = {
   amountInTripCurrency?: number | null;
   exchangeRateToTripCurrency?: number | null;
   exchangeRateDate?: string | null;
+  conversionCurrency?: string | null;
+  conversionStatus?: 'converted' | 'unresolved';
   vendor?: string | null;
   notes?: string | null;
   payerIds: string[];
@@ -96,6 +99,7 @@ type DailyExpensesTabProps = {
   groupMembers: GroupMemberOption[];
   expenses: Expense[];
   setExpenses: React.Dispatch<React.SetStateAction<Expense[]>>;
+  currentUserId?: string | null;
   defaultPayerId: string | null;
   styles: Record<string, any>;
   /** Names for itinerary items whose generated expenses appear in this table. */
@@ -192,6 +196,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   expenses,
   setExpenses,
   defaultPayerId,
+  currentUserId,
   styles,
   itineraryExpenseDescriptions = {},
   onEditItineraryItem,
@@ -230,22 +235,35 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
 
 
   const tripDates = useMemo(() => buildDateRange(trip), [trip]);
-  const expenseDraftStorageKey = `stp.daily-expense-draft.${trip?.id ?? 'none'}`;
+  const expenseDraftStorageKey = `stp.daily-expense-draft.${currentUserId ?? 'session'}.${trip?.id ?? 'none'}`;
   // The category used last starts the next expense, so a run of similar expenses (rides, souvenirs) needs no re-picking.
   const [lastCategory, setLastCategory] = usePersistedState<CategoryOption>('stp.daily-expense-last-category', 'Breakfast');
+  const currencyChosenRef = useRef(false);
+  const [lastCurrency, setLastCurrency] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    setLastCurrency(null);
+    if (trip?.id && currentUserId) void fetch(`${backendUrl}/api/expenses/preferences?tripId=${encodeURIComponent(trip.id)}`, { headers })
+      .then(res => res.ok ? res.json() : null).then(data => {
+        if (cancelled) return;
+        setLastCurrency(data?.currency ?? null);
+        if (data?.currency && !currencyChosenRef.current) setExpenseDraft(current => current?.isOpen && !current.amount ? { ...current, currency: data.currency } : current);
+      }).catch(() => undefined);
+    return () => { cancelled = true; };
+  }, [trip?.id, currentUserId, backendUrl]);
   const defaultExpenseDraft = useMemo<DailyExpenseDraft>(() => {
     const todayIso = localTodayDateOnly();
     return {
       isOpen: false,
       date: tripDates.includes(todayIso) ? todayIso : tripDates[0] ?? todayIso,
       category: categoryOptions.includes(lastCategory) ? lastCategory : 'Breakfast',
-      currency: trip?.currency ?? 'USD',
+      currency: lastCurrency ?? trip?.currency ?? 'USD',
       amount: '',
       vendor: '',
       forIds: activeMembers.map((member) => member.id),
       payerIds: defaultPayerId ? [defaultPayerId] : [],
     };
-  }, [activeMembers, defaultPayerId, trip?.currency, tripDates, lastCategory]);
+  }, [activeMembers, defaultPayerId, trip?.currency, tripDates, lastCategory, lastCurrency]);
   const [storedExpenseDraft, setExpenseDraft] = usePersistedState<DailyExpenseDraft | null>(
     expenseDraftStorageKey,
     null,
@@ -266,7 +284,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   };
   const setDraftDate = (date: string) => updateExpenseDraft({ date });
   const setDraftCategory = (category: CategoryOption) => updateExpenseDraft({ category });
-  const setDraftCurrency = (currency: string) => updateExpenseDraft({ currency });
+  const setDraftCurrency = (currency: string) => { currencyChosenRef.current = true; updateExpenseDraft({ currency }); };
   const setDraftAmount = (amount: string) => updateExpenseDraft({ amount });
   const setDraftVendor = (vendor: string) => updateExpenseDraft({ vendor });
   const setDraftForIds = (next: React.SetStateAction<string[]>) => {
@@ -341,6 +359,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
     [nonZeroExpenses]
   );
 
+  const unresolvedCount = expenseItems.filter(e => amountInTripCurrency(e, trip?.currency ?? 'USD') == null).length;
   const dailyTotals = useMemo(() => {
     const totals: Record<string, Record<string, number>> = {};
     tripDates.forEach((date) => {
@@ -352,10 +371,10 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
     expenseItems.forEach((expense) => {
       if (!totals[expense.expenseDate]) return;
       totals[expense.expenseDate][expense.category] =
-        (totals[expense.expenseDate][expense.category] ?? 0) + (Number(expense.amount) || 0);
+        (totals[expense.expenseDate][expense.category] ?? 0) + (amountInTripCurrency(expense, trip?.currency ?? 'USD') ?? 0);
     });
     return totals;
-  }, [expenseItems, tripDates]);
+  }, [expenseItems, tripDates, trip?.currency]);
 
   const dailyTotalsByDay = useMemo(() => {
     const totals: Record<string, number> = {};
@@ -376,6 +395,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
     ids.includes(id) ? ids.filter((item) => item !== id) : [...ids, id];
 
   const openAddExpenseModal = () => {
+    currencyChosenRef.current = false;
     setEditingPendingId(null);
     setEditingExpenseId(null);
     updateExpenseDraft({ isOpen: true });
@@ -527,35 +547,12 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
     const tripCurrency = (trip.currency ?? 'USD').toUpperCase();
     const inputCurrency = (draftCurrency || tripCurrency).toUpperCase();
     const amountValue = Number(draftAmount) || 0;
-    const rateDate = getLocalDateString();
-    let amountInTripCurrency: number | null = null;
-    let exchangeRateToTripCurrency: number | null = null;
-    let exchangeRateDate: string | null = null;
-    if (inputCurrency === tripCurrency) {
-      amountInTripCurrency = amountValue;
-      exchangeRateToTripCurrency = 1;
-      exchangeRateDate = rateDate;
-    } else if (amountValue) {
-      try {
-        const rateInfo = await fetchExchangeRate(inputCurrency, tripCurrency, rateDate);
-        if (rateInfo) {
-          amountInTripCurrency = amountValue * rateInfo.rate;
-          exchangeRateToTripCurrency = rateInfo.rate;
-          exchangeRateDate = rateInfo.date;
-        }
-      } catch {
-        // ignore FX lookup failures; ledger can still compute on demand.
-      }
-    }
     const payload = {
       tripId: trip.id,
       expenseDate: draftDate,
       category: draftCategory,
       amount: amountValue,
       currency: inputCurrency,
-      amountInTripCurrency: amountInTripCurrency ?? undefined,
-      exchangeRateToTripCurrency: exchangeRateToTripCurrency ?? undefined,
-      exchangeRateDate: exchangeRateDate ?? undefined,
       payerIds: singlePayerIds(draftPayerIds, defaultPayerId),
       forIds: draftForIds,
       // Sent only for a genuinely uneven split; the server treats all-equal weights as an equal split too.
@@ -610,6 +607,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
         ? prev.map((expense) => expense.id === data.id ? data as Expense : expense)
         : [data as Expense, ...prev.filter((expense) => expense.id !== data.id)]);
       setLastCategory(draftCategory);
+      setLastCurrency(inputCurrency);
       cancelAddExpenseModal();
     } catch (err) {
       // The request never got an answer (lost connection mid-save). For a new expense the answer is
@@ -649,6 +647,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
     return (
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Daily Expenses</Text>
+        {unresolvedCount > 0 ? <Text accessibilityRole="alert" style={styles.helperText}>Totals incomplete: {unresolvedCount} expense conversion(s) unavailable. Open the expense details to review.</Text> : null}
         <Text style={styles.helperText}>Select a trip to view daily expenses.</Text>
       </View>
     );
@@ -658,6 +657,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
     return (
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Daily Expenses</Text>
+        {unresolvedCount > 0 ? <Text accessibilityRole="alert" style={styles.helperText}>Totals incomplete: {unresolvedCount} expense conversion(s) unavailable. Open the expense details to review.</Text> : null}
         <Text style={styles.helperText}>Add trip start and end dates to track daily expenses.</Text>
       </View>
     );
@@ -685,6 +685,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
     <View style={styles.card}>
       <View style={styles.row}>
         <Text style={styles.sectionTitle}>Daily Expenses</Text>
+        {unresolvedCount > 0 ? <Text accessibilityRole="alert" style={styles.helperText}>Totals incomplete: {unresolvedCount} expense conversion(s) unavailable. Open the expense details to review.</Text> : null}
         {!isPhoneLayout ? <TouchableOpacity
           style={[styles.button, styles.smallButton, themeStyle('tabs_dailyExpenses_12', {  }, (theme ?? _styleTheme))]}
           onPress={openAddExpenseModal}
@@ -1018,7 +1019,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
           {tripDates.map((date) => {
             const dayTotal = dailyTotalsByDay[date] ?? 0;
             const nonZeroCategories = categoryOptions.filter(
-              (category) => (dailyTotals[date]?.[category] ?? 0) > 0,
+              (category) => expenseItems.some(e => e.expenseDate === date && e.category === category),
             );
             return (
               <View
@@ -1031,7 +1032,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                     {formatDateLabel(date)}
                   </Text>
                   <Text style={[styles.cellText, dayCardStyles.dayTotal]}>
-                    ${dayTotal.toFixed(2)}
+                    {formatMoney(dayTotal, trip?.currency ?? 'USD')}
                   </Text>
                 </View>
                 {nonZeroCategories.length ? (
@@ -1046,7 +1047,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                       >
                         <Text style={styles.cellText}>{category}</Text>
                         <Text style={[styles.cellText, styles.linkText]}>
-                          ${value.toFixed(2)}
+                          {expenseItems.some(e => e.expenseDate === date && e.category === category && amountInTripCurrency(e, trip?.currency ?? 'USD') == null) ? 'Conversion unavailable' : formatMoney(value, trip?.currency ?? 'USD')}
                         </Text>
                       </TouchableOpacity>
                     );
@@ -1080,10 +1081,12 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                 </View>
                 {categoryOptions.map((category) => {
                   const value = dailyTotals[date]?.[category] ?? 0;
-                  const content = value ? `$${value.toFixed(2)}` : '-';
+                  const hasExpense = expenseItems.some(e => e.expenseDate === date && e.category === category);
+                  const missing = expenseItems.some(e => e.expenseDate === date && e.category === category && amountInTripCurrency(e, trip?.currency ?? 'USD') == null);
+                  const content = missing ? 'Conversion unavailable' : hasExpense ? formatMoney(value, trip?.currency ?? 'USD') : '-';
                   return (
                     <View key={`${date}-${category}`} style={[styles.cell, fixedTableColumn(110)]}>
-                      {value ? (
+                      {hasExpense ? (
                         <TouchableOpacity onPress={() => setDetailTarget({ date, category })} testID={`expense-cell-${date}-${category}`}>
                           <Text style={[styles.cellText, styles.linkText]}>{content}</Text>
                         </TouchableOpacity>
@@ -1094,7 +1097,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                   );
                 })}
                 <View style={[styles.cell, styles.lastCell, fixedTableColumn(110)]}>
-                  <Text style={styles.cellText}>${(dailyTotalsByDay[date] ?? 0).toFixed(2)}</Text>
+                  <Text style={styles.cellText}>{formatMoney(dailyTotalsByDay[date] ?? 0, trip?.currency ?? 'USD')}</Text>
                 </View>
               </View>
             ))}
@@ -1121,7 +1124,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
               {pendingDeleteExpense && detailItems.some((e) => e.id === pendingDeleteExpense.id) ? (
                 // Inline confirm — a second stacked Modal can render behind this one on web.
                 <View testID="expense-detail-delete-confirm" style={themeStyle('tabs_dailyExpenses_20', { theme: theme }, (theme ?? _styleTheme))}>
-                  <Text style={styles.cellText}>Delete this ${(Number(pendingDeleteExpense.amount) || 0).toFixed(2)} expense? This cannot be undone.</Text>
+                  <Text style={styles.cellText}>Delete this {formatMoney(Number(pendingDeleteExpense.amount) || 0, pendingDeleteExpense.currency)} expense? This cannot be undone.</Text>
                   <View style={[styles.row, themeStyle('tabs_dailyExpenses_21', {  }, (theme ?? _styleTheme))]}>
                     <TouchableOpacity testID="expense-detail-delete-confirm-yes" accessibilityRole="button" accessibilityLabel="Confirm delete" style={[styles.button, styles.smallButton, styles.tableActionButtonDanger]} onPress={() => deleteExpense(pendingDeleteExpense)}>
                       <Text style={styles.buttonText}>Delete</Text>
@@ -1158,7 +1161,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                           </Text>
                         </View>
                         <View style={[styles.cell, fixedTableColumn(90)]}>
-                          <Text style={styles.cellText}>${(Number(expense.amount) || 0).toFixed(2)}</Text>
+                          <Text style={styles.cellText}>{formatExpenseMoney(expense, trip?.currency ?? 'USD')}</Text>
                         </View>
                         <View style={[styles.cell, styles.lastCell, fixedTableColumn(150)]}>
                           <View style={[styles.actionCell, themeStyle('tabs_dailyExpenses_25', {  }, (theme ?? _styleTheme))]}>

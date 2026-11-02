@@ -10,6 +10,11 @@ import {
 } from '../utils/itineraryStatus';
 
 export type CarRental = PlanningCoordinates & {
+  currency?: string | null;
+  conversionCurrency?: string | null;
+  conversionStatus?: 'converted' | 'unresolved';
+  amountInTripCurrency?: number | null;
+  exchangeRateToTripCurrency?: number | null;
   dropoffLat?: number | null; dropoffLng?: number | null;
   id: string;
   tripId?: string;
@@ -97,6 +102,11 @@ export const buildCarRentalFromDraft = (
 };
 
 export const normalizeCarRentalFromApi = (r: any): CarRental => ({
+  currency: r.currency,
+  conversionCurrency: r.conversionCurrency,
+  conversionStatus: r.conversionStatus,
+  amountInTripCurrency: r.amountInTripCurrency,
+  exchangeRateToTripCurrency: r.exchangeRateToTripCurrency,
   id: String(r.id ?? ''),
   dropoffLat: r.dropoffLat ?? r.dropoff_lat, dropoffLng: r.dropoffLng ?? r.dropoff_lng,
   lat: r.lat, lng: r.lng, geoCity: r.geoCity ?? r.geo_city, coordinateSource: r.coordinateSource ?? r.coordinate_source,

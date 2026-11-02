@@ -34,6 +34,7 @@ const patchField = <S extends z.ZodTypeAny>(schema: S) =>
 
 export const createActivityDto = z.object({
   tripId: trimmedNonEmpty('tripId'),
+  currency: z.string().trim().regex(/^[A-Za-z]{3}$/).transform(v => v.toUpperCase()).optional(),
   status: optionalString,
   activityType: optionalString,
   date: optionalString,
@@ -62,6 +63,7 @@ export type CreateActivityDto = z.infer<typeof createActivityDto>;
 // which already treated PUT as a lenient partial update.
 
 export const updateActivityDto = z.object({
+  currency: z.string().trim().regex(/^[A-Za-z]{3}$/).transform(v => v.toUpperCase()).optional(),
   status: patchField(z.string()),
   activityType: patchField(z.string()),
   date: patchField(z.string()),
