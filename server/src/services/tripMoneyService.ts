@@ -69,7 +69,7 @@ export const bookingCurrency = async <T extends Booking>(kind: TripMoneyMetadata
   const currency = normalizeCurrency(requested ?? previous?.currency ?? item.currency, target);
   const amount = Number(item.cost ?? item.totalCost ?? item.total_cost ?? 0);
   // An undated activity carries date '' (not null); a blank must fall through to the next date, or the DATE column rejects it.
-  const rawDate: unknown = [item.date, item.departureDate, item.departure_date, item.checkInDate, item.check_in_date, item.pickupDate].find(value => value instanceof Date || String(value ?? '').trim()) ?? new Date().toISOString().slice(0, 10);
+  const rawDate: unknown = ([item.date, item.departureDate, item.departure_date, item.checkInDate, item.check_in_date, item.pickupDate] as unknown[]).find(value => value instanceof Date || String(value ?? '').trim()) ?? new Date().toISOString().slice(0, 10);
   const expenseDate = rawDate instanceof Date ? rawDate.toISOString().slice(0, 10) : String(rawDate).slice(0, 10);
   const quote = previous?.currency === currency && previous.conversionCurrency === target && Number(previous.amount) === amount && previous.expenseDate === expenseDate && previous.exchangeRateToTripCurrency != null
     ? { currency, conversionCurrency: target, amountInTripCurrency: previous.amountInTripCurrency, exchangeRateToTripCurrency: previous.exchangeRateToTripCurrency, exchangeRateDate: previous.exchangeRateDate, conversionStatus: 'converted' as const }
