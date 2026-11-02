@@ -131,6 +131,9 @@ flags:
   merchant_category_lookup:
     enabled: true
     description: "Use Nominatim to look up merchant categories from receipt OCR vendor names"
+  premium:
+    enabled: true
+    description: "Master switch for Premium: the first-sign-in Premium popup, free trials, upgrade and checkout, and every Premium-only parsing option (paste, document import, upload, email forwarding, Gmail, auto-add). Off hides all of them for everyone, admins included. Which parsing options are Premium-only is set in Admin > Billing"
   stripe_billing:
     enabled: true
     description: "Enable Stripe billing integration (master switch for all billing features)"
@@ -193,7 +196,7 @@ flags:
     description: "A10 — Android share intent and first-class quick-capture entry point"
   trip_blog_public_sharing:
     enabled: true
-    description: "Phase 4 public sharing, consent flow, and vanity URLs"
+    description: "Public trip blogs with per-traveler privacy choices, age protection, and vanity URLs"
   trip_blog_social_posting:
     enabled: true
     description: "Phase 5 Instagram/Facebook cross-posting for blog days"

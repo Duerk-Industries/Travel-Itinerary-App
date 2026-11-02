@@ -169,7 +169,7 @@ const ActivityEditForm: React.FC<ActivityEditFormProps> = ({
               style={styles.input}
               placeholder="Cost"
               placeholderTextColor={placeholderColor}
-              keyboardType="numeric"
+              keyboardType="decimal-pad"
               value={draft.cost}
               onChangeText={(text: string) => onChange((prev) => ({ ...prev, cost: sanitizeCostInput(text) }))}
             />

@@ -154,6 +154,30 @@ describe('DailyExpensesTab responsive layout', () => {
     mockWindowWidth = 800;
   });
 
+  it.each([1024, 390])('shows consistent mixed-currency totals and original/converted details at %ipx', (width) => {
+    mockWindowWidth = width;
+    const mixed = [
+      { ...expenses[0], amount: 60 },
+      { ...expenses[0], id: 'usd', amount: 24, currency: 'USD', exchangeRateToTripCurrency: 0.9, amountInTripCurrency: 21.6, conversionCurrency: 'EUR' },
+    ];
+    const screen = render(<DailyExpensesTab backendUrl="http://example.test" headers={{}} jsonHeaders={{}} trip={trip}
+      groupMembers={groupMembers} expenses={mixed} setExpenses={() => {}} defaultPayerId="m1" styles={styles} />);
+    expect(screen.getAllByText('€81.60').length).toBeGreaterThan(0);
+    fireEvent.press(screen.getByTestId('expense-cell-2025-02-01-Breakfast'));
+    expect(screen.getByText('$24.00 · €21.60')).toBeTruthy();
+    expect(screen.getByText('€60.00')).toBeTruthy();
+  });
+
+  it.each([1024, 390])('keeps unresolved expenses reviewable at %ipx', (width) => {
+    mockWindowWidth = width;
+    const screen = render(<DailyExpensesTab backendUrl="http://example.test" headers={{}} jsonHeaders={{}} trip={trip}
+      groupMembers={groupMembers} expenses={[{ ...expenses[0], currency: 'USD', conversionStatus: 'unresolved' }]}
+      setExpenses={() => {}} defaultPayerId="m1" styles={styles} />);
+    expect(screen.getByText(/Totals incomplete/)).toBeTruthy();
+    fireEvent.press(screen.getByTestId('expense-cell-2025-02-01-Breakfast'));
+    expect(screen.getByText('$12.00 · Conversion unavailable (EUR)')).toBeTruthy();
+  });
+
   it('renders the wide-grid table at desktop widths', () => {
     mockWindowWidth = 1024;
     const { getByTestId, queryByTestId } = renderTab();

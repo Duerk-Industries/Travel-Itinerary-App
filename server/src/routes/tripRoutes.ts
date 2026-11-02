@@ -1,3 +1,4 @@
+import { defaultTripCurrency } from '../services/tripCurrencyDefaults';
 import { ensureUserInTrip, getFeatureFlag } from '../db';
 import { getPlanningDayPoints } from '../services/planningPointsService';
 import { locateTripItem } from '../services/locateItemService';
@@ -60,6 +61,7 @@ import { detectCoveringConflict, detectCycle } from '../utils/coveredBy';
 import { sendTripInviteEmailBestEffort } from '../mailer';
 import { aggregateTripActivity } from '../services/activityFeed';
 import { assertCanUseFeature, assertUnderActiveTripLimit, getLimit, recordUsage } from '../services/entitlementService';
+import { assertCanUseParsingOption } from '../services/premiumOptionsService';
 import { EntitlementError } from '../errors';
 import { manualUploadMiddleware, buildManualUploadPayloads } from '../ingestion/intake';
 import { IngestionError } from '../ingestion/shared/userFailures';
@@ -782,7 +784,7 @@ router.post('/', async (req, res) => {
       startMonth: Number.isFinite(Number(startMonth)) ? Number(startMonth) : null,
       startYear: Number.isFinite(Number(startYear)) ? Number(startYear) : null,
       durationDays: Number.isFinite(Number(durationDays)) ? Number(durationDays) : null,
-      currency: typeof currency === 'string' && currency.trim() ? currency.trim().toUpperCase() : 'USD',
+      currency: typeof currency === 'string' && currency.trim() ? currency.trim().toUpperCase() : await defaultTripCurrency(userId, normalizeLocationIds(locationIds)),
     });
     await recordUsage(userId, 'trip_creations', 1, { windowKey: 'all-time', tripId: trip.id });
     // Optional product analytics: consent-checked and stored asynchronously; never blocks the response.
@@ -874,7 +876,7 @@ export const createWizardTrip = async (
     startMonth: Number.isFinite(Number(startMonth)) ? Number(startMonth) : null,
     startYear: Number.isFinite(Number(startYear)) ? Number(startYear) : null,
     durationDays: Number.isFinite(Number(durationDays)) ? Number(durationDays) : null,
-    currency: typeof currency === 'string' && currency.trim() ? currency.trim().toUpperCase() : 'USD',
+    currency: typeof currency === 'string' && currency.trim() ? currency.trim().toUpperCase() : await defaultTripCurrency(userId, normalizeLocationIds(locationIds)),
     members,
   });
   await recordUsage(userId, 'trip_creations', 1, { windowKey: 'all-time', tripId: result.trip.id });
@@ -979,7 +981,11 @@ router.post('/:tripId/import-document', (req, res, next) => {
   try {
     // Keep entitlement enforcement ahead of normalization and extraction so a denied
     // request cannot consume provider quota.
-    await assertCanUseFeature(user.userId, ITINERARY_DOCUMENT_IMPORT_FEATURE_KEY, user.role);
+    // The import's own switch must be on; who may use it is the Premium option set in Admin > Billing.
+    if (!(await isFeatureEnabled(ITINERARY_DOCUMENT_IMPORT_FEATURE_KEY, user.userId, user.role))) {
+      throw new EntitlementError('FEATURE_DISABLED', `Feature '${ITINERARY_DOCUMENT_IMPORT_FEATURE_KEY}' is currently disabled`, { featureKey: ITINERARY_DOCUMENT_IMPORT_FEATURE_KEY });
+    }
+    await assertCanUseParsingOption(user.userId, 'documentImport', user.role);
 
     let documentText = typeof req.body?.documentText === 'string' ? req.body.documentText : '';
     let sourceFilename = typeof req.body?.sourceFilename === 'string' ? req.body.sourceFilename.trim() : '';

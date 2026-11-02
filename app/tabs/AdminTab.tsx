@@ -3128,6 +3128,12 @@ const CostEstimateSection: React.FC<{ backendUrl: string; headers: Record<string
   );
 };
 
+type PremiumOptionsState = {
+  premiumEnabled: boolean;
+  options: Array<{ key: string; label: string }>;
+  premiumOnly: Record<string, boolean>;
+};
+
 const BillingSection: React.FC<{ backendUrl: string; headers: Record<string, string> } & ThemedSectionProps> = ({
   backendUrl,
   headers,
@@ -3138,6 +3144,7 @@ const BillingSection: React.FC<{ backendUrl: string; headers: Record<string, str
   const [plans, setPlans] = useState<BillingPlanConfig[]>([]);
   const [forms, setForms] = useState<Record<string, Record<string, string | boolean>>>({});
   const [billingEnabled, setBillingEnabled] = useState(false);
+  const [premiumOptions, setPremiumOptions] = useState<PremiumOptionsState | null>(null);
   const [saving, setSaving] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -3160,9 +3167,30 @@ const BillingSection: React.FC<{ backendUrl: string; headers: Record<string, str
     } catch (e: any) {
       setError(e.message);
     }
+    try {
+      const options = await apiFetch(backendUrl, headers, '/billing/premium-options') as Partial<PremiumOptionsState>;
+      setPremiumOptions(Array.isArray(options?.options) && options.premiumOnly ? options as PremiumOptionsState : null);
+    } catch {
+      setPremiumOptions(null);
+    }
   }, [backendUrl, headers]);
 
   useEffect(() => { load(); }, [load]);
+
+  const togglePremiumOption = async (key: string, premiumOnly: boolean) => {
+    setError(null);
+    setMessage(null);
+    try {
+      setPremiumOptions(await apiFetch(backendUrl, headers, '/billing/premium-options', {
+        method: 'PATCH',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [key]: premiumOnly }),
+      }) as PremiumOptionsState);
+      setMessage('Premium options updated.');
+    } catch (e: any) {
+      setError(e.message);
+    }
+  };
 
   const update = (planKey: string, field: string, value: string | boolean) => {
     setForms((current) => ({
@@ -3213,6 +3241,34 @@ const BillingSection: React.FC<{ backendUrl: string; headers: Record<string, str
       </Text>
       {error ? <Text style={[localStyles((theme ?? _styleTheme)).errorText, themeStyle('tabs_AdminTab_277', { theme: theme }, (theme ?? _styleTheme))]}>{error}</Text> : null}
       {message ? <Text style={[localStyles((theme ?? _styleTheme)).saveMsg, themeStyle('tabs_AdminTab_278', { theme: theme }, (theme ?? _styleTheme))]}>{message}</Text> : null}
+      {premiumOptions ? (
+        <View style={[localStyles((theme ?? _styleTheme)).card, getCardStyle(theme)]} testID="admin-premium-options">
+          <Text style={[localStyles((theme ?? _styleTheme)).cardTitle, themeStyle('tabs_AdminTab_279', { theme: theme }, (theme ?? _styleTheme))]}>Premium parsing</Text>
+          <Text style={[localStyles((theme ?? _styleTheme)).cardSub, themeStyle('tabs_AdminTab_280', { theme: theme }, (theme ?? _styleTheme))]}>
+            {premiumOptions.premiumEnabled
+              ? 'On = only Premium and Pro accounts get it. Off = every account gets it.'
+              : 'The Premium feature flag is off, so all of these are hidden for everyone. Turn Premium on under Feature Flags.'}
+          </Text>
+          {premiumOptions.options.map(({ key, label }) => {
+            const active = premiumOptions.premiumOnly[key] !== false;
+            return (
+              <View key={key} style={[localStyles((theme ?? _styleTheme)).row, themeStyle('tabs_AdminTab_282', {  }, (theme ?? _styleTheme))]}>
+                <Text style={[localStyles((theme ?? _styleTheme)).flex, themeStyle('tabs_AdminTab_283', { theme: theme }, (theme ?? _styleTheme))]}>{label}</Text>
+                <TouchableOpacity
+                  style={[localStyles((theme ?? _styleTheme)).smallButton, themeStyle('tabs_AdminTab_284', { active: active, theme: theme }, (theme ?? _styleTheme))]}
+                  onPress={() => { void togglePremiumOption(key, !active); }}
+                  accessibilityRole="switch"
+                  accessibilityLabel={`${label}: Premium only`}
+                  accessibilityState={{ checked: active }}
+                  testID={`admin-premium-option-${key}`}
+                >
+                  <Text style={localStyles((theme ?? _styleTheme)).smallButtonText}>{active ? 'Premium only' : 'Everyone'}</Text>
+                </TouchableOpacity>
+              </View>
+            );
+          })}
+        </View>
+      ) : null}
       {plans.map((plan) => {
         const form = forms[plan.planKey];
         if (!form) return null;

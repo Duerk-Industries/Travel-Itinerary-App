@@ -1,3 +1,4 @@
+import { evaluateBlogVisibility } from './blogVisibilityService';
 import { randomUUID } from 'crypto';
 import type { PoolClient } from 'pg';
 import type { Transaction } from 'firebase-admin/firestore';
@@ -34,7 +35,7 @@ async function loadPg(client: PoolClient, tripId: string, publicOnly = false, ta
     client.query('SELECT username_slug,trip_slug FROM blog_public_aliases WHERE trip_id=$1 AND canonical=TRUE LIMIT 1 FOR SHARE', [tripId]),
   ]);
   const alias = aliasResult.rows[0];
-  const isPublic = blog.visibility_state === 'public' && epochResult.rows[0]?.state === 'public' && blog.indexing_enabled === true && Boolean(alias);
+  const isPublic = blog.visibility_state === 'public' && (await evaluateBlogVisibility(tripId)).isPublic && blog.indexing_enabled === true && Boolean(alias);
   if (publicOnly && (!isPublic || blog.activity_sharing_enabled !== true || (target && !sameDestination(target, tripResult.rows[0] ?? {})))) return null;
   const activityResult = await client.query('SELECT id,catalog_id FROM tours WHERE trip_id=$1 ORDER BY id LIMIT 100 FOR SHARE', [tripId]);
   const activities: SharedActivityTemplate[] = [];
@@ -45,7 +46,7 @@ async function loadPg(client: PoolClient, tripId: string, publicOnly = false, ta
     if (item) activities.push(item);
   }
   return { trip: tripResult.rows[0] ?? {}, shared: blog.activity_sharing_enabled === true,
-    public: blog.visibility_state === 'public' && epochResult.rows[0]?.state === 'public' && blog.indexing_enabled === true && Boolean(alias),
+    public: blog.visibility_state === 'public' && (await evaluateBlogVisibility(tripId)).isPublic && blog.indexing_enabled === true && Boolean(alias),
     inspiration: { username: alias?.username_slug ?? '', tripSlug: alias?.trip_slug ?? '', title: String(blog.title || 'Shared trip'),
       sourcePath: alias ? sourcePath(alias.username_slug, alias.trip_slug) : '', activities } };
 }
@@ -59,7 +60,7 @@ async function loadFs(tx: Transaction, tripId: string, publicOnly = false, targe
     tx.get(db.collection('blog_publication_epochs').where('tripId', '==', tripId).where('epoch', '==', Number(blog.visibilityEpoch ?? 0)).limit(1)),
     tx.get(db.collection('blog_public_aliases').where('tripId', '==', tripId).where('canonical', '==', true).limit(1)),
   ]);
-  const isPublic = trip.exists && blog.visibilityState === 'public' && epochs.docs[0]?.data().state === 'public' && blog.indexingEnabled === true && !aliases.empty;
+  const isPublic = trip.exists && blog.visibilityState === 'public' && (await evaluateBlogVisibility(tripId)).isPublic && blog.indexingEnabled === true && !aliases.empty;
   if (publicOnly && (!isPublic || blog.activitySharingEnabled !== true || (target && !sameDestination(target, trip.data() ?? {})))) return null;
   const activities = await tx.get(db.collection('tours').where('tripId', '==', tripId).orderBy('__name__').limit(100));
   const alias = aliases.docs[0]?.data(); const templates: SharedActivityTemplate[] = [];
@@ -72,7 +73,7 @@ async function loadFs(tx: Transaction, tripId: string, publicOnly = false, targe
     if (item) templates.push(item);
   }
   return { trip: trip.data() ?? {}, shared: blog.activitySharingEnabled === true,
-    public: trip.exists && blog.visibilityState === 'public' && epochs.docs[0]?.data().state === 'public' && blog.indexingEnabled === true && Boolean(alias),
+    public: trip.exists && blog.visibilityState === 'public' && (await evaluateBlogVisibility(tripId)).isPublic && blog.indexingEnabled === true && Boolean(alias),
     inspiration: { username: alias?.usernameSlug ?? '', tripSlug: alias?.tripSlug ?? '', title: String(blog.title || 'Shared trip'),
       sourcePath: alias ? sourcePath(alias.usernameSlug, alias.tripSlug) : '', activities: templates } };
 }

@@ -18,7 +18,7 @@ jest.mock('react-native', () => ({
   useColorScheme: () => 'light',
 }));
 
-import { AsyncItineraryTracker, useAsyncItineraryPolling } from '../hooks/useAsyncItineraryPolling';
+import { AsyncItineraryTracker, MAX_PENDING_MS, TIMEOUT_MESSAGE, useAsyncItineraryPolling } from '../hooks/useAsyncItineraryPolling';
 
 type HarnessProps = {
   backendUrl?: string;
@@ -277,4 +277,35 @@ describe('useAsyncItineraryPolling', () => {
       });
     });
   });
+
+  it('stops a job that has run past the time limit, cancels it on the server, and offers Retry via the failed state', async () => {
+    const fetchMock = global.fetch as jest.Mock;
+    fetchMock.mockImplementation(() => createJsonResponse({ status: 'running' }));
+    const { result } = renderHook(() =>
+      usePollingHarness({
+        initialTrackers: { tripA: { jobId: 'job-slow', status: 'pending', startedAt: Date.now() - MAX_PENDING_MS - 1000 } },
+      })
+    );
+    await waitFor(() => expect(result.current.trackers.tripA).toMatchObject({ status: 'failed', error: TIMEOUT_MESSAGE }));
+    expect(fetchMock).toHaveBeenCalledWith('https://wanderbunnies.test/api/itinerary/async/job-slow/cancel', expect.objectContaining({ method: 'POST' }));
+  });
+
+  it('keeps polling a job that is still inside the time limit', async () => {
+    const fetchMock = global.fetch as jest.Mock;
+    fetchMock.mockImplementation(() => createJsonResponse({ status: 'running', stageLabel: 'Phase 2 of 6' }));
+    const { result } = renderHook(() =>
+      usePollingHarness({ initialTrackers: { tripA: { jobId: 'job-ok', status: 'pending', startedAt: Date.now() - 60_000 } } })
+    );
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/api/itinerary/async/job-ok'), expect.anything()));
+    expect(result.current.trackers.tripA.status).toBe('pending');
+    expect(fetchMock).not.toHaveBeenCalledWith(expect.stringContaining('/cancel'), expect.anything());
+  });
+
+  it('treats a job the server reports as cancelled as stopped, not as a failure to retry silently', async () => {
+    const fetchMock = global.fetch as jest.Mock;
+    fetchMock.mockImplementation(() => createJsonResponse({ status: 'cancelled' }));
+    const { result } = renderHook(() => usePollingHarness({ initialTrackers: { tripA: { jobId: 'job-c', status: 'pending' } } }));
+    await waitFor(() => expect(result.current.trackers.tripA).toMatchObject({ status: 'failed', error: 'Cancelled.' }));
+  });
+
 });

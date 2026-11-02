@@ -1576,6 +1576,8 @@ export const initDb = async (): Promise<void> => {
     await del('flight_shares');
     await del('flights');
     await del('expenses');
+    await del('trip_money_metadata');
+    await del('trip_expense_preferences');
     await del('trips');
     await del('place_details_cache');
     await del('place_lookup_cache');
@@ -4556,6 +4558,7 @@ export const getLodgingById = async (lodgingId: string): Promise<(Lodging & { tr
 };
 
 export const insertLodging = async (lodging: {
+  currency?: string | null;
   userId: string;
   tripId: string;
   status: string;
@@ -14091,6 +14094,8 @@ export const setAnalyticsSubjectTimezone = async (subjectId: string, timezone: s
   await getPool().query(`UPDATE analytics_subjects SET last_device_timezone = $2 WHERE subject_id = $1`, [subjectId, timezone]);
 };
 
+export { loadBlogVisibilityContext, writeBlogPrivacyChoice, persistBlogVisibility, writeBlogEarlyRelease, listTripsForBlogVisibility } from './blog/visibilityPostgres';
+
 export const getTripTimezone = async (tripId: string): Promise<string | null> => {
   const { rows } = await getPool().query(`SELECT timezone FROM trips WHERE id = $1`, [tripId]);
   return (rows[0] as any)?.timezone ?? null;
@@ -14435,3 +14440,5 @@ export const listTripTemplates = async (options: { enabledOnly?: boolean } = {})
   const { rows } = await getPool().query(`${TRIP_TEMPLATE_SELECT}${options.enabledOnly ? ' WHERE enabled = TRUE' : ''} ORDER BY sort_order, id`);
   return rows.map((row: any) => ({ ...row, days: Number(row.days), sortOrder: Number(row.sortOrder) }));
 };
+
+export { getTripMoneyMetadata, saveTripMoneyMetadata, getLastExpenseCurrency, setLastExpenseCurrency } from './services/moneyMetadataPostgres';

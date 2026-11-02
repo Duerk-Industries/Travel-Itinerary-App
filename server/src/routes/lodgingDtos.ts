@@ -34,6 +34,7 @@ const patchField = <S extends z.ZodTypeAny>(schema: S) =>
 
 export const createLodgingDto = z.object({
   tripId: trimmedNonEmpty('tripId'),
+  currency: z.string().trim().regex(/^[A-Za-z]{3}$/).transform(v => v.toUpperCase()).optional(),
   status: optionalString,
   name: optionalString,
   checkInDate: optionalString,
@@ -59,6 +60,7 @@ export type CreateLodgingDto = z.infer<typeof createLodgingDto>;
 // update. All fields are optional; handler branches on undefined-as-no-change.
 
 export const updateLodgingDto = z.object({
+  currency: z.string().trim().regex(/^[A-Za-z]{3}$/).transform(v => v.toUpperCase()).optional(),
   status: patchField(z.string()),
   name: patchField(z.string()),
   checkInDate: patchField(z.string()),

@@ -6,7 +6,7 @@ import PayerSelect from '../components/PayerSelect';
 import { singlePayerIds } from '../utils/payerSelection';
 import type { ImportTripDraft } from '../../server/src/types';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Linking, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, Alert, Linking, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import HorizontalTableScroll from '../components/HorizontalTableScroll';
 import type { Trait } from './traits';
 import { FlightsTab, type Flight, type GroupMemberOption, type Trip } from './transfers';
@@ -332,6 +332,10 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   const [manualDraft, setManualDraft] = useState({ time: '', activity: '' });
   const [knownInfo, setKnownInfo] = useState<KnownInfoInput>({ flights: '', lodging: '', tours: '', cars: '' });
   const [wizardError, setWizardError] = useState('');
+  // True only while the server has not confirmed the trip exists, so Retry can never create a duplicate.
+  const [createFailed, setCreateFailed] = useState(false);
+  // State updates land after the tap, so a quick second tap would otherwise send a second create request.
+  const submittingRef = useRef(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [createdTripId, setCreatedTripId] = useState<string | null>(null);
@@ -1180,7 +1184,13 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   };
 
   const submitWizard = async () => {
-    if (!userToken) return;
+    if (submittingRef.current) return;
+    if (!userToken) {
+      setWizardError('Your session is not ready. Please sign in again to create a trip.');
+      setCreateFailed(true);
+      track('task_failed', { ...CREATE_TRIP_TASK, failure: 'validation' });
+      return;
+    }
     const detailError = validateTripDetails(details);
     const dateError = validateTripDates(dates);
     const destinationError = quickStartMode && !selectedLocations.length ? 'Choose at least one destination.' : null;
@@ -1194,8 +1204,11 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     const participantPayload = currentUserEmailNormalized
       ? participants.filter((p) => normalizeEmail(p.email) !== currentUserEmailNormalized)
       : participants;
+    submittingRef.current = true;
     setIsSubmitting(true);
     setWizardError('');
+    setCreateFailed(false);
+    let tripExists = false;
     const description = buildTripDescription(details, hasKnownInfo ? knownInfo : undefined);
     const wizardDebugPrefix = '[wizard][itinerary]';
     try {
@@ -1223,14 +1236,19 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       setWizardError(data.error || 'Unable to create trip');
+      setCreateFailed(true);
+      track('task_failed', { ...CREATE_TRIP_TASK, failure: 'server' });
       return;
     }
 
     const tripId = data.trip?.id as string | undefined;
       if (!tripId) {
-        setWizardError('Trip created but no id was returned.');
+        setWizardError('The server did not confirm the trip, so it may not have been saved. Please try again.');
+        setCreateFailed(true);
+        track('task_failed', { ...CREATE_TRIP_TASK, failure: 'server' });
         return;
       }
+      tripExists = true;
       const groupId = data.groupId as string | undefined;
       if (groupId && !quickStartMode) {
         await saveWizardFlightsForTrip(tripId, groupId);
@@ -1344,9 +1362,12 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
       setCreatedTripId(tripId);
       handleTripCreated(tripId);
     } catch (err) {
-      track('task_failed', { ...CREATE_TRIP_TASK, failure: /network|fetch/i.test((err as Error).message) ? 'network' : 'server' });
-      setWizardError((err as Error).message);
+      const unreachable = /network|fetch/i.test((err as Error).message);
+      track('task_failed', { ...CREATE_TRIP_TASK, failure: unreachable ? 'network' : 'server' });
+      if (!tripExists) setCreateFailed(true);
+      setWizardError(!tripExists && unreachable ? 'Could not reach the server, so your trip was not created. Check your connection and try again.' : (err as Error).message);
     } finally {
+      submittingRef.current = false;
       setIsSubmitting(false);
     }
   };
@@ -2508,7 +2529,12 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
             <Text style={styles.dangerButtonText}>X</Text>
           </TouchableOpacity>
         </View>
-        {wizardError ? <Text style={styles.errorText}>{wizardError}</Text> : null}
+        {wizardError ? <Text style={styles.errorText} accessibilityRole="alert">{wizardError}</Text> : null}
+        {createFailed && !isSubmitting ? (
+          <TouchableOpacity testID="wizard-create-retry" accessibilityRole="button" accessibilityLabel="Retry creating the trip" style={[styles.button, styles.smallButton]} onPress={submitWizard}>
+            <Text style={styles.buttonText}>Retry</Text>
+          </TouchableOpacity>
+        ) : null}
         <Modal transparent visible={monthPromptOpen} animationType="fade" onRequestClose={() => setMonthPromptOpen(false)}>
           <View style={styles.modalOverlay} testID="wizard-month-prompt">
             <TouchableOpacity accessibilityLabel="Close month choice" style={styles.passengerOverlayBackdrop} onPress={() => setMonthPromptOpen(false)} />
@@ -2558,6 +2584,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
           {quickStartMode ? (
             <View style={[styles.row, themeStyle('tabs_createTripWizard_60', {  }, (theme ?? _styleTheme))]}>
               <TouchableOpacity style={[styles.button, themeStyle('tabs_createTripWizard_61', {  }, (theme ?? _styleTheme)), !quickStartReady && themeStyle('tabs_createTripWizard_62', {  }, (theme ?? _styleTheme))]} onPress={submitWizard} disabled={!quickStartReady || isSubmitting} testID="quick-start-create">
+                {isSubmitting ? <ActivityIndicator size="small" testID="quick-start-creating-spinner" /> : null}
                 <Text style={styles.buttonText}>{isSubmitting ? 'Creating...' : 'Create Trip'}</Text>
               </TouchableOpacity>
               <View
@@ -2692,7 +2719,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                 placeholder="Total cost"
                 accessibilityLabel="Total cost"
                 value={editingWizardLodging.totalCost}
-                keyboardType="numeric"
+                keyboardType="decimal-pad"
                 onChangeText={(text: any) => setEditingWizardLodging((prev) => (prev ? { ...prev, totalCost: text } : prev))}
               />
               <Text style={styles.modalLabel}>Cost per night</Text>

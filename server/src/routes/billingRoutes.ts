@@ -13,12 +13,13 @@ import { reconcileUserTierFromBillingById } from '../billing/subscriptionEntitle
 import { createCheckoutSessionDto, createPortalSessionDto } from '../billing/billingDtos';
 import { logError } from '../logger';
 import { incrementMetric } from '../metrics';
+import { isPremiumEnabled } from '../services/premiumOptionsService';
 
 const router = Router();
 router.use(authenticate);
 
-const billingEnabled = (res: any): boolean => {
-  if (!isStripeBillingEnabled()) {
+const billingEnabled = async (res: any): Promise<boolean> => {
+  if (!isStripeBillingEnabled() || !(await isPremiumEnabled())) {
     res.status(503).json({ error: 'Billing is not enabled on this server.' });
     return false;
   }
@@ -45,7 +46,7 @@ router.get('/status', async (req, res) => {
 
 /** GET /api/billing/plans */
 router.get('/plans', async (_req, res) => {
-  if (!billingEnabled(res)) return;
+  if (!(await billingEnabled(res))) return;
   try {
     const plans = await listAvailablePlans();
     res.json({ plans });
@@ -57,7 +58,7 @@ router.get('/plans', async (_req, res) => {
 
 /** POST /api/billing/checkout-session */
 router.post('/checkout-session', async (req, res) => {
-  if (!billingEnabled(res)) return;
+  if (!(await billingEnabled(res))) return;
   const { userId, email, role } = (req as any).user as TokenPayload;
 
   const dto = readDto(createCheckoutSessionDto, req.body, res);
@@ -101,7 +102,7 @@ router.post('/checkout-session', async (req, res) => {
 
 /** POST /api/billing/portal-session */
 router.post('/portal-session', async (req, res) => {
-  if (!billingEnabled(res)) return;
+  if (!(await billingEnabled(res))) return;
   const { userId } = (req as any).user as TokenPayload;
 
   const dto = readDto(createPortalSessionDto, req.body ?? {}, res);

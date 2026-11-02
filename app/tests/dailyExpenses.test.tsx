@@ -115,7 +115,7 @@ describe('DailyExpensesTab', () => {
     fireEvent.press(getByText('Add Expense'));
     expect(getByText('EUR')).toBeTruthy();
     expect(queryByTestId('expense-detail-modal')).toBeNull();
-    fireEvent.press(getAllByText('$12.00')[0]);
+    fireEvent.press(getAllByText('€12.00')[0]);
     expect(getByTestId('expense-detail-modal')).toBeTruthy();
     // Description column shows the vendor (falling back to notes).
     expect(getByText('Cafe Nero')).toBeTruthy();
@@ -265,7 +265,7 @@ describe('DailyExpensesTab', () => {
         groupMembers={groupMembers} expenses={expenses} setExpenses={setExpenses} defaultPayerId="m1" styles={styles} costTrackingAllowed />
     );
 
-    fireEvent.press(screen.getAllByText('$12.00')[0]); // open the Breakfast · Feb 1 detail dialog
+    fireEvent.press(screen.getAllByText('€12.00')[0]); // open the Breakfast · Feb 1 detail dialog
     fireEvent.press(screen.getByTestId('expense-delete-e1'));
     // The confirm is inline inside the detail dialog (a second stacked Modal can hide behind it on web).
     expect(screen.getByTestId('expense-detail-delete-confirm')).toBeTruthy();
@@ -288,7 +288,7 @@ describe('DailyExpensesTab', () => {
           groupMembers={groupMembers} expenses={expenses} setExpenses={setExpenses} defaultPayerId="m1" styles={styles} costTrackingAllowed />
       );
 
-      fireEvent.press(screen.getAllByText('$12.00')[0]);
+      fireEvent.press(screen.getAllByText('€12.00')[0]);
       fireEvent.press(screen.getByTestId('expense-edit-e1'));
       expect(screen.getByText('Edit Expense')).toBeTruthy();
       expect(screen.getByPlaceholderText('Description').props.value).toBe('Cafe Nero');
@@ -336,7 +336,7 @@ describe('DailyExpensesTab', () => {
 
       // The delete handler has the same protection for an already-open stale
       // control.
-      fireEvent.press(screen.getAllByText('$12.00')[0]);
+      fireEvent.press(screen.getAllByText('€12.00')[0]);
       fireEvent.press(screen.getByTestId('expense-delete-e1'));
       fireEvent.press(screen.getByTestId('expense-detail-delete-confirm-yes'));
       // Reading which expenses have a receipt is fine; nothing may be changed.
@@ -684,5 +684,14 @@ describe('DailyExpensesTab', () => {
     } finally {
       global.fetch = originalFetch;
     }
+  });
+
+  it('asks for the decimal keypad on the Amount field, so 8.50 can be typed on a phone (R8)', () => {
+    const screen = render(
+      <DailyExpensesTab backendUrl="http://example.test" theme={theme} headers={{}} jsonHeaders={{}} trip={trip}
+        groupMembers={groupMembers} expenses={expenses} setExpenses={() => {}} defaultPayerId="m1" styles={styles} costTrackingAllowed />
+    );
+    fireEvent.press(screen.getByTestId('expense-add-button'));
+    expect(screen.getByPlaceholderText('Amount').props.keyboardType).toBe('decimal-pad');
   });
 });

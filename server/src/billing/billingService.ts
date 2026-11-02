@@ -38,8 +38,7 @@ import {
   getStripeStorage2tbPriceId,
   isStripeBillingEnabled,
 } from '../config/stripeBilling';
-import { PREMIUM_TRIALS_FEATURE_FLAG } from '../config/premiumTrials';
-import { isFeatureEnabled } from '../services/entitlementService';
+import { arePremiumTrialsActive, isPremiumEnabled } from '../services/premiumOptionsService';
 import { getStripeClient, normalizeStripeError } from './stripeClient';
 import {
   isSubscriptionPremiumEligible,
@@ -103,7 +102,8 @@ export const getOrCreateBillingCustomer = async (
 // ---------------------------------------------------------------------------
 
 export const listAvailablePlans = async (): Promise<PlanInfo[]> => {
-  const premiumTrialsEnabled = await isFeatureEnabled(PREMIUM_TRIALS_FEATURE_FLAG);
+  if (!(await isPremiumEnabled())) return [];
+  const premiumTrialsEnabled = await arePremiumTrialsActive();
   const configs = await listBillingPlanConfigs();
   return configs
     .filter((config) => config.isCheckoutEnabled)
@@ -206,7 +206,7 @@ export const createCheckoutSession = async (params: {
   }
   const priceId = planConfig?.activeStripePriceId ?? resolvePriceId(planKey);
   const emailNormalized = normalizeBillingTrialEmail(email);
-  const premiumTrialsEnabled = await isFeatureEnabled(PREMIUM_TRIALS_FEATURE_FLAG);
+  const premiumTrialsEnabled = await arePremiumTrialsActive();
   const trialUsage = premiumTrialsEnabled ? await getBillingTrialUsageByEmail(emailNormalized) : null;
   const configuredTrialDays = planConfig?.trialDays ?? PLAN_DEFAULTS.trialDays;
   const trialDays = premiumTrialsEnabled && configuredTrialDays > 0 && !trialUsage ? configuredTrialDays : 0;
@@ -365,12 +365,13 @@ export const getBillingStatus = async (
   role: UserRole,
 ): Promise<BillingStatusDto> => {
   await ensureCurrentUserTier(userId, 'free');
-  const [currentTier, subscriptions, planConfigs, user, premiumTrialsEnabled, notifications] = await Promise.all([
+  const [currentTier, subscriptions, planConfigs, user, premiumTrialsEnabled, premiumEnabled, notifications] = await Promise.all([
     getCurrentUserTier(userId),
     listActiveBillingSubscriptionsForUser(userId),
     listBillingPlanConfigs(),
     getUserById(userId),
-    isFeatureEnabled(PREMIUM_TRIALS_FEATURE_FLAG),
+    arePremiumTrialsActive(),
+    isPremiumEnabled(),
     listBillingNotificationsForUser(userId, 5),
   ]);
   const emailNormalized = user?.email ? normalizeBillingTrialEmail(user.email) : null;
@@ -385,6 +386,7 @@ export const getBillingStatus = async (
 
   const isBillingManaged = currentTier?.source === 'billing';
   const checkoutAvailable =
+    premiumEnabled &&
     isStripeBillingEnabled() &&
     planConfigs.some((config) => config.isCheckoutEnabled) &&
     !subscriptions.some((sub) => isSubscriptionPremiumEligible(sub, graceDaysByPlan[sub.planKey]));

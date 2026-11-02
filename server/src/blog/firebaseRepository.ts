@@ -1,3 +1,4 @@
+import { evaluateBlogVisibility } from '../services/blogVisibilityService';
 import { createHash, randomUUID } from 'crypto';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getDb, ensureUserCanReadTrip, ensureUserInTrip } from '../db.firebase';
@@ -613,10 +614,7 @@ export const getPublicPath = async (tripId: string): Promise<string | null> => {
   return getCanonicalPublicPathFirebase(tripId);
 };
 
-export const isBlogPublic = async (tripId: string): Promise<boolean> => {
-  const snapshots = await getDb().collection('blog_publication_epochs').where('tripId', '==', tripId).get();
-  return snapshots.docs.some((doc) => (doc.data() as any).state === 'public');
-};
+export const isBlogPublic = async (tripId: string): Promise<boolean> => (await evaluateBlogVisibility(tripId)).isPublic;
 
 export const createModalityItem = async (
   userId: string,

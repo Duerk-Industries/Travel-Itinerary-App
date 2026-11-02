@@ -1,3 +1,4 @@
+import { evaluateBlogVisibility } from '../services/blogVisibilityService';
 import { createHash, randomUUID } from 'crypto';
 import { ensureUserCanReadTrip, ensureUserInTrip } from '../db';
 import { queryBlog, withBlogTransaction } from '../db.postgres';
@@ -788,13 +789,7 @@ export const getPublicPath = async (tripId: string): Promise<string | null> => {
   return null;
 };
 
-export const isBlogPublic = async (tripId: string): Promise<boolean> => {
-  const publicEpoch = await queryBlog(
-    "SELECT 1 FROM trip_blogs b JOIN blog_publication_epochs e ON e.trip_id = b.trip_id AND e.state = 'public' WHERE b.trip_id = $1",
-    [tripId]
-  );
-  return Boolean(publicEpoch.rows[0]);
-};
+export const isBlogPublic = async (tripId: string): Promise<boolean> => (await evaluateBlogVisibility(tripId)).isPublic;
 
 export const createModalityItem = async (
   userId: string,

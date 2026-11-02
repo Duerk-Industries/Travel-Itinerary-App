@@ -9,6 +9,7 @@ import {
 } from '../ingestion/shared/repository';
 import type { ProviderConnectionRecord } from '../ingestion/contracts';
 import { getCurrentUserTier } from '../db';
+import { canUseParsingOption } from './premiumOptionsService';
 import { logError, logInfo } from '../logger';
 import { getEnvFlag, getEnvValue } from '../env';
 
@@ -127,7 +128,10 @@ export const runGmailPollingTick = async (opts: { now?: Date } = {}): Promise<Gm
 
   for (const connection of connections) {
     const tierKey = await resolveTierKey(connection.userId);
-    const rules = tierKey !== 'unknown' ? INGESTION_TIER_RULES[tierKey] : null;
+    // A free account polls (on the Premium cadence) only when Gmail import has been opened to it; with Premium off, nobody does.
+    const gmailOpen = await canUseParsingOption(connection.userId, 'gmailImport');
+    const rules: (typeof INGESTION_TIER_RULES)[keyof typeof INGESTION_TIER_RULES] | null =
+      !gmailOpen || tierKey === 'unknown' ? null : (INGESTION_TIER_RULES[tierKey === 'free' ? 'premium' : tierKey] as (typeof INGESTION_TIER_RULES)[keyof typeof INGESTION_TIER_RULES]);
     const intervalHours = rules?.gmailPollIntervalHours ?? null;
     if (!intervalHours) {
       results.push({

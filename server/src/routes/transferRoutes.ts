@@ -25,11 +25,12 @@ import { applyVoteSummary } from '../services/itemVoteService';
 import { rateItem } from '../services/itemRatingService';
 import { itemRatingDto } from './itemRatingDto';
 import { readDto } from '../utils/dtoParse';
-import { assertCanUseFeature, getUserRoleForToken } from '../services/entitlementService';
+import { getUserRoleForToken, isFeatureEnabled } from '../services/entitlementService';
+import { assertCanUseParsingOption } from '../services/premiumOptionsService';
 import { ApiLimitExceededError, reserveApiUsageOrThrow } from '../apis/usageLimiter';
 import { buildManualUploadPayloads } from '../ingestion/intake';
 import { previewIngestionPayload } from '../ingestion/orchestrator';
-import { getTierIngestionRules } from '../ingestion/shared/quota';
+import { getTierIngestionRules, rulesForAccess } from '../ingestion/shared/quota';
 import type { Request } from 'express';
 
 const TRANSFER_TYPES = ['Flight', 'Public Transit', 'Private Transfer', 'Train', 'Bus', 'Private', 'Ferry', 'Other'] as const;
@@ -99,9 +100,12 @@ router.post('/parse', async (req, res) => {
   if (typeof text !== 'string' || !text.trim() || Buffer.byteLength(text) > 64 * 1024) { res.status(400).json({ error: 'Paste confirmation text up to 64 KB.' }); return; }
   const userId = (req as any).user.userId as string;
   try {
-    await assertCanUseFeature(userId, 'flight_parser', await getUserRoleForToken(userId));
+    // The parser's own switch (flight_parser) must be on; who may use it is the Premium option set in Admin > Billing.
+    if (!(await isFeatureEnabled('flight_parser', userId))) throw new EntitlementError('FEATURE_DISABLED', "Feature 'flight_parser' is currently disabled", { featureKey: 'flight_parser' });
+    await assertCanUseParsingOption(userId, 'pasteParsing', await getUserRoleForToken(userId));
     await reserveApiUsageOrThrow({ provider: 'LLM_PARSER', caller: 'PARSE_FLIGHT_TEXT' });
-    const { rules } = await getTierIngestionRules(userId);
+    const { tierKey, rules: tierRules } = await getTierIngestionRules(userId);
+    const rules = rulesForAccess(String(tierKey), tierRules);
     const [payload] = await buildManualUploadPayloads({ files: [{ originalname: 'pasted-confirmation.txt', mimetype: 'text/plain', buffer: Buffer.from(text), size: Buffer.byteLength(text), fieldname: 'files' }] } as unknown as Request, userId);
     payload.dryRun = true;
     const result = await previewIngestionPayload(payload, rules.llmEscalations === 'LARGE_ALLOWED', rules.llmEscalations !== 'NONE');
@@ -214,6 +218,7 @@ router.post('/', async (req, res) => {
     layoverDuration,
     arrivalDate: arrivalDate || departureDate || new Date().toISOString().slice(0, 10),
     arrivalTime: arrivalTime || '00:00',
+    currency: typeof req.body.currency === 'string' ? req.body.currency.trim().toUpperCase() : undefined,
     cost: normalizedCost,
     carrier: normalizedCarrier,
     flightNumber: normalizedFlightNumber,
@@ -352,6 +357,7 @@ router.patch('/:id', async (req, res) => {
       layoverDuration,
       arrivalDate: arrivalDate || departureDate,
       arrivalTime,
+      currency: typeof req.body.currency === 'string' ? req.body.currency.trim().toUpperCase() : undefined,
       cost: typeof cost === 'undefined' ? undefined : Number(cost),
       carrier,
       flightNumber,
@@ -435,6 +441,7 @@ router.put('/:id', async (req, res) => {
       layoverDuration,
       arrivalDate: arrivalDate || departureDate,
       arrivalTime,
+      currency: typeof req.body.currency === 'string' ? req.body.currency.trim().toUpperCase() : undefined,
       cost: typeof cost === 'undefined' ? undefined : Number(cost),
       carrier,
       flightNumber,

@@ -1,6 +1,6 @@
 import request from 'supertest';
 import { app } from '../src/app';
-import { initDb, setFeatureFlag, getCurrentDbProvider } from '../src/db';
+import { initDb, setFeatureFlag, getCurrentDbProvider, loadBlogVisibilityContext, writeBlogPrivacyChoice } from '../src/db';
 import { randomUUID } from 'crypto';
 import { futureDateString, registerAndLoginWebUser } from './helpers';
 import { insertPublicAlias, insertPublicEpoch, publishUploadedAsset, setStoredVisibility } from './providerRows';
@@ -91,6 +91,8 @@ describe('Public Blog API', () => {
     expect(maps.headers['cache-control']).toContain('no-store');
     expect(maps.body.days).toEqual([]);
     await setStoredVisibility(publishedTripId, 'private');
+    const context = await loadBlogVisibilityContext(publishedTripId);
+    await writeBlogPrivacyChoice(publishedTripId, context!.members[0].userId, { optOut: true });
     if (getCurrentDbProvider() === 'firebase') {
       const { getDb } = require('../src/db.firebase') as typeof import('../src/db.firebase');
       const epochs = await getDb().collection('blog_publication_epochs').where('tripId', '==', publishedTripId).get();

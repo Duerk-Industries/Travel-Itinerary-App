@@ -63,6 +63,7 @@ test.describe('Authentication', () => {
     await loginAsNewUser(page);
 
     // Logout is exposed from the persistent top bar on authenticated screens.
+    await page.getByTestId('topbar-user-menu').click();
     await page.getByTestId('topbar-logout').click();
 
     // Logout returns to the public landing page; the form opens via Log In.

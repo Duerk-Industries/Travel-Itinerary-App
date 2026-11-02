@@ -17,6 +17,14 @@ import { runReconciliationBatch } from '../billing/subscriptionReconciliationSer
 import { getStripeClient } from '../billing/stripeClient';
 import { isStripeBillingEnabled, getStripePremiumProductId } from '../config/stripeBilling';
 import { logError, logInfo } from '../logger';
+import {
+  PREMIUM_OPTION_LABELS,
+  PREMIUM_PARSING_OPTIONS,
+  getPremiumOptionStates,
+  isPremiumEnabled,
+  setPremiumOptionStates,
+  type PremiumParsingOption,
+} from '../services/premiumOptionsService';
 import type { BillingPlanKey } from '../types';
 
 // Admin billing routes — mounted at /api/admin/billing (authenticate + requireAdmin applied in app.ts)
@@ -103,6 +111,57 @@ router.patch('/config/:planKey', async (req, res) => {
       error: 'Failed to update billing config.',
       ...(process.env.NODE_ENV === 'test' ? { details: message } : {}),
     });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET/PATCH /api/admin/billing/premium-options
+// Which parsing features are Premium only. `premiumEnabled` is the master `premium` feature flag, shown here so the
+// admin sees that the options do nothing while it is off; it is switched in Feature Flags, not here.
+// ---------------------------------------------------------------------------
+
+const patchPremiumOptionsDto = z.object(
+  Object.fromEntries(PREMIUM_PARSING_OPTIONS.map((option) => [option, z.boolean().optional()])) as Record<PremiumParsingOption, z.ZodOptional<z.ZodBoolean>>
+).strict();
+
+const premiumOptionsPayload = async () => ({
+  premiumEnabled: await isPremiumEnabled(),
+  options: PREMIUM_PARSING_OPTIONS.map((key) => ({ key, label: PREMIUM_OPTION_LABELS[key] })),
+  premiumOnly: await getPremiumOptionStates(),
+});
+
+router.get('/premium-options', async (_req, res) => {
+  try {
+    res.json(await premiumOptionsPayload());
+  } catch (err) {
+    logError('[admin-billing] GET /premium-options failed', { error: (err as Error)?.message ?? 'unknown' });
+    res.status(500).json({ error: 'Failed to retrieve Premium options.' });
+  }
+});
+
+router.patch('/premium-options', async (req, res) => {
+  const actorId = ((req as any).user as TokenPayload).userId;
+  const dto = readDto(patchPremiumOptionsDto, req.body, res);
+  if (!dto) return;
+  if (Object.keys(dto).length === 0) {
+    res.status(400).json({ error: 'No fields provided to update.' });
+    return;
+  }
+  try {
+    const before = await getPremiumOptionStates();
+    const after = await setPremiumOptionStates(dto, actorId);
+    await writeAuditLog({
+      actorUserId: actorId,
+      targetUserId: null,
+      action: 'BILLING_CONFIG_UPDATED',
+      beforeState: before,
+      afterState: after,
+      reason: 'Admin updated which parsing features are Premium only',
+    });
+    res.json(await premiumOptionsPayload());
+  } catch (err) {
+    logError('[admin-billing] PATCH /premium-options failed', { error: (err as Error)?.message ?? 'unknown' });
+    res.status(500).json({ error: 'Failed to update Premium options.' });
   }
 });
 

@@ -26,6 +26,7 @@ For admin APIs, RBAC must always pass. For product features, the backend remains
 
 | Flag | Meaning |
 |---|---|
+| `premium` | Master Premium switch. Off hides the first-sign-in Premium popup, plan comparison, free trials, upgrade/checkout and every Premium parsing option, for everyone including admins. See "Premium and parsing options" below. |
 | `ai_itinerary_generation` | AI itinerary generation |
 | `csv_export` | CSV exports |
 | `car_rentals` | Car rental tracking |
@@ -56,6 +57,23 @@ For admin APIs, RBAC must always pass. For product features, the backend remains
 ## Ingestion note
 
 The ingestion feature is rolled out in phases, and the review queue can remain available even when a specific intake path is disabled. Intake-path flags control how new documents enter the system. The backend remains authoritative and returns `403` when a disabled ingestion route is called.
+
+## Premium and parsing options
+
+`premium` is the one switch for everything Premium. While it is off: no Premium popup or plan comparison, no trial offers (`premium_trials` has no effect), no upgrade panel, checkout or portal, and none of the parsing features below, for any account.
+
+While it is on, **Admin > Billing > Premium parsing** chooses, per option, whether the feature is Premium/Pro only (the default) or open to every account:
+
+| Option | What it covers | Still needs its own flag |
+|---|---|---|
+| Paste a confirmation | `POST /api/transfers/parse` and the Paste Info button | `flight_parser` |
+| Itinerary document import | Import Itinerary on the overview | `itinerary_document_import` |
+| Upload for review | Imports tab upload | `feature_ingest_manual_upload` |
+| Email forwarding | Forwarding address, inbound mail | `feature_ingest_forwarded_mailbox` |
+| Gmail import | Gmail connect, dry run, import, polling | `feature_ingest_gmail_import` |
+| Auto-add parsed bookings | Automatic assignment | `planning_auto_assign` |
+
+Each option is stored as the admin setting `premium_only_<option>` (missing = Premium only). A free account let into an option uses the Premium monthly allowances. `GET /api/account` returns `premiumEnabled` and `parsingAccess` so the client shows only what the account can use; the server enforces the same rules on every route.
 
 ## Important rule
 

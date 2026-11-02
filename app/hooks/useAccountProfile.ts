@@ -31,6 +31,17 @@ export type AccountProfile = {
     aiAssistantActions?: boolean;
   };
   tierKey?: string;
+  /** The master `premium` feature flag. When false, no Premium UI shows. */
+  premiumEnabled?: boolean;
+  /** Which Premium parsing features this account can use right now (server-decided). */
+  parsingAccess?: {
+    pasteParsing?: boolean;
+    documentImport?: boolean;
+    fileUpload?: boolean;
+    emailForwarding?: boolean;
+    gmailImport?: boolean;
+    autoAssign?: boolean;
+  };
 };
 
 const EMPTY_PROFILE: AccountProfile = {

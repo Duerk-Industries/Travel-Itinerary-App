@@ -36,12 +36,16 @@ type HomeTabProps = {
   // Drives the Ingest tile's visibility below — Free users don't get it, Premium/Pro do.
   // Purely a UX gate; every ingestion endpoint re-checks tier server-side independently.
   userTier?: string;
+  // When given, the server's answer (Premium parsing options) replaces the tier guess above.
+  canImport?: boolean;
   activeTripOverride?: Trip | null;
   styles: Record<string, any>;
   onSelectTrip: (tripId: string) => void;
   onSelectFollowedTrip: (tripId: string) => void;
   onNavigate: (page: string) => void;
   onDeleteTrip?: (trip: { id: string; name: string }) => void;
+  /** Opens the Share Trip dialog for the active trip, so inviting someone does not mean digging through the itinerary. */
+  onShareTrip?: () => void;
   disabledPages?: Set<string>;
   hiddenPages?: Set<string>;
   // Kill switch for the designed gradient placeholder shown in place of a
@@ -67,12 +71,14 @@ const HomeTab: React.FC<HomeTabProps> = ({
   followedTrips,
   userRole = 'user',
   userTier = 'free',
+  canImport,
   activeTripOverride,
   styles,
   onSelectTrip,
   onSelectFollowedTrip,
   onNavigate,
   onDeleteTrip,
+  onShareTrip,
   disabledPages,
   hiddenPages,
   featureCoverPhotoFallbackV2 = true,
@@ -178,7 +184,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
   // don't get the tile. Gmail import specifically stays hidden for everyone regardless of
   // tier via feature_ingest_gmail_import (see ingestion.tsx's config.features.gmailImport)
   // since it's untested; remove that flag check once Gmail import is ready to ship.
-  const canAccessIngest = userRole === 'admin' || userTier === 'premium' || userTier === 'pro';
+  const canAccessIngest = canImport ?? (userRole === 'admin' || userTier === 'premium' || userTier === 'pro');
   const hasTripsToSelect = sortedTrips.length > 0 || followedTrips.length > 0;
 
   const navItemDefs: Array<{ key: string; label: string; icon: IconName }> = [
@@ -280,6 +286,18 @@ const HomeTab: React.FC<HomeTabProps> = ({
               <Text style={styles.homeNavArrow}>{'>'}</Text>
             </Pressable>
           ))}
+          {onShareTrip && !readOnly ? (
+            <Pressable
+              accessibilityRole="button"
+              testID="home-share-trip"
+              style={({ pressed }: { pressed: boolean }) => [styles.homeNavButton, pressed && styles.homeNavButtonPressed]}
+              onPress={onShareTrip}
+            >
+              <View style={styles.homeNavIcon}><Icon name="share" color={navIconColor} size={22} /></View>
+              <Text style={styles.homeNavLabel}>Share</Text>
+              <Text style={styles.homeNavArrow}>{'>'}</Text>
+            </Pressable>
+          ) : null}
         </View>
       </ScrollView>
 

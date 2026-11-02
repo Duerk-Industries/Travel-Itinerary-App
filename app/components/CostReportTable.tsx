@@ -1,3 +1,4 @@
+import { formatMoney } from '../../packages/domain/src/money';
 import React, { memo } from 'react';
 import { Text, View } from 'react-native';
 import HorizontalTableScroll from './HorizontalTableScroll';
@@ -19,6 +20,7 @@ type CostReportRow = {
 };
 
 type CostReportTableProps = {
+  currency?: string;
   rows: CostReportRow[];
   members: Member[];
   overallShares: Record<string, number>;
@@ -28,6 +30,7 @@ type CostReportTableProps = {
 };
 
 const CostReportTableComponent: React.FC<CostReportTableProps> = ({
+  currency = 'USD',
   rows,
   members,
   overallShares,
@@ -62,12 +65,12 @@ const CostReportTableComponent: React.FC<CostReportTableProps> = ({
             const share = row.shares[m.id] ?? 0;
             return (
               <View key={`${row.label}-${m.id}`} style={[styles.cell, fixedTableColumn(120)]}>
-                <Text style={styles.cellText}>${share.toFixed(2)}</Text>
+                <Text style={styles.cellText}>{formatMoney(share, currency)}</Text>
               </View>
             );
           })}
           <View style={[styles.cell, styles.lastCell, fixedTableColumn(120)]}>
-            <Text style={styles.cellText}>${row.total.toFixed(2)}</Text>
+            <Text style={styles.cellText}>{formatMoney(row.total, currency)}</Text>
           </View>
         </View>
       ))}
@@ -79,12 +82,12 @@ const CostReportTableComponent: React.FC<CostReportTableProps> = ({
           const total = overallShares[m.id] ?? 0;
           return (
             <View key={`overall-${m.id}`} style={[styles.cell, fixedTableColumn(120)]}>
-              <Text style={styles.headerText}>${total.toFixed(2)}</Text>
+              <Text style={styles.headerText}>{formatMoney(total, currency)}</Text>
             </View>
           );
         })}
         <View style={[styles.cell, styles.lastCell, fixedTableColumn(120)]}>
-          <Text style={styles.headerText}>${overallCost.toFixed(2)}</Text>
+          <Text style={styles.headerText}>{formatMoney(overallCost, currency)}</Text>
         </View>
       </View>
     </View>

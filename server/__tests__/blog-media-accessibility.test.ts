@@ -2,6 +2,7 @@ import request from 'supertest';
 import { app } from '../src/app';
 import { initDb, setFeatureFlag } from '../src/db';
 import { cleanupTestUsersByEmail, confirmWebUser, loginWebUser, registerWebUser } from './helpers';
+import { setDateOfBirth } from './providerRows';
 import { clearFeatureFlagCacheForTesting } from '../src/services/entitlementService';
 
 describe('trip blog media accessibility', () => {
@@ -16,7 +17,9 @@ describe('trip blog media accessibility', () => {
     clearFeatureFlagCacheForTesting();
     await registerWebUser(traveler);
     await confirmWebUser(traveler.email);
-    token = (await loginWebUser(traveler)).body.token;
+    const login = await loginWebUser(traveler);
+    token = login.body.token;
+    await setDateOfBirth(login.body.user.id, '1990-01-01');
     const trip = await request(app).post('/api/trips/wizard').set('Authorization', `Bearer ${token}`)
       .send({ name: 'Accessible Blog', startDate: '2027-07-01', endDate: '2027-07-01', participants: [] }).expect(201);
     tripId = trip.body.trip?.id ?? trip.body.id;
@@ -44,11 +47,12 @@ describe('trip blog media accessibility', () => {
     expect(response.body).toEqual(expect.objectContaining({ code: 'CAPTION_QUOTA_OR_TIER' }));
   });
 
-  it('blocks public publication until every public photo is accessible', async () => {
+  it('publishes with optional alt-text reminders instead of blocking publication', async () => {
     await request(app).patch(`/api/trips/${tripId}/blog/media/${assetId}/metadata`).set('Authorization', `Bearer ${token}`)
       .send({ caption: '', altText: '', isDecorative: false }).expect(200);
-    const blocked = await request(app).post(`/api/trips/${tripId}/blog/publication/request`).set('Authorization', `Bearer ${token}`).expect(422);
-    expect(blocked.body).toEqual(expect.objectContaining({ code: 'ALT_TEXT_REQUIRED' }));
+    await request(app).post(`/api/trips/${tripId}/blog/publication/request`).set('Authorization', `Bearer ${token}`).expect(201);
+    const readiness = await request(app).get(`/api/trips/${tripId}/blog/publication/readiness`).set('Authorization', `Bearer ${token}`).expect(200);
+    expect(readiness.body).toMatchObject({ isPublic: true, reminders: ['PHOTO_ALT_TEXT_MISSING'] });
 
     await request(app).patch(`/api/trips/${tripId}/blog/media/${assetId}/metadata`).set('Authorization', `Bearer ${token}`)
       .send({ caption: '', altText: '', isDecorative: true }).expect(200);

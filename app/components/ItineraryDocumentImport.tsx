@@ -22,6 +22,7 @@ type Props = {
   tripId: string;
   userTier?: string | null;
   featureEnabled: boolean;
+  accessGranted?: boolean;
   styles: Record<string, any>;
   readOnly?: boolean;
   theme?: AppTheme;
@@ -38,13 +39,15 @@ export const canShowItineraryDocumentImport = (params: {
   userTier?: string | null;
   platform: string;
   readOnly?: boolean;
+  /** The server's answer for this account (Premium option set in Admin > Billing). Replaces the tier check when given. */
+  accessGranted?: boolean;
 }): boolean => params.featureEnabled
   && params.platform === 'web'
   && !params.readOnly
-  && ['premium', 'pro'].includes(String(params.userTier ?? '').toLowerCase());
+  && (params.accessGranted ?? ['premium', 'pro'].includes(String(params.userTier ?? '').toLowerCase()));
 
 export const ItineraryDocumentImport: React.FC<Props> = ({
-  backendUrl, headers, tripId, userTier, featureEnabled, styles, readOnly = false, theme: _providedTheme, onImported,
+  backendUrl, headers, tripId, userTier, featureEnabled, accessGranted, styles, readOnly = false, theme: _providedTheme, onImported,
   expanded: controlledExpanded, onExpandedChange, hideTrigger = false,
 }) => {
   const _styleTheme = useStyleTheme();
@@ -64,7 +67,7 @@ export const ItineraryDocumentImport: React.FC<Props> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  if (!canShowItineraryDocumentImport({ featureEnabled, userTier, platform: Platform.OS, readOnly })) {
+  if (!canShowItineraryDocumentImport({ featureEnabled, userTier, platform: Platform.OS, readOnly, accessGranted })) {
     return null;
   }
 

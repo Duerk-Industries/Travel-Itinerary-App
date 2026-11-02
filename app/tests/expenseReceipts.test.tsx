@@ -5,7 +5,8 @@
 /// <reference types="node" />
 
 import React from 'react';
-import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { Platform } from 'react-native';
+import { act, render, fireEvent, waitFor } from '@testing-library/react-native';
 import ExpenseReceiptPanel from '../components/ExpenseReceiptPanel';
 import DailyExpensesTab from '../tabs/dailyExpenses';
 import { getAppTheme } from '../theme/theme';
@@ -56,6 +57,20 @@ describe('ExpenseReceiptPanel', () => {
     expect(queryByTestId('expense-receipt-remove')).toBeNull();
     expect(queryByTestId('expense-receipt-attach')).toBeNull();
   });
+  it('says so when saving the receipt image fails, and does not report a change', async () => {
+    const originalOs = Platform.OS;
+    (Platform as any).OS = 'web'; // the file picker is a web input
+    const onChanged = jest.fn();
+    (global as any).fetch = jest.fn().mockImplementation((_url: string, init?: RequestInit) =>
+      init?.method === 'PUT' ? jsonResponse({ error: 'Image is too large' }, false, 413) : jsonResponse({ url: 'https://storage.test/r.png' }));
+    const { findByTestId, UNSAFE_getByProps } = renderPanel({ onChanged, hasReceipt: false });
+    const input: any = UNSAFE_getByProps({ type: 'file' });
+    expect(input).toBeTruthy();
+    await act(async () => { await input.props.onChange({ target: { files: [new File(['x'], 'r.png', { type: 'image/png' })] } }); });
+    expect((await findByTestId('expense-receipt-error')).props.children).toBe('Image is too large');
+    expect(onChanged).not.toHaveBeenCalled();
+    (Platform as any).OS = originalOs;
+  });
 });
 
 describe('DailyExpensesTab receipts', () => {
@@ -76,11 +91,24 @@ describe('DailyExpensesTab receipts', () => {
       <DailyExpensesTab backendUrl="http://api" theme={getAppTheme('auto', null)} headers={{}} jsonHeaders={{}} trip={trip as any} groupMembers={groupMembers}
         expenses={[expense('e1', 'Cafe Nero'), expense('e2', 'Bakery')] as any} setExpenses={() => {}} defaultPayerId="m1" styles={styles} costTrackingAllowed readOnly />
     );
-    fireEvent.press(getAllByText('$24.00')[0]);
+    fireEvent.press(getAllByText('€24.00')[0]);
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('http://api/api/expenses/receipts?tripId=t1', { headers: {} }));
     expect(await findByTestId('expense-receipt-e1')).toBeTruthy();
     expect(() => getByTestId('expense-receipt-e2')).toThrow(); // read-only viewers cannot attach one
     fireEvent.press(getByTestId('expense-receipt-e1'));
     expect(await findByTestId('expense-receipt-open')).toBeTruthy();
+  });
+
+  it("shows a thumbnail of the receipt in the expense detail when one is stored", async () => {
+    (global as any).fetch = jest.fn().mockImplementation((url: string) =>
+      String(url).includes('/receipts?tripId=') ? jsonResponse({ expenseIds: ['e1'] }) : jsonResponse({ url: 'https://storage.test/r.png' }));
+    const { getAllByText, findByTestId, queryByTestId } = render(
+      <DailyExpensesTab backendUrl="http://api" theme={getAppTheme('auto', null)} headers={{}} jsonHeaders={{}} trip={trip as any} groupMembers={groupMembers}
+        expenses={[expense('e1', 'Cafe Nero'), expense('e2', 'Bakery')] as any} setExpenses={() => {}} defaultPayerId="m1" styles={styles} costTrackingAllowed />
+    );
+    fireEvent.press(getAllByText('€24.00')[0]);
+    const thumb = await findByTestId('expense-receipt-thumb-e1');
+    expect(thumb.props.source).toEqual({ uri: 'https://storage.test/r.png' });
+    expect(queryByTestId('expense-receipt-thumb-e2')).toBeNull();
   });
 });

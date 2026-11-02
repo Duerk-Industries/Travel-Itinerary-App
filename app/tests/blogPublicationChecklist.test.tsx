@@ -20,8 +20,9 @@ describe('readinessLines', () => {
 
   it('asks the viewer to add their own date of birth, and counts photos missing alt text', () => {
     const lines = readinessLines({ ...ready, missingBirthDate: 2, selfMissingBirthDate: true, altTextIssueCount: 3, ready: false });
-    expect(lines.find((line) => line.key === 'dob')?.text).toContain('Add your date of birth');
-    expect(lines.find((line) => line.key === 'alt')?.text).toBe('3 public photos need alt text or a decorative mark.');
+    expect(lines.find((line) => line.key === 'age')?.text).toContain('add yours in your profile');
+    expect(lines).toHaveLength(3);
+    expect(lines.some((line) => line.key === 'alt')).toBe(false);
   });
 });
 
@@ -37,7 +38,7 @@ describe('BlogPublicationChecklist', () => {
     await findByTestId('blog-publication-checklist');
     expect(fetchMock).toHaveBeenCalledWith('http://api/api/trips/trip-1/blog/publication/readiness', { headers: { Authorization: 'Bearer t' } });
     expect(getByTestId('blog-publication-check-start').props.accessibilityLabel).toMatch(/^To do:/);
-    expect(getByTestId('blog-publication-check-alt').props.accessibilityLabel).toMatch(/^Done:/);
+    expect(getByTestId('blog-publication-alt-reminder').props.children.join('')).toContain('Optional:');
   });
 
   it('renders nothing when the endpoint is unavailable', async () => {

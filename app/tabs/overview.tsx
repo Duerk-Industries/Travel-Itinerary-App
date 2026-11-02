@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { formatMoney } from '../../packages/domain/src/money';
 import ActivitySummaryCard from '../components/ActivitySummaryCard';
 import IconText from '../components/IconText';
 import TransferSummaryCard from '../components/TransferSummaryCard';
@@ -163,6 +164,7 @@ type GroupView = {
 };
 
 type Lodging = {
+  currency?: string | null;
   id: string;
   status?: string;
   name: string;
@@ -177,6 +179,7 @@ type Lodging = {
 };
 
 type Tour = {
+  currency?: string | null;
   nearLodgingId?: import('../../server/src/types').Activity['nearLodgingId'];
   id: string;
   status?: string;
@@ -258,6 +261,7 @@ type OverviewTabProps = {
   /** Present only when AI itinerary generation is available; starts generation for the open trip. */
   onGenerateAiItinerary?: (tripId: string) => void;
   onDismissAiItineraryError?: (tripId: string) => void;
+  onCancelAiItinerary?: (tripId: string) => void;
   // Reflects the `ai_itinerary_generation` feature flag (+ tier entitlement)
   // for the current user. When false, the Retry button is hidden since a
   // retry would just 402 again.
@@ -304,6 +308,7 @@ type OverviewTabProps = {
   featureDayPlanCsvImport?: boolean;
   featureDayPlanCsvExport?: boolean;
   userTier?: string | null;
+  documentImportAllowed?: boolean;
   /** Defined in offline mode (including null when this trip has no itinerary). */
   cachedItinerary?: {
     id: string | null;
@@ -477,6 +482,8 @@ export const isWithinOverviewWeatherWindow = (
 };
 
 /** The day's optional activities plus template suggestions offered in the "Add activity" menu, in all. */
+/** How long "Add activity" waits for template suggestions before opening the form without them. */
+const SUGGESTION_WAIT_MS = 800;
 const MAX_POPOVER_ACTIVITIES = 4;
 
 const localTodayIso = (): string => {
@@ -507,6 +514,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   onRetryAiItinerary,
   onGenerateAiItinerary,
   onDismissAiItineraryError,
+  onCancelAiItinerary,
   aiItineraryGenerationAllowed = true,
   editSignal,
   goToDay1Signal,
@@ -537,6 +545,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   featureDayPlanCsvImport = false,
   featureDayPlanCsvExport = false,
   userTier,
+  documentImportAllowed,
   cachedItinerary,
   onItineraryCacheChange,
 }) => {
@@ -2176,13 +2185,23 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     setShowAddLodging(true);
   };
 
+  // "Add activity" opens the form straight away. The menu only appears when it has something besides "Add a new activity"
+  // to offer for the day: an optional activity already on the trip, or a template suggestion for the day's city.
   const addTourForDay = (dateIso: string) => {
     if (readOnly) return;
     setSelectedTour(null);
     setReturnToOverviewViewAfterItemEdit(true);
+    const date = dateIso.startsWith('unscheduled-') ? null : dateIso;
     setAddPopoverDay(Math.max(1, dayCards.findIndex((day) => day.date === dateIso) + 1));
-    setAddPopoverDate(dateIso.startsWith('unscheduled-') ? null : dateIso);
-    setAddPopoverOpen(true);
+    setAddPopoverDate(date);
+    const openForm = () => { setActiveAddDialog(null); setAddPopoverOpen(false); openCustomActivityDialog(date); };
+    if (optionalActivitiesForDay(tours, lodgings, date, trip ?? {}).length) { setAddPopoverOpen(true); return; }
+    const token = (headers.Authorization ?? '').replace(/^Bearer\s+/i, '');
+    if (!date || !trip?.id || !token) { openForm(); return; }
+    // Suggestions come from the server; do not make the traveler wait long for them.
+    const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), SUGGESTION_WAIT_MS));
+    Promise.race([fetchActivitySuggestions({ backendUrl, activeTripId: trip.id, token, date }), timeout])
+      .then((found) => { if (found && found.suggestions.length) setAddPopoverOpen(true); else openForm(); }, openForm);
   };
 
   // Reuse the day's add flows and selected date, falling back to today during the trip
@@ -2388,7 +2407,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             { label: 'Check-out', value: formatFriendlyDate(selectedLodging.checkOutDate) || selectedLodging.checkOutDate },
             { label: 'Rooms', value: selectedLodging.rooms || '-' },
             { label: 'Refund by', value: selectedLodging.refundBy || '-' },
-            { label: 'Total cost', value: selectedLodging.totalCost ? `$${selectedLodging.totalCost}` : '-' },
+            { label: 'Total cost', value: selectedLodging.totalCost ? formatMoney(Number(selectedLodging.totalCost), selectedLodging.currency ?? 'USD') : '-' },
             { label: 'Address', value: selectedLodging.address || '-', onPress: selectedLodging.address ? () => onOpenAddress(selectedLodging.address) : undefined },
           ]}
           styles={styles}
@@ -2757,6 +2776,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       tripId={trip.id}
       userTier={userTier}
       featureEnabled={featureItineraryDocumentImport}
+      accessGranted={documentImportAllowed}
       styles={styles}
       theme={theme}
       readOnly={readOnly}
@@ -2777,6 +2797,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
   const showDocumentImport = canShowItineraryDocumentImport({
     featureEnabled: featureItineraryDocumentImport,
+    accessGranted: documentImportAllowed,
     userTier,
     platform: Platform.OS,
     readOnly,
@@ -2842,7 +2863,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const renderDayBar = (activeDate: string | null) => (
     <ScrollView
       horizontal
-      showsHorizontalScrollIndicator
+      // Swipe scrolling stays; a desktop-style scrollbar under the day tabs does not belong on a phone.
+      showsHorizontalScrollIndicator={!isPhoneLayout}
       nestedScrollEnabled
       style={themeStyle('tabs_overview_14', {  }, (theme ?? _styleTheme))}
       contentContainerStyle={themeStyle('tabs_overview_15', {  }, (theme ?? _styleTheme))}
@@ -3991,6 +4013,17 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           <Text style={styles.helperText}>
             {aiItineraryStageDetail || 'Your AI trip plan is being generated and will appear here automatically.'}
           </Text>
+          {onCancelAiItinerary ? (
+            <TouchableOpacity
+              style={[styles.button, styles.smallButton, styles.dangerButton]}
+              onPress={() => onCancelAiItinerary(trip.id)}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel itinerary generation"
+              testID="ai-itinerary-cancel-button"
+            >
+              <Text style={styles.dangerButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          ) : null}
         </View>
       ) : null}
       {trip && !aiItineraryPending && aiItineraryFailedMessage ? (

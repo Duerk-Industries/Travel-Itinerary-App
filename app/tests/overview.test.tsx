@@ -995,26 +995,27 @@ describe('Overview UI (nested itinerary)', () => {
     expect(queryByTestId('flight-modal-flight-number')).toBeNull();
   });
 
-  test('Add activity still offers a new activity when itinerary item kinds are disabled', async () => {
+  test('Add activity opens the activity form directly, with no menu of one choice, when itinerary item kinds are disabled', async () => {
     const { findByTestId, queryByTestId } = await renderOverview(<OverviewTab {...baseProps} featureItineraryItemKinds={false} />);
     fireEvent.press(await findByTestId('overview-day-card-1'));
     expect(queryByTestId('day-details-add-item-button')).toBeNull();
     expect(queryByTestId('day-details-add-note-button')).toBeNull();
     expect(queryByTestId('day-details-add-checklist-button')).toBeNull();
     fireEvent.press(await findByTestId('day-details-add-activity-button'));
-    expect(await findByTestId('add-item-option-activity')).toBeTruthy();
+    expect(await findByTestId('activity-form-modal')).toBeTruthy();
+    expect(queryByTestId('add-item-option-activity')).toBeNull();
     expect(queryByTestId('add-item-option-place')).toBeNull();
     expect(queryByTestId('add-item-option-note')).toBeNull();
     expect(queryByTestId('add-item-option-checklist')).toBeNull();
   });
 
-  // The phone Add menu's Activity option opens the same "Add activity" menu as a day's button, without picking a day first.
-  test('opens the add activity menu on its own when the phone Add menu asks, and reports it handled', async () => {
+  // The phone Add menu's Activity option does what a day's Add activity button does, without picking a day first.
+  test('opens the activity form on its own when the phone Add menu asks, and reports it handled', async () => {
     const onAutoOpenAddHandled = jest.fn();
     const { findByTestId } = await renderOverview(
       <OverviewTab {...baseProps} autoOpenAdd="activity" onAutoOpenAddHandled={onAutoOpenAddHandled} />
     );
-    expect(await findByTestId('add-item-option-activity')).toBeTruthy();
+    expect(await findByTestId('activity-form-modal')).toBeTruthy();
     expect(onAutoOpenAddHandled).toHaveBeenCalledTimes(1);
   });
 
@@ -1058,7 +1059,6 @@ describe('Overview UI (nested itinerary)', () => {
     } else {
       fireEvent.press(await findByTestId('day-details-add-activity-button'));
     }
-    fireEvent.press(await findByTestId('add-item-option-activity'));
 
     expect(await findByTestId('activity-form-modal')).toBeTruthy();
     fireEvent.changeText(getByPlaceholderText('Activity name'), 'Custom walking tour');
@@ -1081,7 +1081,6 @@ describe('Overview UI (nested itinerary)', () => {
       onTourDataChanged={onTourDataChanged} />);
     fireEvent.press(await findByTestId('overview-day-card-1'));
     fireEvent.press(await findByTestId('day-details-add-activity-button'));
-    fireEvent.press(await findByTestId('add-item-option-activity'));
     fireEvent.press(within(await findByTestId('activity-scheduling')).getByLabelText('Activity scheduling'));
     fireEvent.press(await findByTestId('activity-scheduling-option-optional'));
     fireEvent.changeText(getByPlaceholderText('Activity name'), 'Optional museum');

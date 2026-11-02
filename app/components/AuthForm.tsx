@@ -140,6 +140,9 @@ const AuthForm: React.FC<AuthFormProps> = ({
       nativeID="password"
       value={authForm.password}
       onChangeText={(text: string) => setAuthForm((p) => ({ ...p, password: text }))}
+      // Enter in the last field submits, like the button. Registering has a confirm field after this one.
+      returnKeyType={authMode === 'login' ? 'go' : 'next'}
+      onSubmitEditing={authMode === 'login' ? loginWithPassword : undefined}
     />
     {authMode === 'register' ? (
       <PasswordField
@@ -152,6 +155,8 @@ const AuthForm: React.FC<AuthFormProps> = ({
         nativeID="password-confirm"
         value={authForm.passwordConfirm}
         onChangeText={(text: string) => setAuthForm((p) => ({ ...p, passwordConfirm: text }))}
+        returnKeyType="go"
+        onSubmitEditing={register}
       />
     ) : null}
     {authMode === 'login' && showResendConfirmation ? (

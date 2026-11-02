@@ -20,6 +20,7 @@ import {
   upsertExpenseForSource,
 } from '../db';
 import { logError, logInfo } from '../logger';
+import { repairGeneratedLocations } from '../utils/generatedLocations';
 import { getEnvFlag, isLocalEnv } from '../env';
 import { incrementMetric, recordTiming } from '../metrics';
 import { failGenerationUsage, finalizeGenerationUsage } from './entitlementService';
@@ -38,7 +39,7 @@ import { renderSimplifiedItineraryMarkdown } from './itineraryMarkdownRenderer';
 import { tripNameToFileSlug } from '../utils/tripNameSlug';
 import type { ActivityType } from '../types';
 
-type AsyncStatus = 'queued' | 'running' | 'completed' | 'failed';
+type AsyncStatus = 'queued' | 'running' | 'completed' | 'failed' | 'cancelled';
 type TransferWithPassengers = ItineraryGeneratedTransfer & { passengerIds?: string[] };
 
 // The prompt-pipeline stages reported by itineraryPromptPlanService, plus a
@@ -56,6 +57,8 @@ export type AsyncItineraryJob = {
   createdAt: string;
   updatedAt: string;
   error?: string;
+  /** Set by cancelAsyncItineraryJob; the runner stops before it saves anything. */
+  cancelRequested?: boolean;
   stage?: AsyncItineraryStageId;
   stageLabel?: string;
   stageDetail?: string;
@@ -209,7 +212,7 @@ const pruneStaleJobs = (
   // Phase 1: drop any terminal job whose updatedAt is older than the TTL.
   if (ttlMs > 0) {
     for (const [id, job] of jobs) {
-      if (job.status !== 'completed' && job.status !== 'failed') continue;
+      if (job.status !== 'completed' && job.status !== 'failed' && job.status !== 'cancelled') continue;
       const updated = Date.parse(job.updatedAt);
       if (Number.isFinite(updated) && now - updated > ttlMs) {
         jobs.delete(id);
@@ -225,7 +228,7 @@ const pruneStaleJobs = (
       sortable.push({
         id,
         updated: Date.parse(job.updatedAt) || 0,
-        terminal: job.status === 'completed' || job.status === 'failed',
+        terminal: job.status === 'completed' || job.status === 'failed' || job.status === 'cancelled',
       });
     }
     // Terminal-first, then oldest-first.
@@ -654,7 +657,16 @@ const persistResult = async (params: {
     transfersCount += 1;
   }
 
-  const lodgings = Array.isArray(params.generatedItems.lodgings) ? params.generatedItems.lodgings : [];
+  // A generated location that is blank or just the trip's name maps to nothing: repair it before anything is saved.
+  const placed = repairGeneratedLocations(
+    {
+      activities: Array.isArray(params.generatedItems.activities) ? params.generatedItems.activities : [],
+      lodgings: Array.isArray(params.generatedItems.lodgings) ? params.generatedItems.lodgings : [],
+    },
+    { tripName: tripForPayer?.name, destination: tripForPayer?.destination }
+  );
+  if (placed.repaired > 0) logInfo(`[itinerary] repaired ${placed.repaired} generated location(s) that were blank or the trip name for trip ${params.tripId}`);
+  const lodgings = placed.lodgings;
   let lodgingsCount = 0;
   for (const lodging of lodgings) {
     const checkInDate = safeString(lodging.checkInDate) || today;
@@ -694,7 +706,7 @@ const persistResult = async (params: {
     lodgingsCount += 1;
   }
 
-  const activities = Array.isArray(params.generatedItems.activities) ? params.generatedItems.activities : [];
+  const activities = placed.activities;
   let activitiesCount = 0;
   for (const activity of activities) {
     const date = safeString(activity.date) || today;
@@ -822,9 +834,16 @@ const writeLocalGenerationArtifacts = async (
   logInfo(`[itinerary] wrote local generation artifacts to ${outputDir}`);
 };
 
+const abandonIfCancelled = async (job: AsyncItineraryJob, input: QueueInput): Promise<boolean> => {
+  if (!job.cancelRequested) return false;
+  if (input.idempotencyKey) await failGenerationUsage(input.idempotencyKey, 'cancelled').catch(() => undefined);
+  logInfo(`[itinerary][async] cancelled job=${job.id} trip=${input.tripId}; nothing saved`);
+  return true;
+};
+
 const runJob = async (jobId: string, input: QueueInput): Promise<void> => {
   const job = jobs.get(jobId);
-  if (!job) return;
+  if (!job || job.cancelRequested) return;
   job.status = 'running';
   job.updatedAt = nowIso();
   jobs.set(jobId, job);
@@ -880,6 +899,8 @@ const runJob = async (jobId: string, input: QueueInput): Promise<void> => {
       onStageChange: (stage: ItineraryGenerationStageId) => updateJobStage(jobId, stage, input.days),
     };
     const result = await generateItineraryViaPromptPlan(generationInput);
+    // Cancelled while it was generating: drop the draft before anything is written.
+    if (await abandonIfCancelled(job, input)) return;
 
     if (getEnvFlag('ENABLE_RAW_AI_CAPTURE', { defaultValue: false }) && isLocalEnv()) {
       await writeLocalGenerationArtifacts(jobId, input, generationInput, result).catch((err) =>
@@ -895,6 +916,7 @@ const runJob = async (jobId: string, input: QueueInput): Promise<void> => {
       days: input.days,
       budget: input.budgetMax,
     });
+    if (await abandonIfCancelled(job, input)) return;
     updateJobStage(jobId, 'saving', input.days);
     const persisted = await persistResult({
       userId: input.userId,
@@ -1009,6 +1031,24 @@ export const enqueueAsyncItineraryJob = (input: QueueInput): AsyncItineraryJob =
 };
 
 export const getAsyncItineraryJob = (jobId: string): AsyncItineraryJob | null => jobs.get(jobId) ?? null;
+
+/**
+ * Stops a job that has not finished. Generation runs in the background and cannot be interrupted mid-call, so this marks the
+ * job and the runner drops its draft before saving. Returns the job, or null when it is not this user's.
+ */
+export const cancelAsyncItineraryJob = (jobId: string, userId: string): AsyncItineraryJob | null => {
+  const job = jobs.get(jobId);
+  if (!job || job.userId !== userId) return null;
+  if (job.status === 'queued' || job.status === 'running') {
+    job.cancelRequested = true;
+    job.status = 'cancelled';
+    job.error = 'Cancelled';
+    job.etaSeconds = null;
+    job.updatedAt = nowIso();
+    jobs.set(jobId, job);
+  }
+  return job;
+};
 
 const waitForJobForTest = async (jobId: string, timeoutMs = 10000): Promise<AsyncItineraryJob | null> => {
   const runPromise = jobRuns.get(jobId);

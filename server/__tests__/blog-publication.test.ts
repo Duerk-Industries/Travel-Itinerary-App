@@ -14,7 +14,7 @@ const registerWithDob = async (user: { firstName: string; lastName: string; emai
     .expect(201);
 };
 
-describe('trip blog publication consent', () => {
+describe('trip blog publication privacy', () => {
   const solo = { firstName: 'Solo', lastName: 'Traveler', email: 'blog-pub-solo@example.com', password: 'Password123!' };
   const a1 = { firstName: 'Requester', lastName: 'Adult', email: 'blog-pub-a1@example.com', password: 'Password123!' };
   const a2 = { firstName: 'CoTraveler', lastName: 'Adult', email: 'blog-pub-a2@example.com', password: 'Password123!' };
@@ -68,76 +68,24 @@ describe('trip blog publication consent', () => {
     expect(blogRow.visibilityState).toBe('public');
   });
 
-  it('requires unanimous consent from every other account-holding traveler, and syncs private->public->private through decline/revoke', async () => {
-    await registerWithDob(a1, '1988-05-01');
-    await confirmWebUser(a1.email);
-    const login1 = await loginWebUser(a1);
-    const token1 = login1.body.token;
-    const userId1 = login1.body.user.id;
-
-    await registerWithDob(a2, '1992-03-01');
-    await confirmWebUser(a2.email);
-    const login2 = await loginWebUser(a2);
-    const token2 = login2.body.token;
-    const userId2 = login2.body.user.id;
-
-    const tripId = await createTripWithMembers(token1, 'Two Adult Trip', [userId2]);
-    await seedBlogText(tripId, token1);
-
-    const requestRes = await request(app)
-      .post(`/api/trips/${tripId}/blog/publication/request`)
-      .set('Authorization', `Bearer ${token1}`)
-      .expect(201);
-    expect(requestRes.body.state).toBe('pending_consent');
-    expect(requestRes.body.pendingCount).toBe(1);
-
-    let blogRow = (await storedBlog(tripId))!;
-    expect(blogRow.visibilityState).toBe('pending_consent');
-
-    const epoch = requestRes.body.epoch;
-
-    // Requester cannot unilaterally approve on behalf of the other traveler by re-posting.
-    await request(app)
-      .post(`/api/trips/${tripId}/blog/publication/${epoch}/consent`)
-      .set('Authorization', `Bearer ${token2}`)
-      .send({ decision: 'declined' })
-      .expect(204);
-
-    blogRow = (await storedBlog(tripId))!;
-    expect(blogRow.visibilityState).toBe('private');
-    expect(await epochState(tripId, epoch)).toBe('expired');
-
-    // Re-request and this time approve unanimously.
-    const secondRequest = await request(app)
-      .post(`/api/trips/${tripId}/blog/publication/request`)
-      .set('Authorization', `Bearer ${token1}`)
-      .expect(201);
-    const secondEpoch = secondRequest.body.epoch;
-    expect(secondEpoch).toBeGreaterThan(epoch);
-
-    await request(app)
-      .post(`/api/trips/${tripId}/blog/publication/${secondEpoch}/consent`)
-      .set('Authorization', `Bearer ${token2}`)
-      .send({ decision: 'approved' })
-      .expect(204);
-
-    blogRow = (await storedBlog(tripId))!;
-    expect(blogRow.visibilityState).toBe('public');
-    expect(blogRow.visibilityEpoch).toBe(secondEpoch);
-
-    // The public route must now serve this trip.
-    const identity = (await canonicalAlias(tripId))!;
-    await request(app).get(`/public/blog/${identity.usernameSlug}/${identity.tripSlug}`).expect(200);
-
-    // Revoke — any single consent-eligible traveler can pull it back to private unilaterally.
-    await request(app)
-      .post(`/api/trips/${tripId}/blog/publication/revoke`)
-      .set('Authorization', `Bearer ${token2}`)
-      .expect(204);
-
-    blogRow = (await storedBlog(tripId))!;
-    expect(blogRow.visibilityState).toBe('private');
-    await request(app).get(`/public/blog/${identity.usernameSlug}/${identity.tripSlug}`).expect(404);
+  it('releases immediately for two adults, retires consent, and respects each traveler’s opt-out', async () => {
+    await registerWithDob(a1, '1988-05-01'); await confirmWebUser(a1.email);
+    await registerWithDob(a2, '1992-03-01'); await confirmWebUser(a2.email);
+    const first = await loginWebUser(a1), second = await loginWebUser(a2);
+    const auth1 = { Authorization: `Bearer ${first.body.token}` }, auth2 = { Authorization: `Bearer ${second.body.token}` };
+    const tripId = await createTripWithMembers(first.body.token, 'Two Adult Trip', [second.body.user.id]);
+    await seedBlogText(tripId, first.body.token);
+    const result = await request(app).post(`/api/trips/${tripId}/blog/publication/request`).set(auth1).expect(201);
+    expect(result.body).toMatchObject({ state: 'public', pendingCount: 0 });
+    await request(app).post(`/api/trips/${tripId}/blog/publication/1/consent`).set(auth2).send({ decision: 'approved' }).expect(410);
+    const alias = (await canonicalAlias(tripId))!;
+    await request(app).get(`/public/blog/${alias.usernameSlug}/${alias.tripSlug}`).expect(200);
+    await request(app).post(`/api/trips/${tripId}/blog/publication/revoke`).set(auth2).expect(204);
+    await request(app).get(`/public/blog/${alias.usernameSlug}/${alias.tripSlug}`).expect(404);
+    await request(app).patch(`/api/trips/${tripId}/blog/publication/privacy`).set(auth1).send({ optOut: false }).expect(200);
+    await request(app).get(`/public/blog/${alias.usernameSlug}/${alias.tripSlug}`).expect(404);
+    await request(app).patch(`/api/trips/${tripId}/blog/publication/privacy`).set(auth2).send({ optOut: false }).expect(200);
+    await request(app).get(`/public/blog/${alias.usernameSlug}/${alias.tripSlug}`).expect(200);
   });
 
   it('blocks a publication request until every account traveler has completed their date-of-birth profile', async () => {
@@ -152,6 +100,6 @@ describe('trip blog publication consent', () => {
       .post(`/api/trips/${tripId}/blog/publication/request`)
       .set('Authorization', `Bearer ${token}`)
       .expect(409);
-    expect(res.body.code).toBe('PROFILE_COMPLETION_REQUIRED');
+    expect(res.body.code).toBe('BLOG_NOT_ELIGIBLE');
   });
 });

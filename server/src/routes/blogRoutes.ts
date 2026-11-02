@@ -9,7 +9,7 @@ import { getBlogItemDescriptor, listBlogItemDescriptors } from '../blog/registry
 import { blogMediaRepository, blogRepository } from '../blog/repository';
 import { blogEngagementRepository } from '../blog/engagementRepository';
 import { BlogAudience } from '../blog/types';
-import { ensureUserInTrip, ensureUserCanReadTrip, getCurrentDbProvider } from '../db';
+import { ensureUserInTrip, ensureUserCanReadTrip, getCurrentDbProvider, loadBlogVisibilityContext } from '../db';
 import { assertCanUseFeature, getUserTierKey } from '../services/entitlementService';
 import { ApiLimitExceededError, commitCapacityReservation, releaseCapacityReservation, reserveApiUsageOrThrow, reserveCapacityOrThrow } from '../apis/usageLimiter';
 import { validateVideoEnvelope } from '../services/blogVideoProcessingService';
@@ -19,7 +19,7 @@ import { queryBlog } from '../db.postgres';
 import { getCanonicalPublicPathFirebase } from '../blog/firebasePublicationRepository';
 import { logError } from '../logger';
 import { isLocalEnv } from '../env';
-import { autoPublishBlogIfEligible } from './blogPublicationRoutes';
+import { evaluateBlogVisibility } from '../services/blogVisibilityService';
 import { suggestBlogMediaCaption } from '../services/blogCaptionSuggestionService';
 import { transcribeAndCleanCaption } from '../services/blogVoiceCaptionService';
 import { normalizeBlogTags } from '../blog/tags';
@@ -110,14 +110,11 @@ router.get('/:tripId/blog', async (req, res) => {
       cursor: typeof req.query.cursor === 'string' ? req.query.cursor : undefined,
       limit: req.query.limit ? Number(req.query.limit) : undefined,
     };
-    // Public by default: when a traveler opens the blog, publish it for public viewing if every
-    // traveler qualifies and nobody opted out. Best effort -- never blocks reading the blog.
-    try {
-      await autoPublishBlogIfEligible(req.params.tripId, userIdOf(req));
-    } catch (error) {
-      logError('[blog] auto-publish check failed', error);
-    }
     const blog = await blogRepository().getBlog(userIdOf(req), req.params.tripId, options);
+    const visibility = await evaluateBlogVisibility(req.params.tripId);
+    blog.visibilityState = visibility.isPublic ? 'public' : 'private';
+    const context = await loadBlogVisibilityContext(req.params.tripId);
+    blog.publicOptOut = context?.members.find(m => m.userId === userIdOf(req))?.optOut === true;
     const media = await blogMediaRepository().listMedia(userIdOf(req), req.params.tripId);
     const withUrls = await attachMediaUrls(media);
     // `id` must be the underlying blog_items row id (asset.blogItemId), not the media asset's own

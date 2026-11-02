@@ -1,3 +1,4 @@
+import { amountInTripCurrency, formatMoney } from '../packages/domain/src/money';
 import IconText from './components/IconText';
 import { getStandaloneTheme, applyDocumentLayout, buildStyles, rootErrorStyles, themeStyle, getAppTheme, hitSlop } from './theme/theme';
 
@@ -105,8 +106,10 @@ const ADD_OPTION_PAGE: Record<AddOptionKey, Page> = {
   person: 'overview',
   note: 'overview',
   checklist: 'overview',
+  share: 'overview',
 };
 import { FloatingInsetContext } from './contexts/FloatingInsetContext';
+import { nextFirstSignInDialog } from './utils/firstSignInDialogs';
 import { FOLLOWED_TRIP_HIDDEN_PAGES, shouldAllowPageChange, shouldDisableTab } from './utils/wizardGuard';
 import * as WebBrowser from 'expo-web-browser';
 import {
@@ -149,6 +152,7 @@ import { subscribeAgeVerificationRequired } from './utils/ageVerificationRequire
 import { markLoginStarted, markTripReady, useScreenReadyMark } from './utils/readinessMarks';
 import { configureAnalytics, startItemSaveTask, taskFailure, track, useTrackView } from './utils/analytics/track';
 import { analyticsViewForPage } from './utils/analytics/features';
+import ActionDropdown, { type DropdownAction } from './components/ActionDropdown';
 import PremiumPlanComparisonDialog from './components/PremiumPlanComparisonDialog';
 import { arePremiumTrialsEnabled } from './config/premiumTrials';
 import DropdownOptionButton from './components/DropdownOptionButton';
@@ -578,6 +582,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [externalCarRentalEditId, setExternalCarRentalEditId] = useState<string | null>(null);
   const [pendingInviteModalOpen, setPendingInviteModalOpen] = useState(false);
   const [premiumTrialWelcomeVisible, setPremiumTrialWelcomeVisible] = useState(false);
+  // True once the account profile request has answered (either way), so the tier is as known as it will get.
+  const [accountProfileSettled, setAccountProfileSettled] = useState(false);
   const [premiumPlanComparisonVisible, setPremiumPlanComparisonVisible] = useState(false);
   const [ageVerificationRequired, setAgeVerificationRequired] = useState(false);
   const [ageVerifiedReloadKey, setAgeVerifiedReloadKey] = useState(0);
@@ -625,7 +631,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [autoOpenAddPhotos, setAutoOpenAddPhotos] = useState(false);
   // One-shot requests from the phone Add menu, cleared by the tab once it opens the form.
   const [pendingExpenseAdd, setPendingExpenseAdd] = useState(false);
-  const [pendingItineraryAdd, setPendingItineraryAdd] = useState<Exclude<AddOptionKey, 'expense' | 'blog' | 'import'> | null>(null);
+  const [pendingItineraryAdd, setPendingItineraryAdd] = useState<Exclude<AddOptionKey, 'expense' | 'blog' | 'import' | 'share'> | null>(null);
   const [autoOpenActivityCapture, setAutoOpenActivityCapture] = useState<{ date: string; tags: string[] } | null>(null);
   const [activityRecapTarget, setActivityRecapTarget] = useState<ActivityRecapTarget | null>(null);
   const [pendingActivityRecap, setPendingActivityRecap] = useState<{ tripId: string; activityId: string } | null>(null);
@@ -734,6 +740,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [featureDayPlanCsvExport, setFeatureDayPlanCsvExport] = useState(false);
   const [featureAiItineraryGeneration, setFeatureAiItineraryGeneration] = useState(false);
   const [featureActivityRecap, setFeatureActivityRecap] = useState(false);
+  // Master Premium switch. Defaults on so a slow first fetch does not hide Premium UI; the server enforces regardless.
+  const [featurePremium, setFeaturePremium] = useState(true);
   useEffect(() => {
     let cancelled = false;
     const refreshFeatures = () => fetch(`${backendUrl}/api/auth/features`, { cache: 'no-store' })
@@ -761,6 +769,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           setFeatureDayPlanCsvExport(Boolean(data.featureDayPlanCsvExport));
           setFeatureActivityRecap(Boolean(data.featureActivityRecap));
           setFeatureAiItineraryGeneration(Boolean(data.featureAiItineraryGeneration));
+          setFeaturePremium(data.featurePremium !== false);
         }
       })
       .catch(() => undefined);
@@ -782,6 +791,11 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     updateAppearancePreference,
     clearAccountProfile,
   } = useAccountProfile();
+  // Premium parsing (paste, document import, upload, forwarding, Gmail): the server says which of these this account can
+  // use. Nothing shows until the profile has answered, and nothing shows at all while the master Premium flag is off.
+  const premiumOn = featurePremium && accountProfile.premiumEnabled !== false;
+  const parsingAccess = premiumOn ? accountProfile.parsingAccess : undefined;
+  const canImportTravel = Boolean(parsingAccess?.fileUpload || parsingAccess?.emailForwarding || parsingAccess?.gmailImport);
   // Set while App renders, before any screen formats a time.
   setTimeFormatPreference(isTimeFormat(accountProfile.timeFormat) ? accountProfile.timeFormat : null);
   const costTrackingAllowed = accountProfile.entitlements?.costTracking === true;
@@ -806,6 +820,18 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     setInvitesLoaded,
     setPendingTripShareInvites,
   } = useGroupInvites({ backendUrl, userToken });
+  // First sign-in shows one dialog at a time: date of birth, then pending invites, then the Premium offer. The offer waits
+  // for the account's tier to be known and is never made to an account that already pays or administers.
+  const trialUpsellAllowed =
+    nextFirstSignInDialog({
+      ageVerificationRequired,
+      invitesLoaded,
+      hasPendingInvites: pendingInviteModalOpen,
+      profileSettled: accountProfileSettled,
+      tierKey: accountProfile.tierKey,
+      userRole,
+      premiumEnabled: featurePremium && accountProfile.premiumEnabled !== false,
+    }) === 'premium';
 
   const {
     followedTrips,
@@ -965,19 +991,19 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   );
 
   const flightsTotal = useMemo(
-    () => flights.reduce((sum, f) => sum + (Number(f.cost) || 0), 0),
-    [flights]
+    () => flights.reduce((sum, f) => sum + (amountInTripCurrency({ ...f, amount: f.cost }, activeTrip?.currency ?? 'USD') ?? 0), 0),
+    [flights, activeTrip?.currency]
   );
 
   const lodgingTotal = useMemo(
-    () => lodgings.reduce((sum, l) => sum + (Number(l.totalCost) || 0), 0),
-    [lodgings]
+    () => lodgings.reduce((sum, l) => sum + (amountInTripCurrency({ ...l, amount: l.totalCost }, activeTrip?.currency ?? 'USD') ?? 0), 0),
+    [lodgings, activeTrip?.currency]
   );
 
-  const toursTotal = useMemo(() => tours.reduce((sum, t) => sum + (Number(t.cost) || 0), 0), [tours]);
+  const toursTotal = useMemo(() => tours.reduce((sum, t) => sum + (amountInTripCurrency({ ...t, amount: t.cost }, activeTrip?.currency ?? 'USD') ?? 0), 0), [tours, activeTrip?.currency]);
   const tourPayerTotals = useMemo(
-    () => computePayerTotals(tours, (t) => Number(t.cost) || 0, (t) => t.paidBy, memberIds, { fallbackOnEmpty: true }),
-    [tours, memberIds]
+    () => computePayerTotals(tours, (t) => amountInTripCurrency({ ...t, amount: t.cost }, activeTrip?.currency ?? 'USD') ?? 0, (t) => t.paidBy, memberIds, { fallbackOnEmpty: true }),
+    [tours, memberIds, activeTrip?.currency]
   );
 
   const expenseCategories = useMemo(
@@ -989,8 +1015,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     [expenses, expenseCategories]
   );
   const getExpenseAmount = useCallback(
-    (expense: Expense) => Number(expense.amountInTripCurrency ?? expense.amount) || 0,
-    []
+    (expense: Expense) => amountInTripCurrency(expense, activeTrip?.currency ?? 'USD') ?? 0,
+    [activeTrip?.currency]
   );
   const expenseTotalsByCategory = useMemo(() => {
     const totals: Record<string, number> = {};
@@ -1007,8 +1033,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     [expenseCategories, expenseTotalsByCategory]
   );
   const carRentalsTotal = useMemo(
-    () => carRentals.reduce((sum, rental) => sum + (Number(rental.cost) || 0), 0),
-    [carRentals]
+    () => carRentals.reduce((sum, rental) => sum + (amountInTripCurrency({ ...rental, amount: rental.cost }, activeTrip?.currency ?? 'USD') ?? 0), 0),
+    [carRentals, activeTrip?.currency]
   );
 
   // updateMapPreference + updateAppearancePreference are now provided by useAccountProfile.
@@ -1566,6 +1592,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     setGroupAddRelationship({});
     clearTraitsState();
     clearAccountProfile();
+    setAccountProfileSettled(false);
     clearAccountSidecars();
     setRequirePasswordSetup(false);
     setPasswordSetupLoading(false);
@@ -1611,7 +1638,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 
   const loadAccountProfile = useCallback(
     (token?: string) =>
-      fetchAccountProfile({
+      Promise.resolve(fetchAccountProfile({
         backendUrl,
         token: token ?? userToken,
         logout,
@@ -1620,7 +1647,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         setAppearancePreference: updateAppearancePreference,
         setUserName,
         setUserEmail,
-      }),
+      })).finally(() => setAccountProfileSettled(true)),
     [backendUrl, logout, setAccountProfile, setUserEmail, setUserName, updateAppearancePreference, updateMapPreference, userToken]
   );
 
@@ -2288,6 +2315,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     }
     if (result.nextTripId) {
       setActiveTripId(result.nextTripId);
+      // A follower is not in the trip's group, so group-only requests (its member list) are denied. Mark the trip as
+      // followed now: waiting for the followed-trips refresh below leaves a moment where the app treats it as a member trip.
+      setSelectedFollowedTripId(result.role === 'follower' ? result.nextTripId : null);
     }
     if (isFirstLogin) {
       setDeferFirstLoginRedirect(false);
@@ -2931,6 +2961,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         jobId,
         status: 'pending',
         request: request ?? prev[tripId]?.request ?? null,
+        startedAt: Date.now(),
       },
     }));
   }, []);
@@ -2968,6 +2999,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
             jobId: String(data.jobId),
             status: 'pending',
             error: undefined,
+            startedAt: Date.now(),
             stage: null,
             stageLabel: null,
             stageDetail: null,
@@ -3031,6 +3063,23 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     },
     [trips, traits, backendUrl, headers, onAiItineraryQueued]
   );
+
+  // Stops a generation in progress. The server drops whatever it had made and saves nothing, then the banner goes away.
+  const cancelAiItinerary = useCallback(async (tripId: string) => {
+    const tracker = asyncItineraryByTrip[tripId];
+    if (!tracker || tracker.status !== 'pending') return;
+    try {
+      await fetch(`${backendUrl}/api/itinerary/async/${encodeURIComponent(tracker.jobId)}/cancel`, { method: 'POST', headers });
+    } catch {
+      // Offline: still stop waiting on it; the server job is dropped when it next reports.
+    }
+    setAsyncItineraryByTrip((prev) => {
+      if (!(tripId in prev)) return prev;
+      const next = { ...prev };
+      delete next[tripId];
+      return next;
+    });
+  }, [asyncItineraryByTrip, backendUrl, headers]);
 
   const dismissAiItineraryError = useCallback((tripId: string) => {
     setAsyncItineraryByTrip((prev) => {
@@ -3281,10 +3330,12 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     ];
     return new Set(pages.filter((page) => shouldDisableTab(activePage, page, { isFollowedTrip: isFollowingMode })));
   }, [activePage, isFollowingMode]);
-  const hiddenPages = useMemo(
-    () => new Set<string>(isFollowingMode ? FOLLOWED_TRIP_HIDDEN_PAGES : []),
-    [isFollowingMode]
-  );
+  const hiddenPages = useMemo(() => {
+    const hidden = new Set<string>(isFollowingMode ? FOLLOWED_TRIP_HIDDEN_PAGES : []);
+    // Importing travel confirmations is Premium parsing: hidden unless the server says some import source is open to this account.
+    if (!canImportTravel) hidden.add('ingest');
+    return hidden;
+  }, [isFollowingMode, canImportTravel]);
   const activeTripName = useMemo(
     () => activeTrip?.name?.replace(/\s/g, '_') ?? 'export',
     [activeTrip?.name]
@@ -3293,6 +3344,12 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     () => activeTripForHome ?? activeTrip ?? undefined,
     [activeTrip, activeTripForHome]
   );
+  // Profile, Admin (admins only) and Log out hang off the name in the top bar instead of being separate buttons.
+  const userMenuActions = useMemo<DropdownAction[]>(() => [
+    { id: 'topbar-profile', label: 'Profile', onSelect: () => requestPageChange('account') },
+    ...(userRole === 'admin' ? [{ id: 'topbar-admin', label: 'Admin', onSelect: () => openAdminSection('overview') }] : []),
+    { id: 'topbar-logout', label: 'Log out', onSelect: requestLogout },
+  ], [userRole, requestPageChange, openAdminSection, requestLogout]);
   const handleHomeNavigate = useCallback((page: string) => requestPageChange(page as Page), [requestPageChange]);
   const handleOpenShareTrip = useCallback(() => {
     const tripToShare = isFollowingMode ? null : activeTrip;
@@ -3361,7 +3418,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const renderSharedPageScroll = (content: React.ReactNode) => (
     <ScrollView
       style={styles.pageScroll}
-      contentContainerStyle={[styles.pageScrollContent, iosSafariContentInsetStyle]}
+      contentContainerStyle={[styles.pageScrollContent, iosSafariContentInsetStyle, showBottomTabs && activeTripId ? styles.pageViewportInnerFabClearance : null]}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
       nestedScrollEnabled
@@ -3374,7 +3431,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 
   const renderBoundedPage = (content: React.ReactNode) => (
     <View style={styles.pageViewport}>
-      <View style={[styles.pageViewportInner, iosSafariContentInsetStyle]}>{content}</View>
+      <View style={[styles.pageViewportInner, iosSafariContentInsetStyle, showBottomTabs && activeTripId ? styles.pageViewportInnerFabClearance : null]}>{content}</View>
     </View>
   );
 
@@ -3398,11 +3455,13 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
             ] : [])
           : [{ key: 'person', label: 'Person', icon: 'profile' }]),
         ...(canImportConfirmations ? [{ key: 'import', label: 'Import email', icon: 'import' }] : []),
+        { key: 'share', label: 'Share', icon: 'share' },
       ] as AddOption[]).filter((option) => !hiddenPages.has(ADD_OPTION_PAGE[option.key]))
     : [];
   // Each option opens its add form directly: flights, lodging and activities use the
   // itinerary's add forms (the same ones as a day's "+ Add" chips).
   const handleChooseAdd = (key: AddOptionKey) => {
+    if (key === 'share') { handleOpenShareTrip(); return; }
     if (key === 'expense') setPendingExpenseAdd(true);
     else if (key === 'blog') setAutoOpenAddPhotos(true);
     else if (key !== 'import') setPendingItineraryAdd(key);
@@ -3460,7 +3519,13 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               <Text style={styles.backButtonText}>{'>'}</Text>
             </TouchableOpacity>
           ) : null}
-          <Image source={TOP_BANNER_ICON} style={styles.brandIcon} accessibilityLabel="WanderBunnies logo" />
+          {showBottomTabs ? (
+            <TouchableOpacity onPress={() => requestPageChange('home')} accessibilityRole="button" accessibilityLabel="Home" testID="topbar-logo-home" hitSlop={hitSlop.small}>
+              <Image source={TOP_BANNER_ICON} style={styles.brandIcon} accessibilityLabel="WanderBunnies logo" />
+            </TouchableOpacity>
+          ) : (
+            <Image source={TOP_BANNER_ICON} style={styles.brandIcon} accessibilityLabel="WanderBunnies logo" />
+          )}
           <Text
             style={[styles.title, isPhoneLayout && styles.titleNarrow]}
             numberOfLines={isPhoneLayout ? 2 : 1}
@@ -3486,12 +3551,23 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                       theme={theme}
                     />
                   )}
-                  <TouchableOpacity
-                    style={[styles.userNameButton, styles.smallButton, styles.topBarActionButton]}
-                    onPress={() => requestPageChange('account')}
-                  >
-                    <Text style={styles.userNameButtonText}>{userName ?? 'Traveler'}</Text>
-                  </TouchableOpacity>
+                  {showBottomTabs ? (
+                    <TouchableOpacity
+                      style={[styles.userNameButton, styles.smallButton, styles.topBarActionButton]}
+                      onPress={() => requestPageChange('account')}
+                    >
+                      <Text style={styles.userNameButtonText}>{userName ?? 'Traveler'}</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <ActionDropdown
+                      testID="topbar-user-menu"
+                      label={userName ?? 'Traveler'}
+                      accessibilityLabel="Account menu"
+                      triggerStyle={[styles.userNameButton, styles.smallButton, styles.topBarActionButton]}
+                      styles={styles}
+                      actions={userMenuActions}
+                    />
+                  )}
                 </View>
               ) : showBottomTabs ? null : (
                 // Phone layout drops the full name pill (and presence avatars) to
@@ -3500,33 +3576,16 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                 // out of the Home tab list too (see regularUserHiddenHomePages),
                 // so mobile users had no path to their profile at all. Keep a
                 // compact icon-only entry point instead of removing it outright.
-                <TouchableOpacity
-                  style={[styles.userNameButton, styles.smallButton, styles.topBarActionButton]}
-                  onPress={() => requestPageChange('account')}
-                  accessibilityLabel="Account"
-                  hitSlop={hitSlop.small}
-                >
-                  <IconText style={styles.userNameButtonText}>👤</IconText>
-                </TouchableOpacity>
+                <ActionDropdown
+                  testID="topbar-user-menu"
+                  label="👤"
+                  accessibilityLabel="Account menu"
+                  triggerStyle={[styles.userNameButton, styles.smallButton, styles.topBarActionButton]}
+                  styles={styles}
+                  actions={userMenuActions}
+                />
               )}
-              {userRole === 'admin' ? (
-                <TouchableOpacity
-                  style={[styles.button, styles.smallButton, styles.topBarActionButton]}
-                  onPress={() => openAdminSection('overview')}
-                >
-                  <Text style={styles.buttonText}>Admin</Text>
-                </TouchableOpacity>
-              ) : null}
-              {/* On phones, Log out lives on the Profile tab's Account page. */}
-              {!showBottomTabs ? (
-                <TouchableOpacity
-                  style={[styles.button, styles.smallButton, styles.topBarActionButton]}
-                  onPress={requestLogout}
-                  testID="topbar-logout"
-                >
-                  <Text style={styles.buttonText}>Logout</Text>
-                </TouchableOpacity>
-              ) : null}
+              {/* With bottom tabs (phones), Profile, Admin and Log out live on the Profile tab instead. */}
             </View>
           </View>
         ) : null}
@@ -3552,12 +3611,14 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   followedTrips={followedTrips}
                   userRole={userRole}
                   userTier={accountProfile.tierKey}
+                  canImport={canImportTravel}
                   activeTripOverride={activeTripForHome}
                   styles={styles}
                   onSelectTrip={handleSelectOwnedTrip}
                   onSelectFollowedTrip={handleSelectFollowedTrip}
                   onNavigate={handleHomeNavigate}
                   onDeleteTrip={confirmDeleteTrip}
+                  onShareTrip={activeTrip?.id && !isFollowingMode && !offlineReadOnly ? handleOpenShareTrip : undefined}
                   disabledPages={disabledPages}
                   hiddenPages={hiddenPages}
                   featureCoverPhotoFallbackV2={featureCoverPhotoFallbackV2}
@@ -3618,6 +3679,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   jsonHeaders={jsonHeaders}
                   payerTotals={tourPayerTotals}
                   toursTotal={toursTotal}
+                  tripCurrency={activeTrip?.currency ?? 'USD'}
                   styles={styles}
                   theme={theme}
                   fetchTours={fetchTours}
@@ -3657,6 +3719,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               jsonHeaders={jsonHeaders}
               payerTotals={tourPayerTotals}
               toursTotal={toursTotal}
+                  tripCurrency={activeTrip?.currency ?? 'USD'}
               styles={styles}
               theme={theme}
               fetchTours={fetchTours}
@@ -3674,6 +3737,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           {activePage === 'expenses'
             ? renderSharedPageScroll(
                 <DailyExpensesTab
+                  currentUserId={userId}
                   autoOpenAdd={pendingExpenseAdd}
                   onAutoOpenAddHandled={() => setPendingExpenseAdd(false)}
                   theme={theme}
@@ -3709,6 +3773,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           {activePage === 'ledger'
             ? renderSharedPageScroll(
                 <LedgerTab
+                  unresolvedConversions={allExpenses.filter(e => e.conversionStatus === 'unresolved').length}
                   trip={activeTripForHome ?? activeTrip}
                   groupMembers={groupMembers}
                   reportableMembers={reportableMembers}
@@ -3797,7 +3862,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                 </View>
               </View>
               <Text style={styles.helperText}>Combined totals by category and user.</Text>
+              {allExpenses.some(e => e.conversionStatus === 'unresolved') ? <Text style={styles.helperText}>Totals incomplete: some currency conversions are unavailable.</Text> : null}
               <CostReportTable
+                currency={activeTrip?.currency ?? 'USD'}
                 rows={costReportRows}
                 members={reportableMembers}
                 overallShares={ledgerPaidTotals}
@@ -3832,6 +3899,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                 <AccountTab
                   backendUrl={backendUrl}
                   onLogout={showBottomTabs ? requestLogout : undefined}
+                  onOpenAdmin={showBottomTabs && userRole === 'admin' ? () => openAdminSection('overview') : undefined}
+                  premiumEnabled={premiumOn}
                   privacy={privacy}
                   userToken={userToken}
                   activePage={activePage}
@@ -3994,6 +4063,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       {(activePage === 'flights' || activePage === 'ground-transfers')
         ? renderSharedPageScroll(
             <FlightsTab
+              pasteParsingAllowed={parsingAccess?.pasteParsing === true}
           activities={tours}
               key={activePage}
               lodgings={lodgings}
@@ -4032,6 +4102,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         : null}
       {activePage !== 'flights' && activePage !== 'ground-transfers' && externalFlightEditId ? (
         <FlightsTab
+          pasteParsingAllowed={parsingAccess?.pasteParsing === true}
           activities={tours}
           mapApp={mapApp}
           lodgings={lodgings}
@@ -4216,6 +4287,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   onRetryAiItinerary={retryAiItinerary}
                   onGenerateAiItinerary={featureAiItineraryGeneration ? generateAiItinerary : undefined}
                   onDismissAiItineraryError={dismissAiItineraryError}
+                  onCancelAiItinerary={cancelAiItinerary}
                   aiItineraryGenerationAllowed={aiItineraryGenerationAllowed}
                   editSignal={overviewEditSignal}
                   goToDay1Signal={goToDay1Signal}
@@ -4236,6 +4308,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   openLodgingDetails={(lodging) => openLodgingDetails(lodging as Lodging)}
                   theme={theme}
                   userTier={accountProfile.tierKey}
+                  documentImportAllowed={parsingAccess?.documentImport === true}
                   readOnly={isFollowingMode || offlineReadOnly}
                   featureStandardizedItemDialogs={featureStandardizedItemDialogs}
                   featureCoverPhotoFallbackV2={featureCoverPhotoFallbackV2}
@@ -4423,13 +4496,13 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         <PrivacyChoiceDialog privacy={privacy} backendUrl={backendUrl} theme={theme} />
       ) : null}
       <PremiumTrialWelcomeDialog
-        visible={Boolean(userToken && premiumTrialWelcomeVisible && !ageVerificationRequired && arePremiumTrialsEnabled())}
+        visible={Boolean(userToken && premiumTrialWelcomeVisible && trialUpsellAllowed && arePremiumTrialsEnabled())}
         styles={styles}
         onViewPlans={openPremiumPlansFromWelcome}
         onDismiss={dismissPremiumTrialWelcome}
       />
       <PremiumPlanComparisonDialog
-        visible={Boolean(userToken && premiumPlanComparisonVisible && arePremiumTrialsEnabled())}
+        visible={Boolean(userToken && premiumPlanComparisonVisible && premiumOn && arePremiumTrialsEnabled())}
         backendUrl={backendUrl}
         token={userToken}
         styles={styles}
@@ -4437,7 +4510,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       />
       {userToken ? (
         <PendingInvitesModal
-          visible={pendingInviteModalOpen}
+          visible={pendingInviteModalOpen && !ageVerificationRequired}
           onClose={() => setPendingInviteModalOpen(false)}
           invites={invites}
           pendingTripShareInvites={pendingTripShareInvites}

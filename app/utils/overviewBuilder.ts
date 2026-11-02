@@ -1,8 +1,10 @@
+import { formatMoney } from '../../packages/domain/src/money';
 import { isFlightTransfer } from './transferCategory';
 import { MapApp, buildMapUrl } from './mapLinks';
 import { formatClockTime, formatTimeOfDay } from './timeFormat';
 
 type FlightLike = {
+  currency?: string | null;
   transfer_type?: string;
   transferType?: string;
   id: string;
@@ -30,6 +32,7 @@ type FlightLike = {
 };
 
 type LodgingLike = {
+  currency?: string | null;
   id: string;
   name: string;
   checkInDate: string;
@@ -42,6 +45,7 @@ type LodgingLike = {
 };
 
 type TourLike = {
+  currency?: string | null;
   id: string;
   name: string;
   date: string;
@@ -55,6 +59,7 @@ type TourLike = {
 };
 
 type CarRentalLike = {
+  currency?: string | null;
   id: string;
   pickupLocation: string;
   pickupDate: string;
@@ -179,7 +184,7 @@ export const formatFlightDetails = (flight: FlightLike): DetailItem[] => {
   if (flight.booking_reference || flight.bookingReference) {
     details.push({ label: 'Booking Reference', value: flight.booking_reference || flight.bookingReference || '' });
   }
-  if (flight.cost != null) details.push({ label: 'Cost', value: `$${Number(flight.cost).toFixed(2)}` });
+  if (flight.cost != null) details.push({ label: 'Cost', value: formatMoney(Number(flight.cost), flight.currency ?? 'USD') });
   return details;
 };
 
@@ -199,8 +204,8 @@ export const formatLodgingDetails = (lodging: LodgingLike, mapApp: MapApp = 'goo
     { label: 'Rooms', value: lodging.rooms || 'N/A' },
     { label: 'Refund By', value: formatFriendlyDate(lodging.refundBy) || lodging.refundBy || 'N/A' },
     { label: 'Address', value: address || 'N/A', linkUrl: addressLink ?? undefined },
-    { label: 'Total Cost', value: lodging.totalCost ? `$${lodging.totalCost}` : 'N/A' },
-    { label: 'Cost Per Night', value: lodging.costPerNight ? `$${lodging.costPerNight}` : 'N/A' },
+    { label: 'Total Cost', value: lodging.totalCost ? formatMoney(Number(lodging.totalCost), lodging.currency ?? 'USD') : 'N/A' },
+    { label: 'Cost Per Night', value: lodging.costPerNight ? formatMoney(Number(lodging.costPerNight), lodging.currency ?? 'USD') : 'N/A' },
   ];
 };
 
@@ -221,7 +226,7 @@ export const formatTourDetails = (tour: TourLike, onOpenLocation?: (address: str
     { label: 'Booking Reference', value: tour.reference || 'N/A' },
     { label: 'Booked On', value: formatFriendlyDate(tour.bookedOn) || tour.bookedOn || 'N/A' },
     { label: 'Free Cancel By', value: formatFriendlyDate(tour.freeCancelBy) || tour.freeCancelBy || 'N/A' },
-    { label: 'Cost', value: tour.cost ? `$${tour.cost}` : 'N/A' },
+    { label: 'Cost', value: tour.cost ? formatMoney(Number(tour.cost), tour.currency ?? 'USD') : 'N/A' },
   ];
 };
 

@@ -215,6 +215,15 @@ describe('HomeTab', () => {
     expect(admin.getByTestId('home-nav-ingest')).toBeTruthy();
   });
 
+  test('shows the Import tile from the server answer when one is given, whatever the tier', () => {
+    const props = { backendUrl: 'http://localhost', headers: {}, activeTripId: 't2', trips, followedTrips, styles, onSelectTrip: jest.fn(), onSelectFollowedTrip: jest.fn(), onNavigate: jest.fn() };
+    const opened = render(<HomeTab {...props} userRole="user" userTier="free" canImport />);
+    expect(opened.getByTestId('home-nav-ingest')).toBeTruthy();
+    opened.unmount();
+    const closed = render(<HomeTab {...props} userRole="admin" userTier="pro" canImport={false} />);
+    expect(closed.queryByTestId('home-nav-ingest')).toBeNull();
+  });
+
   test('keeps trip management actions off Home', () => {
     const { queryByTestId, getByTestId } = render(
       <HomeTab
@@ -289,4 +298,17 @@ describe('HomeTab', () => {
     await waitFor(() => expect(onFollowTrip).toHaveBeenCalledWith('ABC123'));
     await waitFor(() => expect(queryByTestId('all-trips-follow-dialog')).toBeNull());
   });
+
+  test('offers Share on Home when the traveler can share the active trip', () => {
+    const onShareTrip = jest.fn();
+    const props = { backendUrl: 'http://localhost', headers: {}, activeTripId: 't2', trips, followedTrips, styles, onSelectTrip: jest.fn(), onSelectFollowedTrip: jest.fn(), onNavigate: jest.fn() };
+    const withShare = render(<HomeTab {...props} onShareTrip={onShareTrip} />);
+    fireEvent.press(withShare.getByTestId('home-share-trip'));
+    expect(onShareTrip).toHaveBeenCalledTimes(1);
+    expect(props.onNavigate).not.toHaveBeenCalled();
+    withShare.unmount();
+    expect(render(<HomeTab {...props} />).queryByTestId('home-share-trip')).toBeNull();
+    expect(render(<HomeTab {...props} onShareTrip={onShareTrip} readOnly />).queryByTestId('home-share-trip')).toBeNull();
+  });
+
 });

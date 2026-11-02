@@ -170,7 +170,7 @@ const LodgingFormComponent: React.FC<LodgingFormProps> = ({
           <DraftTextInput
             style={styles.input}
             placeholder="0.00"
-            keyboardType="numeric"
+            keyboardType="decimal-pad"
             value={draft.totalCost}
             onChangeText={(text: string) =>
               setDraft((prev) => ({ ...prev, totalCost: sanitizeCostInput(text) }))

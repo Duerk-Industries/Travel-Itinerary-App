@@ -3,7 +3,7 @@ import bodyParser from 'body-parser';
 import multer from 'multer';
 import { authenticate } from '../auth';
 import { randomUUID } from 'crypto';
-import { deleteExpense, deleteExpenseReceipt, ensureUserInTrip, getExpenseReceipt, getExpenseTripForUser, getTripById, insertExpense, insertExpenseIdempotent, listExpenseIdsWithReceipt, listExpenses, listGroupMembers, setExpenseReceipt, updateExpense } from '../db';
+import { deleteExpense, deleteExpenseReceipt, getLastExpenseCurrency, ensureUserInTrip, getExpenseReceipt, getExpenseTripForUser, getTripById, insertExpense, insertExpenseIdempotent, listExpenseIdsWithReceipt, listExpenses, listGroupMembers, setExpenseReceipt, updateExpense } from '../db';
 import { createReceiptReadUrl, deleteReceiptObject, putReceiptObject, receiptObjectKey } from '../services/expenseReceiptStorage';
 import { assertCanUseFeature } from '../services/entitlementService';
 import { EntitlementError } from '../errors';
@@ -83,6 +83,14 @@ router.get('/', async (req, res) => {
     }
     res.status(500).json({ error: 'Failed to load expenses' });
   }
+});
+
+router.get('/preferences', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const dto = readDto(listExpensesQueryDto, req.query, res);
+  if (!dto) return;
+  if (!await ensureUserInTrip(dto.tripId, userId)) { res.status(403).json({ error: 'Trip membership required' }); return; }
+  res.json({ currency: await getLastExpenseCurrency(userId, dto.tripId) });
 });
 
 router.post('/', async (req, res) => {

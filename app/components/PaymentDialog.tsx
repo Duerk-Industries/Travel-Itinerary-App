@@ -180,7 +180,7 @@ const PaymentDialogComponent: React.FC<PaymentDialogProps> = ({
               <DraftTextInput
                 style={styles.input}
                 placeholder="0.00"
-                keyboardType="numeric"
+                keyboardType="decimal-pad"
                 value={amount}
                 onChangeText={(text: string) => setAmount(sanitizeCostInput(text))}
                 commitOnBlur={false}

@@ -104,15 +104,15 @@ describe('Trips like this and credited activity copies', () => {
     await sharing(false).expect(200); expect((await browse().expect(200)).body.trips).toEqual([]); await copy().expect(409);
     await copy(key, { date: '2027-05-03' }).expect(409); // source consent is rechecked even before replay
     expect((await request(app).get(`/api/activities?tripId=${targetTrip}`).set(auth()).expect(200)).body.some((item: { id: string }) => item.id === existing.body.id)).toBe(true);
-    await sharing(true).expect(200); await setStoredVisibility(sourceTrip, 'private');
+    await sharing(true).expect(200); await setStoredVisibility(sourceTrip, 'private'); await db.writeBlogPrivacyChoice(sourceTrip, ownerId, { optOut: true });
     expect((await browse().expect(200)).body.trips).toEqual([]); await copy().expect(409);
-    await setStoredVisibility(sourceTrip, 'public');
+    await setStoredVisibility(sourceTrip, 'public'); await db.writeBlogPrivacyChoice(sourceTrip, ownerId, { optOut: false });
     if (db.getCurrentDbProvider() === 'firebase') await (await firestore()).collection('trip_blogs').doc(sourceTrip).update({ indexingEnabled: false });
     else await sql('UPDATE trip_blogs SET indexing_enabled=FALSE WHERE trip_id=$1', [sourceTrip]);
     expect((await browse().expect(200)).body.trips).toEqual([]); await copy().expect(409);
     if (db.getCurrentDbProvider() === 'firebase') await (await firestore()).collection('trip_blogs').doc(sourceTrip).update({ indexingEnabled: true });
     else await sql('UPDATE trip_blogs SET indexing_enabled=TRUE WHERE trip_id=$1', [sourceTrip]);
-    await revokeEpochs(sourceTrip);
+    await revokeEpochs(sourceTrip); await db.writeBlogPrivacyChoice(sourceTrip, ownerId, { optOut: true });
     expect((await browse().expect(200)).body.trips).toEqual([]); await copy().expect(409);
   });
 });

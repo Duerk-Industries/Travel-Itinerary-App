@@ -1,3 +1,4 @@
+import { formatMoney } from '../../packages/domain/src/money';
 import type { CarRental } from '../tabs/carRentals';
 import { formatFriendlyDate, type DetailItem } from './overviewBuilder';
 import { normalizeItineraryStatus, LEGACY_ITINERARY_STATUS } from './itineraryStatus';
@@ -12,6 +13,6 @@ export const formatRentalDetails = (rental: CarRental): DetailItem[] => [
     { label: 'Model', value: rental.model || 'N/A' },
     { label: 'Reference', value: rental.reference || 'N/A' },
     { label: 'Prepaid', value: rental.prepaid || 'N/A' },
-    { label: 'Cost', value: rental.cost ? `$${rental.cost}` : 'N/A' },
+    { label: 'Cost', value: rental.cost ? formatMoney(Number(rental.cost), rental.currency ?? 'USD') : 'N/A' },
     { label: 'Notes', value: rental.notes || 'N/A' },
   ];

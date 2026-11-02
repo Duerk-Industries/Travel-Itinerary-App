@@ -1,7 +1,7 @@
 import request from 'supertest';
 import { randomUUID } from 'crypto';
 import { app } from '../src/app';
-import { initDb, setFeatureFlag } from '../src/db';
+import { initDb, setFeatureFlag, writeBlogPrivacyChoice } from '../src/db';
 import { followTripAs, setStoredVisibility, insertPublicEpoch, insertPublicAlias, revokeEpochs } from './providerRows';
 import { cleanupTestUsersByEmail, confirmWebUser, loginWebUser, registerWebUser } from './helpers';
 
@@ -110,6 +110,7 @@ describe('comment audience is frozen at creation, not re-derived from current pu
   });
 
   it('revoking publication does not relabel the public comment, but it disappears from the unauthenticated route', async () => {
+    await writeBlogPrivacyChoice(tripId, ownerId, { optOut: true });
     await setStoredVisibility(tripId, 'private');
     await revokeEpochs(tripId);
 
@@ -121,8 +122,7 @@ describe('comment audience is frozen at creation, not re-derived from current pu
     const stillPublic = dayFetch.body.comments.find((c: any) => c.body === 'Written after publication');
     expect(stillPublic.audience).toBe('public'); // frozen — revoking doesn't relabel it either
 
-    // The unauthenticated route resolves the alias only through an active `state = 'public'`
-    // epoch (resolvePublicTripIdPostgres) — once revoked, the whole page 404s, taking every
+    // The unauthenticated route evaluates the current personal opt-outs — the page 404s, taking every
     // comment on it out of unauthenticated reach regardless of any individual row's audience.
     await request(app).get(`/public/blog/${usernameSlug}/${tripSlug}/engagement`).query({ dayDate }).expect(404);
   });

@@ -25,6 +25,7 @@ import { logError, logInfo } from '../logger';
 import { sendVerificationEmailBestEffort } from '../mailer';
 import { getAuthFlag } from '../config/authFlags';
 import { ensureAdminBootstrap, getSeededTierForEmail, isFeatureEnabled } from '../services/entitlementService';
+import { isPremiumEnabled } from '../services/premiumOptionsService';
 import { authLoginRateLimit } from '../services/httpRateLimitService';
 import { validateRegistrationAge } from '../services/registrationAgeGate';
 
@@ -287,6 +288,7 @@ router.get('/features', async (_req, res) => {
     dayPlanExport,
     activityRecap,
     aiItineraryGeneration,
+    premiumEnabled,
   ] = await Promise.all([
     getFeatureFlag('feature_grid_editing'),
     getFeatureFlag('feature_grid_editing_clipboard'),
@@ -310,6 +312,7 @@ router.get('/features', async (_req, res) => {
     isFeatureEnabled('day_plan_csv_export'),
     isFeatureEnabled('activity_recap'),
     getFeatureFlag('ai_itinerary_generation').then((flag) => flag?.enabled ?? true),
+    isPremiumEnabled(),
   ]);
   res.json({
     usernameLoginEnabled: getAuthFlag('usernameLoginEnabled'),
@@ -337,6 +340,8 @@ router.get('/features', async (_req, res) => {
     featureDayPlanCsvExport: dayPlanExport === true && csvExport === true,
     featureActivityRecap: activityRecap === true,
     featureAiItineraryGeneration: aiItineraryGeneration === true,
+    // Master Premium switch: popup, trials, upgrade prompts and every Premium-only parsing option.
+    featurePremium: premiumEnabled === true,
   });
 });
 

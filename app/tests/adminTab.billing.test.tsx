@@ -84,6 +84,57 @@ describe('AdminTab billing section', () => {
     });
   });
 
+  test('lists the Premium parsing options and saves a toggle', async () => {
+    const options = [{ key: 'pasteParsing', label: 'Paste a confirmation to add a transfer' }, { key: 'fileUpload', label: 'Upload confirmations for review (Imports)' }];
+    let premiumOnly: Record<string, boolean> = { pasteParsing: true, fileUpload: true };
+    const fetchMock = jest.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith('/api/admin/billing/config') && !init?.method) {
+        return { ok: true, json: async () => ({ billingEnabled: true, plans: [plan] }) } as Response;
+      }
+      if (url.endsWith('/api/admin/billing/premium-options') && !init?.method) {
+        return { ok: true, json: async () => ({ premiumEnabled: true, options, premiumOnly }) } as Response;
+      }
+      if (url.endsWith('/api/admin/billing/premium-options') && init?.method === 'PATCH') {
+        premiumOnly = { ...premiumOnly, ...JSON.parse(String(init.body)) };
+        return { ok: true, json: async () => ({ premiumEnabled: true, options, premiumOnly }) } as Response;
+      }
+      throw new Error(`Unhandled fetch: ${url}`);
+    });
+    (global as any).fetch = fetchMock;
+
+    const { findByTestId, findByText, getByText } = render(
+      <AdminTab backendUrl={backendUrl} headers={headers} initialSection="billing" />
+    );
+    await findByText('Paste a confirmation to add a transfer');
+    fireEvent.press(await findByTestId('admin-premium-option-fileUpload'));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        `${backendUrl}/api/admin/billing/premium-options`,
+        expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ fileUpload: false }) }),
+      );
+    });
+    await findByText('Everyone');
+    expect(getByText('Premium only')).toBeTruthy();
+  });
+
+  test('says the options are hidden for everyone while the Premium flag is off', async () => {
+    const fetchMock = jest.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith('/api/admin/billing/config') && !init?.method) {
+        return { ok: true, json: async () => ({ billingEnabled: true, plans: [plan] }) } as Response;
+      }
+      if (url.endsWith('/api/admin/billing/premium-options')) {
+        return { ok: true, json: async () => ({ premiumEnabled: false, options: [{ key: 'pasteParsing', label: 'Paste' }], premiumOnly: { pasteParsing: true } }) } as Response;
+      }
+      throw new Error(`Unhandled fetch: ${url}`);
+    });
+    (global as any).fetch = fetchMock;
+    const { findByText } = render(<AdminTab backendUrl={backendUrl} headers={headers} initialSection="billing" />);
+    await findByText(/Premium feature flag is off/);
+  });
+
   test('publishes the initial Stripe Price even when the seeded amount is unchanged', async () => {
     const unpublishedPlan = { ...plan, activeStripePriceId: null };
     const fetchMock = jest.fn(async (input: RequestInfo | URL, init?: RequestInit) => {

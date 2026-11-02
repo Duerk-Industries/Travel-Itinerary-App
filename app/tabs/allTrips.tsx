@@ -8,6 +8,7 @@ import type { FollowedTrip } from './follow';
 import { getTripPeriod, TripPeriod } from '../utils/tripPeriod';
 import FollowTripButton from '../components/FollowTripButton';
 import ConfirmDialog from '../components/ConfirmDialog';
+import ActionDropdown from '../components/ActionDropdown';
 import { formatDateLong } from '../utils/formatDateLong';
 
 type Props = {
@@ -112,29 +113,15 @@ export default function AllTripsTab({ backendUrl, headers, trips, followedTrips,
                       <Text style={styles.homeModalRowMeta}>{trip.startDate ? `${formatDateLong(trip.startDate)}${trip.endDate ? ` – ${formatDateLong(trip.endDate)}` : ''}` : following && !details[trip.id] ? 'Dates unavailable' : trip.durationDays ? `Dates not set · ${trip.durationDays} day(s)` : 'Dates not set'}</Text>
                     </View>
                     {trip.id === activeTripId ? <Text style={styles.homeModalActiveBadge}>Active</Text> : null}
-                    {!following && onDeleteTrip ? (
-                      <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel={`Delete ${trip.name}`}
-                        testID={`all-trips-row-delete-${trip.id}`}
-                        hitSlop={8}
-                        style={({ pressed }: { pressed: boolean }) => [styles.homeModalRowDelete, pressed && styles.homeModalRowDeletePressed]}
-                        onPress={(e: any) => { e?.stopPropagation?.(); onDeleteTrip({ id: trip.id, name: trip.name }); }}
-                      >
-                        <Text style={styles.homeModalRowDeleteText}>Delete</Text>
-                      </Pressable>
-                    ) : null}
-                    {following && onUnfollowTrip ? (
-                      <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel={`Unfollow ${trip.name}`}
-                        testID={`all-trips-row-unfollow-${trip.id}`}
-                        hitSlop={8}
-                        style={({ pressed }: { pressed: boolean }) => [styles.homeModalRowDelete, pressed && styles.homeModalRowDeletePressed]}
-                        onPress={(e: any) => { e?.stopPropagation?.(); setUnfollowError(null); setTripToUnfollow({ id: trip.id, name: trip.name }); }}
-                      >
-                        <Text style={styles.homeModalRowDeleteText}>Unfollow</Text>
-                      </Pressable>
+                    {/* Destructive actions sit behind a menu so a stray tap on a row cannot reach them. Delete still confirms. */}
+                    {(!following && onDeleteTrip) || (following && onUnfollowTrip) ? (
+                      <ActionDropdown
+                        testID={`all-trips-row-menu-${trip.id}`}
+                        styles={styles}
+                        actions={following
+                          ? [{ id: `all-trips-row-unfollow-${trip.id}`, label: `Unfollow ${trip.name}`, onSelect: () => { setUnfollowError(null); setTripToUnfollow({ id: trip.id, name: trip.name }); } }]
+                          : [{ id: `all-trips-row-delete-${trip.id}`, label: `Delete ${trip.name}`, onSelect: () => onDeleteTrip?.({ id: trip.id, name: trip.name }) }]}
+                      />
                     ) : null}
                   </Pressable>
                 ))}

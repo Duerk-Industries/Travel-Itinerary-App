@@ -4201,7 +4201,7 @@ const styleFactories = {
   // components/PublicTripBlogPage.tsx
   components_PublicTripBlogPage_1: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }),
   // components/PublicTripBlogPage.tsx
-  components_PublicTripBlogPage_2: (_theme: AppTheme, { selectedReaction, emoji }: ThemeStyleValues): any => ({ flexDirection: 'row', alignItems: 'center', marginRight: 8, marginBottom: 6, paddingHorizontal: 8, paddingVertical: 5, borderRadius: 16, borderWidth: 1, borderColor: selectedReaction === emoji ? _theme.colors.accentBorder : _theme.colors.border, backgroundColor: selectedReaction === emoji ? _theme.colors.surfaceMuted : _theme.colors.surface }),
+  components_PublicTripBlogPage_2: (_theme: AppTheme, { selectedReaction, emoji }: ThemeStyleValues): any => ({ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', minWidth: 44, minHeight: 44, marginRight: 8, marginBottom: 6, paddingHorizontal: 8, paddingVertical: 5, borderRadius: 16, borderWidth: 1, borderColor: selectedReaction === emoji ? _theme.colors.accentBorder : _theme.colors.border, backgroundColor: selectedReaction === emoji ? _theme.colors.surfaceMuted : _theme.colors.surface }),
   // components/PublicTripBlogPage.tsx
   components_PublicTripBlogPage_3: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ fontSize: 16 }),
   // components/PublicTripBlogPage.tsx
@@ -4348,6 +4348,17 @@ const styleFactories = {
   components_ExpenseReceiptPanel_1: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ display: 'none' }),
   // components/ExpenseReceiptPanel.tsx
   components_ExpenseReceiptPanel_2: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ width: '100%', height: 320, backgroundColor: _theme.colors.surfaceMuted }),
+  // components/BlogDayPlaceRatings.tsx
+  components_BlogDayPlaceRatings_1: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ marginTop: 8, padding: 10, borderWidth: 1, borderRadius: 8, borderColor: _theme.colors.border, backgroundColor: _theme.colors.surface }),
+  components_BlogDayPlaceRatings_2: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ fontSize: 14, fontWeight: '700', color: _theme.colors.text, marginBottom: 6 }),
+  components_BlogDayPlaceRatings_3: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ marginBottom: 10 }),
+  components_BlogDayPlaceRatings_4: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ fontSize: 14, color: _theme.colors.text, marginBottom: 2 }),
+  components_BlogDayPlaceRatings_5: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ borderWidth: 1, borderColor: _theme.colors.border, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 6, color: _theme.colors.text, marginTop: 4 }),
+  components_BlogDayPlaceRatings_6: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ marginTop: 6, minHeight: 44, minWidth: 44, justifyContent: 'center', alignItems: 'center', alignSelf: 'flex-start', paddingHorizontal: 12, borderRadius: 6, backgroundColor: _theme.colors.link }),
+  components_BlogDayPlaceRatings_7: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ fontSize: 14, fontWeight: '600', color: _theme.colors.onAccent }),
+  components_BlogDayPlaceRatings_8: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ fontSize: 13, color: _theme.colors.textMuted, marginTop: 4 }),
+  // components/ReceiptThumbnail.tsx
+  components_ReceiptThumbnail_1: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ width: 28, height: 28, borderRadius: 4, marginRight: 6, backgroundColor: _theme.colors.surfaceMuted }),
   // components/PublicTripBlogPage.tsx
   components_PublicTripBlogPage_57: (_theme: AppTheme, { bodyFont }: ThemeStyleValues): any => ({ minHeight: 72, borderWidth: 1, borderColor: _theme.colors.border, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, marginBottom: 8, fontFamily: bodyFont, fontSize: 15, color: _theme.colors.text, textAlignVertical: 'top' }),
   // components/PublicTripBlogPage.tsx
@@ -7661,6 +7672,11 @@ export const buildStyles = (theme: AppTheme) => StyleSheet.create(solidBackgroun
     minHeight: 0,
     maxWidth: 1200,
     overflow: 'hidden',
+  }),
+  // The floating chat buttons sit over the bottom of the page on a phone; this keeps the last content clear of them
+  // (their 56px height plus the 24px gap above the bottom bar).
+  pageViewportInnerFabClearance: ({
+    paddingBottom: 80,
   }),
   card: ({
     width: '100%',

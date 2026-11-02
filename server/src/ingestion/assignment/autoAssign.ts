@@ -1,6 +1,7 @@
 import { logError, logInfo } from '../../logger';
 import { isFeatureEnabled } from '../../services/entitlementService';
 import { notify } from '../../services/notificationService';
+import { canUseParsingOption } from '../../services/premiumOptionsService';
 import type { PersistedParsedItem } from '../contracts';
 import { AUTO_UNDO_WINDOW_MS, assignParsedItemToTrip, getAutoAssignPreference } from '../shared/repository';
 import { buildMatchingContext } from './matchingContext';
@@ -14,6 +15,7 @@ export const AUTO_ASSIGN_FLAG = 'planning_auto_assign';
  */
 export const automaticAddingEnabledFor = async (userId: string): Promise<boolean> => {
   if (!(await isFeatureEnabled(AUTO_ASSIGN_FLAG, userId))) return false;
+  if (!(await canUseParsingOption(userId, 'autoAssign'))) return false;
   return (await getAutoAssignPreference(userId)) ?? true;
 };
 

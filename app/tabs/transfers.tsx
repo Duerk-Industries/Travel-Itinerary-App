@@ -1,3 +1,4 @@
+import { formatMoney, amountInTripCurrency } from '../../packages/domain/src/money';
 import IconText from '../components/IconText';
 import { useLayoutBreakpoints } from '../hooks/useLayoutBreakpoints';
 import TransferSummaryCard from '../components/TransferSummaryCard';
@@ -47,6 +48,11 @@ import {
 } from '../utils/itineraryStatus';
 
 export interface Flight {
+  conversionCurrency?: string | null;
+  conversionStatus?: 'converted' | 'unresolved';
+  amountInTripCurrency?: number | null;
+  exchangeRateToTripCurrency?: number | null;
+  currency?: string | null;
   departureLat?: number | null; departureLng?: number | null; arrivalLat?: number | null; arrivalLng?: number | null;
   id: string;
   status?: ItineraryStatus;
@@ -534,6 +540,8 @@ type FlightsTabProps = {
   // Ground-transfer CSV import/export (the Ground Transfers page only; flights are never imported from CSV).
   featureGroundTransferCsvImport?: boolean;
   featureGroundTransferCsvExport?: boolean;
+  /** Server-decided: paste-a-confirmation parsing is a Premium option. Defaults on so isolated renders keep the button; the server enforces. */
+  pasteParsingAllowed?: boolean;
 };
 
 type Airport = {
@@ -617,6 +625,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   featureTapToEditTables = true,
   featureGroundTransferCsvImport = false,
   featureGroundTransferCsvExport = false,
+  pasteParsingAllowed = true,
 }) => {
   const _styleTheme = useStyleTheme();
   const theme = resolveStyleTheme(_providedTheme, _styleTheme);
@@ -756,7 +765,8 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     };
   };
 
-  const flightsTotal = useMemo(() => flights.reduce((sum, f) => sum + (Number(f.cost) || 0), 0), [flights]);
+  const tripCurrency = findActiveTrip()?.currency ?? 'USD';
+  const flightsTotal = useMemo(() => flights.reduce((sum, f) => sum + (amountInTripCurrency({ ...f, amount: f.cost }, tripCurrency) ?? 0), 0), [flights, tripCurrency]);
 
   const userMembers = useMemo(
     () => groupMembers.filter((m) => !m.guestName && m.status !== 'removed'),
@@ -935,11 +945,11 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       case 'arrival_time':
         return formatClockTime(baseDisplay);
       case 'cost':
-        return `$${value}`;
+        return formatMoney(Number(value) || 0, item.currency ?? findActiveTrip()?.currency ?? 'USD');
       case 'costPerPerson': {
         const count = Array.isArray(item.passenger_ids) ? item.passenger_ids.length : 0;
         const per = count ? (Number(item.cost) || 0) / count : Number(item.cost) || 0;
-        return `$${per.toFixed(2)}`;
+        return formatMoney(per, item.currency ?? findActiveTrip()?.currency ?? 'USD');
       }
       case 'booking_reference':
         return baseDisplay.toUpperCase();
@@ -1600,7 +1610,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
               <TouchableOpacity style={[styles.button, themeStyle('tabs_transfers_11', {  }, (theme ?? _styleTheme))]} onPress={undoGridChange} disabled={gridSaving || !gridHistory.length} testID="transfer-table-undo"><IconText style={styles.buttonText}>↶</IconText></TouchableOpacity>
               <TouchableOpacity style={[styles.button, themeStyle('tabs_transfers_12', {  }, (theme ?? _styleTheme))]} onPress={redoGridChange} disabled={gridSaving || !gridRedo.length} testID="transfer-table-redo"><IconText style={styles.buttonText}>↷</IconText></TouchableOpacity>
             </> : null}
-            {!isPhoneLayout ? <TouchableOpacity style={[styles.button, styles.outlineButton, themeStyle('tabs_transfers_13', {  }, (theme ?? _styleTheme))]} onPress={() => setShowPasteModal(true)} testID="transfer-paste">
+            {!isPhoneLayout && pasteParsingAllowed ? <TouchableOpacity style={[styles.button, styles.outlineButton, themeStyle('tabs_transfers_13', {  }, (theme ?? _styleTheme))]} onPress={() => setShowPasteModal(true)} testID="transfer-paste">
               <Text style={styles.buttonText}>Paste Info</Text>
             </TouchableOpacity> : null}
             {!isPhoneLayout || isWizard ? <TouchableOpacity style={[styles.button, styles.roundButton]} onPress={handleAddPress} testID="transfer-add">
@@ -1747,7 +1757,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                         isLast && styles.lastCell,
                       ]}
                     >
-                      <Text style={styles.cellText}>{`$${per.toFixed(2)}`}</Text>
+                      <Text style={styles.cellText}>{formatMoney(per, findActiveTrip()?.currency ?? 'USD')}</Text>
                     </View>
                   );
                 }
@@ -1966,7 +1976,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       </HorizontalTableScroll>
       </> : null}
       <View style={styles.totalRow}>
-        <Text style={styles.flightTitle}>Total {transferScope === 'ground' ? 'ground transfer' : transferScope === 'all' ? 'transfer' : 'flight'} cost: ${flightsTotal.toFixed(2)}</Text>
+        <Text style={styles.flightTitle}>Total {transferScope === 'ground' ? 'ground transfer' : transferScope === 'all' ? 'transfer' : 'flight'} cost: {formatMoney(flightsTotal, findActiveTrip()?.currency ?? 'USD')}</Text>
       </View>
         </>
       ) : null}

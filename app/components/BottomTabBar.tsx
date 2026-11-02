@@ -4,7 +4,7 @@ import Icon, { type IconName } from './Icon';
 import { themeStyle, type AppTheme } from '../theme/theme';
 
 export type BottomTab = { page: string; label: string; icon: IconName };
-export type AddOptionKey = 'expense' | 'blog' | 'activity' | 'flight' | 'lodging' | 'import' | 'transfer' | 'rental' | 'person' | 'note' | 'checklist';
+export type AddOptionKey = 'expense' | 'blog' | 'activity' | 'flight' | 'lodging' | 'import' | 'transfer' | 'rental' | 'person' | 'note' | 'checklist' | 'share';
 export type AddOption = { key: AddOptionKey; label: string; icon: IconName };
 
 /** Height of the bar above the bottom safe-area inset; floating buttons sit above it. */

@@ -49,6 +49,7 @@ type TripPayment = {
 };
 
 type LedgerTabProps = {
+  unresolvedConversions?: number;
   trip: Trip | null;
   groupMembers: GroupMemberOption[];
   reportableMembers: GroupMemberOption[];
@@ -241,6 +242,7 @@ const formatShortPaymentDate = (value: string): string => {
 };
 
 const LedgerTab: React.FC<LedgerTabProps> = ({
+  unresolvedConversions = 0,
   trip,
   groupMembers,
   reportableMembers,
@@ -415,6 +417,7 @@ const LedgerTab: React.FC<LedgerTabProps> = ({
     return (
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Balances</Text>
+          {unresolvedConversions > 0 ? <Text accessibilityRole="alert" style={styles.helperText}>Totals incomplete: {unresolvedConversions} currency conversion(s) unavailable.</Text> : null}
         <Text style={styles.helperText}>Select a trip to view balances.</Text>
       </View>
     );
@@ -606,6 +609,7 @@ const LedgerTab: React.FC<LedgerTabProps> = ({
       <View style={styles.card} testID="ledger-summary">
         <View style={styles.row}>
           <Text style={styles.sectionTitle}>Balances</Text>
+          {unresolvedConversions > 0 ? <Text accessibilityRole="alert" style={styles.helperText}>Totals incomplete: {unresolvedConversions} currency conversion(s) unavailable.</Text> : null}
           <TouchableOpacity
             style={[styles.button, styles.smallButton, themeStyle('tabs_ledger_29', {  }, (theme ?? _styleTheme))]}
             onPress={() => onNavigate('cost')}

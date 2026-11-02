@@ -1,5 +1,7 @@
+import { amountInTripCurrency, normalizeCurrency } from '../../packages/domain/src/money';
 import { rollUpTotals } from './coveredBy';
-import { singlePayerIds } from './payerSelection';
+import { singlePayerIds } from './payerSelection';
+
 import { transferExpenseCategory } from './transferCategory';
 
 import { carRentalExpenseDescription, flightExpenseDescription } from './expenseDescription';
@@ -97,6 +99,9 @@ export interface UnifiedExpense {
   description: string;
   amount: number;
   currency: string;
+  conversionStatus?: 'converted' | 'unresolved';
+  originalAmount?: number;
+  originalCurrency?: string;
   payerIds: string[];
   forIds: string[];
   /** Weight per person in forIds for an uneven split; absent means an equal split. */
@@ -117,6 +122,15 @@ export const buildAllExpenses = (
   const resolvePayers = (ids?: readonly string[] | null) => singlePayerIds(ids, defaultPayerId ?? allMemberIds[0]);
   const allExpenses: UnifiedExpense[] = [];
 
+  const moneyFields = (item: any, kind?: string) => {
+    const amount = Number(item.amount ?? item.cost ?? item.totalCost ?? item.total_cost) || 0;
+    const mirror = kind ? dailyExpenses.find(e => (e.sourceType ?? e.source_type) === kind && (e.sourceId ?? e.source_id) === item.id) : undefined;
+    const currency = normalizeCurrency(item.currency, mirror?.currency ?? tripCurrency);
+    const converted = amountInTripCurrency({ ...(mirror ?? item), amount, currency }, tripCurrency);
+    return { amount: converted ?? 0, currency: tripCurrency, originalAmount: amount, originalCurrency: currency,
+      conversionStatus: converted == null ? 'unresolved' as const : 'converted' as const };
+  };
+
   flights.forEach((f) => {
     const paidBy =
       (Array.isArray(f.paidBy) && f.paidBy.length ? f.paidBy : null) ??
@@ -133,8 +147,7 @@ export const buildAllExpenses = (
       date: f.departureDate ?? f.departure_date,
       category: transferExpenseCategory(f),
       description: flightExpenseDescription(f),
-      amount: Number(f.cost) || 0,
-      currency: tripCurrency,
+      ...moneyFields(f, 'flight'),
       payerIds: resolvePayers(paidBy),
       forIds: passengerIds.length ? passengerIds : allMemberIds,
     });
@@ -156,8 +169,7 @@ export const buildAllExpenses = (
       date: l.checkInDate ?? l.check_in_date,
       category: 'Lodging',
       description: l.name ?? '',
-      amount: Number(l.totalCost ?? l.total_cost) || 0,
-      currency: tripCurrency,
+      ...moneyFields(l, 'lodging'),
       payerIds: resolvePayers(paidBy),
       forIds: travelerIds.length ? travelerIds : allMemberIds,
     });
@@ -179,8 +191,7 @@ export const buildAllExpenses = (
       date: t.date,
       category: 'Activities',
       description: t.name ?? '',
-      amount: Number(t.cost) || 0,
-      currency: tripCurrency,
+      ...moneyFields(t, 'activity'),
       payerIds: resolvePayers(paidBy),
       forIds: travelerIds.length ? travelerIds : paidBy.length ? paidBy : allMemberIds,
     });
@@ -202,8 +213,7 @@ export const buildAllExpenses = (
       date: c.pickupDate ?? c.pickup_date,
       category: 'Car Rentals',
       description: carRentalExpenseDescription(c),
-      amount: Number(c.cost) || 0,
-      currency: tripCurrency,
+      ...moneyFields(c, 'car_rental'),
       payerIds: resolvePayers(paidBy),
       forIds: travelerIds.length ? travelerIds : allMemberIds,
     });
@@ -217,8 +227,7 @@ export const buildAllExpenses = (
         date: e.expenseDate ?? e.expense_date,
         category: e.category,
         description: e.vendor || e.notes || '',
-        amount: Number(e.amountInTripCurrency ?? e.amount) || 0,
-        currency: tripCurrency,
+        ...moneyFields(e),
         payerIds: resolvePayers(Array.isArray(e.payerIds) ? e.payerIds : Array.isArray(e.payer_ids) ? e.payer_ids : []),
         forIds: Array.isArray(e.forIds) && e.forIds.length > 0 ? e.forIds : allMemberIds,
         forShares: e.forShares ?? null,

@@ -1,3 +1,4 @@
+import { formatMoney } from '../../packages/domain/src/money';
 import ActivitySummaryCard from '../components/ActivitySummaryCard';
 import IconText from '../components/IconText';
 import { useLayoutBreakpoints } from '../hooks/useLayoutBreakpoints';
@@ -56,6 +57,11 @@ import { formatClockTime } from '../utils/timeFormat';
 export { ACTIVITY_TYPES, type ActivityType } from '../utils/activityTypes';
 
 export type Tour = PlanningCoordinates & Pick<Activity, 'nearLodgingId'> & {
+  currency?: string | null;
+  conversionCurrency?: string | null;
+  conversionStatus?: 'converted' | 'unresolved';
+  amountInTripCurrency?: number | null;
+  exchangeRateToTripCurrency?: number | null;
   dayPosition?: number | null;
   catalogId?: string | null;
   id: string;
@@ -183,7 +189,8 @@ export const createInitialActivityState = (preferredDate?: string | null): TourD
   startTime: '',
   duration: '',
   cost: '0',
-  freeCancelBy: new Date().toISOString().slice(0, 10),
+  // Empty unless the traveler sets it: a made-up date reads as a real cancellation deadline.
+  freeCancelBy: '',
   bookedOn: '',
   reference: '',
   notes: '',
@@ -371,6 +378,11 @@ export const normalizeActivityFromApi = (t: any): Tour => ({
     netVotes: Number(t.netVotes ?? 0) || 0,
     userVote: t.userVote === 1 || t.userVote === -1 ? t.userVote : null,
     ...normalizeRatingFields(t),
+    currency: t.currency,
+    conversionCurrency: t.conversionCurrency,
+    conversionStatus: t.conversionStatus,
+    amountInTripCurrency: t.amountInTripCurrency,
+    exchangeRateToTripCurrency: t.exchangeRateToTripCurrency,
     cost: String(t.cost ?? ''),
     paidBy: Array.isArray(t.paidBy) ? t.paidBy : [],
     travelerIds: Array.isArray(t.travelerIds) ? t.travelerIds : [],
@@ -392,6 +404,7 @@ type TourTabProps = {
   jsonHeaders: Record<string, string>;
   payerTotals: Record<string, number>;
   toursTotal: number;
+  tripCurrency?: string;
   styles: ReturnType<typeof StyleSheet.create>;
   theme?: AppTheme;
   fetchTours: (token?: string) => Promise<void>;
@@ -435,6 +448,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
   jsonHeaders,
   payerTotals,
   toursTotal,
+  tripCurrency = 'USD',
   styles,
   theme: _providedTheme,
   fetchTours,
@@ -1251,12 +1265,12 @@ export const ActivityTab: React.FC<TourTabProps> = ({
         </View>
       ) : null}
       <View style={themeStyle('tabs_activities_15', {  }, (theme ?? _styleTheme))}>
-            <Text style={styles.flightTitle}>Total activity cost: ${toursTotal.toFixed(2)}</Text>
+            <Text style={styles.flightTitle}>Total activity cost: {formatMoney(toursTotal, tripCurrency)}</Text>
         {payerTotalsList.length ? (
           <View style={themeStyle('tabs_activities_16', {  }, (theme ?? _styleTheme))}>
             {payerTotalsList.map(([id, total]) => (
               <Text key={id} style={styles.helperText}>
-                {payerName(id)}: ${total.toFixed(2)}
+                {payerName(id)}: {formatMoney(total, tripCurrency)}
               </Text>
             ))}
           </View>
@@ -1291,9 +1305,9 @@ export const ActivityTab: React.FC<TourTabProps> = ({
                   'Rating',
                   <ItemRating status={selectedTour.status} averageRating={selectedTour.averageRating} ratingCount={selectedTour.ratingCount} userStars={selectedTour.userStars} readOnly={readOnly} onRate={(stars) => rateTour(selectedTour.id, stars)} name={selectedTour.name || 'this activity'} testID={`activity-rating-${selectedTour.id}`} theme={theme} />
                 )}
-                {renderDetailRow('Cost', selectedTour.cost ? `$${selectedTour.cost}` : '-')}
+                {renderDetailRow('Cost', selectedTour.cost ? formatMoney(Number(selectedTour.cost), selectedTour.currency ?? 'USD') : '-')}
                 {renderDetailRow('Platform Booked On', selectedTour.bookedOn || '-')}
-                {renderDetailRow('Free Cancel By', selectedTour.freeCancelBy ? formatDateLong(selectedTour.freeCancelBy) : '-')}
+                {renderDetailRow('Free Cancel By', selectedTour.freeCancelBy ? formatDateLong(selectedTour.freeCancelBy) : 'N/A')}
                 {renderDetailRow('Reference', selectedTour.reference || '-')}
                 {renderDetailRow('Description', selectedTour.notes || '-')}
                 {renderDetailRow('Paid by', formatPeopleList(selectedTour.paidBy))}
@@ -1353,9 +1367,9 @@ export const ActivityTab: React.FC<TourTabProps> = ({
             { label: 'Start Location', value: selectedTour.startLocation || '-', onPress: selectedTour.startLocation?.trim() && onOpenMap ? () => onOpenMap(selectedTour.startLocation.trim()) : undefined },
             { label: 'Start Time', value: formatClockTime(selectedTour.startTime) || '-' },
             { label: 'Duration', value: selectedTour.duration || '-' },
-            { label: 'Cost', value: selectedTour.cost ? `$${selectedTour.cost}` : '-' },
+            { label: 'Cost', value: selectedTour.cost ? formatMoney(Number(selectedTour.cost), selectedTour.currency ?? 'USD') : '-' },
             { label: 'Platform Booked On', value: selectedTour.bookedOn || '-' },
-            { label: 'Free Cancel By', value: selectedTour.freeCancelBy ? formatDateLong(selectedTour.freeCancelBy) : '-' },
+            { label: 'Free Cancel By', value: selectedTour.freeCancelBy ? formatDateLong(selectedTour.freeCancelBy) : 'N/A' },
             { label: 'Reference', value: selectedTour.reference || '-' },
             { label: 'Description', value: selectedTour.notes || '-' },
             { label: 'Paid by', value: formatPeopleList(selectedTour.paidBy) },

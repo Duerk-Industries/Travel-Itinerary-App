@@ -13,7 +13,13 @@ export type AsyncItineraryTracker = {
   /** The original /api/itinerary/async request body, kept so a failed job can be retried
    * with the same inputs without sending the user back through the create-trip wizard. */
   request?: Record<string, unknown> | null;
+  /** When the job was started on this device (ms since epoch); a job that runs past MAX_PENDING_MS is stopped. */
+  startedAt?: number;
 };
+
+/** Generation that has not finished in this long is stopped, and the traveler is offered Retry. */
+export const MAX_PENDING_MS = 3 * 60 * 1000;
+export const TIMEOUT_MESSAGE = 'This is taking longer than expected, so it was stopped. Nothing was saved. Please try again.';
 
 type UseAsyncItineraryPollingParams = {
   asyncItineraryByTrip: Record<string, AsyncItineraryTracker>;
@@ -58,6 +64,11 @@ export function useAsyncItineraryPolling({
 
     const nextEntries = await Promise.all(
       currentPendingEntries.map(async ([tripId, tracker]) => {
+        if (tracker.startedAt && Date.now() - tracker.startedAt > MAX_PENDING_MS) {
+          // Stop the server-side job too, so it cannot save a half-wanted itinerary after the traveler retries.
+          void fetch(`${backendUrl}/api/itinerary/async/${encodeURIComponent(tracker.jobId)}/cancel`, { method: 'POST', headers: headersRef.current }).catch(() => undefined);
+          return [tripId, { ...tracker, status: 'failed' as const, error: TIMEOUT_MESSAGE }] as const;
+        }
         try {
           const res = await fetch(
             `${backendUrl}/api/itinerary/async/${encodeURIComponent(tracker.jobId)}`,
@@ -78,6 +89,9 @@ export function useAsyncItineraryPolling({
             const itineraryId =
               (data as any).itineraryId ?? (data as any).result?.itineraryId ?? null;
             return [tripId, { ...tracker, ...stageFields, status: 'completed' as const, itineraryId, error: undefined }] as const;
+          }
+          if (status === 'cancelled') {
+            return [tripId, { ...tracker, ...stageFields, status: 'failed' as const, error: 'Cancelled.' }] as const;
           }
           if (status === 'failed') {
             return [
