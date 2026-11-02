@@ -10,6 +10,7 @@ import {
   persistMapPreference,
 } from '../utils/mapLinks';
 import { defaultTemperatureUnitForRegion, type TemperatureUnit } from '../utils/temperatureUnit';
+import type { TimeFormat } from '../utils/timeFormat';
 
 export type AccountProfile = {
   firstName: string;
@@ -19,6 +20,7 @@ export type AccountProfile = {
   preferredAirport: string;
   appearancePreference: AppearancePreference;
   temperatureUnit: TemperatureUnit;
+  timeFormat?: TimeFormat;
   mapPreference?: MapApp;
   calendarPreference?: 'google' | 'apple';
   entitlements?: {

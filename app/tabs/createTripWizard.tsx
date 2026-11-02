@@ -81,6 +81,7 @@ import DateField from '../components/DateField';
 import CarRentalEditForm from '../components/CarRentalEditForm';
 import { createIdempotencyKey } from '../utils/idempotencyKey';
 import { fixedTableColumn } from '../utils/tableColumns';
+import { formatClockTime } from '../utils/timeFormat';
 
 type Suggestion = {
   id: string;
@@ -1989,7 +1990,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                           items.map(({ item, index }) => (
                             <View key={`${item.activity}-${index}`} style={styles.memberPill}>
                               <Text style={styles.cellText}>
-                                {item.time ? `${item.time} - ` : ''}{item.activity}
+                                {item.time ? `${formatClockTime(item.time)} - ` : ''}{item.activity}
                               </Text>
                               <TouchableOpacity onPress={() => setItineraryItems((prev) => prev.filter((_, i) => i !== index))}>
                                 <Text style={styles.removeText}>Remove</Text>

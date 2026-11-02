@@ -27,6 +27,7 @@ import { formatLocalDateOnly, parseLocalDateOnly } from '../utils/dateOnly';
 
 import NativeDateTimePicker from './NativeDateTimePicker';
 import NativeDatePickerSheet from './NativeDatePickerSheet';
+import { formatClockTime } from '../utils/timeFormat';
 
 export type DateFieldMode = 'date' | 'time';
 
@@ -94,10 +95,10 @@ const DateField: React.FC<DateFieldProps> = ({
   const webInputStyle = useMemo(
     // Precedence: theme input style < full-width defaults < caller `style` (e.g. a grid cell's
     // fixed width) < color-scheme, which always tracks the app appearance.
-    () => toWebStyle(themeStyle('components_DateField_1', { flattenStyle: flattenStyle, styles: styles, style: style }, (theme ?? _styleTheme)), {
+    () => toWebStyle(themeStyle('components_DateField_1', { flattenStyle: flattenStyle, styles: styles, style: style, empty: !value }, (theme ?? _styleTheme)), {
       colorScheme: theme?.mode === 'dark' ? 'dark' : 'light',
     }),
-    [styles, style, theme?.mode, _styleTheme]
+    [styles, style, theme?.mode, _styleTheme, value]
   );
 
   if (Platform.OS === 'web') {
@@ -142,7 +143,7 @@ const DateField: React.FC<DateFieldProps> = ({
         onPress={openPicker}
         disabled={disabled}
       >
-        <Text style={[styles.cellText, !value && themeStyle('components_DateField_3', { theme: theme }, (theme ?? _styleTheme))]}>{value || resolvedPlaceholder}</Text>
+        <Text style={[styles.cellText, !value && themeStyle('components_DateField_3', { theme: theme }, (theme ?? _styleTheme))]}>{(isTime ? formatClockTime(value) : value) || resolvedPlaceholder}</Text>
       </TouchableOpacity>
       <NativeDatePickerSheet
         visible={pickerOpen}

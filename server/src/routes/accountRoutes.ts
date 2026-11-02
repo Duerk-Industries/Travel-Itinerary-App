@@ -468,12 +468,16 @@ router.post('/age-verification/apple', async (req, res) => {
 router.patch('/profile', async (req, res) => {
   const user = (req as any).user as { userId: string; email: string };
   const body = req.body ?? {};
-  const { firstName, lastName, email, homeAddress, preferredAirport, mapPreference, calendarPreference, appearancePreference, temperatureUnit } = req.body ?? {};
-  const hasAnyProfileField = ['firstName', 'lastName', 'email', 'homeAddress', 'preferredAirport', 'mapPreference', 'calendarPreference', 'appearancePreference', 'temperatureUnit'].some((key) =>
+  const { firstName, lastName, email, homeAddress, preferredAirport, mapPreference, calendarPreference, appearancePreference, temperatureUnit, timeFormat } = req.body ?? {};
+  const hasAnyProfileField = ['firstName', 'lastName', 'email', 'homeAddress', 'preferredAirport', 'mapPreference', 'calendarPreference', 'appearancePreference', 'temperatureUnit', 'timeFormat'].some((key) =>
     Object.prototype.hasOwnProperty.call(body, key)
   );
   if (Object.prototype.hasOwnProperty.call(body, 'calendarPreference') && calendarPreference !== 'google' && calendarPreference !== 'apple') {
     res.status(400).json({ error: 'Calendar preference must be google or apple' });
+    return;
+  }
+  if (Object.prototype.hasOwnProperty.call(body, 'timeFormat') && timeFormat !== '12h' && timeFormat !== '24h') {
+    res.status(400).json({ error: 'Time format must be 12h or 24h' });
     return;
   }
   if (!hasAnyProfileField) {
@@ -491,6 +495,7 @@ router.patch('/profile', async (req, res) => {
       calendarPreference,
       appearancePreference: typeof appearancePreference === 'string' ? appearancePreference.trim().toLowerCase() : undefined,
       temperatureUnit: typeof temperatureUnit === 'string' ? temperatureUnit.trim().toLowerCase() : undefined,
+      timeFormat,
     });
     const role = await getUserRole(updated.id);
     const token = createToken({ userId: updated.id, email: updated.email, provider: 'email', role });

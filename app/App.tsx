@@ -208,6 +208,7 @@ import { horizontalTableLayout } from './utils/horizontalTableLayout';
 import { fixedTableColumn } from './utils/tableColumns';
 import { exportCsv } from './utils/csvExport';
 import type { PresenceUser } from '../packages/messaging/src/types';
+import { isTimeFormat, setTimeFormatPreference } from './utils/timeFormat';
 
 const WEB_DOCUMENT_TITLE = 'WanderBunnies | Collaborative Trip Planner';
 
@@ -794,6 +795,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const premiumOn = featurePremium && accountProfile.premiumEnabled !== false;
   const parsingAccess = premiumOn ? accountProfile.parsingAccess : undefined;
   const canImportTravel = Boolean(parsingAccess?.fileUpload || parsingAccess?.emailForwarding || parsingAccess?.gmailImport);
+  // Set while App renders, before any screen formats a time.
+  setTimeFormatPreference(isTimeFormat(accountProfile.timeFormat) ? accountProfile.timeFormat : null);
   const costTrackingAllowed = accountProfile.entitlements?.costTracking === true;
   const receiptScanningAllowed = accountProfile.entitlements?.receiptScanning === true;
   const aiItineraryGenerationAllowed = featureAiItineraryGeneration && accountProfile.entitlements?.aiItineraryGeneration === true;
@@ -3695,6 +3698,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   featureTapToEditTables={featureTapToEditTables}
                   featureActivityRecap={featureActivityRecap}
                   onOpenActivityRecap={setActivityRecapTarget}
+                  onOpenMap={openMaps}
                   compactActivityCards={showBottomTabs}
                   showSuggestions
                 />
@@ -3726,6 +3730,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               readOnly={isFollowingMode || offlineReadOnly}
               featureActivityRecap={featureActivityRecap}
               onOpenActivityRecap={setActivityRecapTarget}
+              onOpenMap={openMaps}
             />
           ) : null}
 

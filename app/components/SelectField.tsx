@@ -22,6 +22,8 @@ type SelectFieldProps = {
   listStyle?: any;
   testID?: string;
   disabled?: boolean;
+  /** Pick from a centered list on web too, instead of the browser's own dropdown (which opens wherever it likes). */
+  sheet?: boolean;
 };
 
 const SelectFieldComponent: React.FC<SelectFieldProps> = ({
@@ -36,6 +38,7 @@ const SelectFieldComponent: React.FC<SelectFieldProps> = ({
   listStyle,
   testID,
   disabled,
+  sheet = false,
 }) => {
   const _styleTheme = useStyleTheme();
   const [open, setOpen] = useState(false);
@@ -59,7 +62,7 @@ const SelectFieldComponent: React.FC<SelectFieldProps> = ({
     [onChange]
   );
 
-  if (Platform.OS === 'web') {
+  if (Platform.OS === 'web' && !sheet) {
     // Native HTML controls do not inherit React Native's Text styles.  Always
     // provide the same themed foreground/background/border as the shared
     // input style so selects remain readable in either appearance mode.
@@ -97,7 +100,7 @@ const SelectFieldComponent: React.FC<SelectFieldProps> = ({
       >
         <View style={styles.selectButtonRow}>
           <Text style={[styles.cellText, !value && styles.placeholderText]}>{selectedLabel}</Text>
-          <Text style={styles.selectCaret}>v</Text>
+          <Text style={styles.selectCaret}>▾</Text>
         </View>
       </TouchableOpacity>
       {open && !disabled ? (

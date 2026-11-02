@@ -5,6 +5,7 @@ import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-nativ
 import { decodeInviteCode, encodeInviteCode, InvitePayload } from '../utils/inviteCodes';
 import { copyToClipboard } from '../utils/clipboard';
 import { canAccessWebStorage, readAsync, writeAsync, removeAsync } from '../utils/persistentStorage';
+import { formatClockTime } from '../utils/timeFormat';
 
 export type FollowedTrip = {
   tripId: string;
@@ -348,7 +349,7 @@ export const FollowTab: React.FC<FollowTabProps> = ({
                 f.todayDetails.map((d) => (
                   <View key={d.id ?? `${f.tripId}-${d.activity}`} style={themeStyle('tabs_follow_2', {  }, _styleTheme)}>
                     <Text style={styles.bodyText}>
-                      {d.time ? `${d.time}  · ` : ''}
+                      {d.time ? `${formatClockTime(d.time)}  · ` : ''}
                       {d.activity}
                     </Text>
                   </View>

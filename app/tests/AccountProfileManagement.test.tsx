@@ -99,13 +99,21 @@ describe('AccountProfileManagement', () => {
     });
   });
 
+  it('switches between 24-hour and 12-hour times', () => {
+    const setAccountProfile = jest.fn();
+    const view = render(<AccountProfileManagement {...defaultProps} activePage="account-preferences" setAccountProfile={setAccountProfile} />);
+    expect(view.getByTestId('preferences-time-format-24h').props.accessibilityState).toMatchObject({ selected: true });
+    fireEvent.press(view.getByText('12-hour (2:30 PM)'));
+    expect(setAccountProfile.mock.calls[0][0](defaultProps.accountProfile)).toEqual({ ...defaultProps.accountProfile, timeFormat: '12h' });
+  });
+
   it('moves all preference controls off Profile and onto Preferences', () => {
     const view = render(<AccountProfileManagement {...defaultProps} />);
-    for (const label of ['Preferred maps app', 'Preferred calendar app', 'Appearance', 'Temperature', 'Update saved trips']) {
+    for (const label of ['Preferred maps app', 'Preferred calendar app', 'Appearance', 'Temperature', 'Time format', 'Update saved trips']) {
       expect(view.queryByText(label)).toBeNull();
     }
     view.rerender(<AccountProfileManagement {...defaultProps} activePage="account-preferences" />);
-    for (const label of ['Preferred maps app', 'Preferred calendar app', 'Appearance', 'Temperature', 'Update saved trips', 'Save Preferences']) {
+    for (const label of ['Preferred maps app', 'Preferred calendar app', 'Appearance', 'Temperature', 'Time format', 'Update saved trips', 'Save Preferences']) {
       expect(view.getByText(label)).toBeTruthy();
     }
     expect(view.queryByPlaceholderText('First name')).toBeNull();

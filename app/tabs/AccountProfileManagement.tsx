@@ -15,6 +15,7 @@ import { type MapApp, isMapApp, mapAppOptions } from '../utils/mapLinks';
 import { appearanceOptions, isAppearancePreference, type AppearancePreference } from '../utils/appearancePreference';
 import { normalizeTemperatureUnit, type TemperatureUnit } from '../utils/temperatureUnit';
 import { AccountProfile } from './account';
+import { isTimeFormat, normalizeTimeFormat, timeFormatOptions } from '../utils/timeFormat';
 
 type Setter<T> = React.Dispatch<React.SetStateAction<T>>;
 type Styles = ReturnType<typeof StyleSheet.create>;
@@ -289,6 +290,8 @@ const AccountProfileManagement = ({
         calendarPreference: accountProfile.calendarPreference ?? 'google',
         appearancePreference: accountProfile.appearancePreference ?? appearancePreference,
         temperatureUnit: accountProfile.temperatureUnit,
+        // Left out until picked, so saving other preferences does not switch device-formatted times to 24-hour.
+        timeFormat: accountProfile.timeFormat,
       } : { ...accountProfile, preferredAirport: parsePreferredAirportCode(accountProfile.preferredAirport), mapPreference: accountProfile.mapPreference ?? mapApp }),
     });
     const data = await res.json().catch(() => ({}));
@@ -323,6 +326,7 @@ const AccountProfileManagement = ({
       calendarPreference: isCalendarApp(updatedUser.calendarPreference) ? updatedUser.calendarPreference : accountProfile.calendarPreference ?? 'google',
       appearancePreference: nextAppearancePreference,
       temperatureUnit: nextTemperatureUnit,
+      timeFormat: isTimeFormat(updatedUser.timeFormat) ? updatedUser.timeFormat : accountProfile.timeFormat,
     });
     setAccountMessage(activePage === 'account-preferences' ? 'Preferences updated' : 'Profile updated');
   };
@@ -583,6 +587,33 @@ const AccountProfileManagement = ({
       </View>
       <Text style={styles.helperText}>
         Selected: {temperatureUnitOptions.find((opt) => opt.key === normalizeTemperatureUnit(accountProfile.temperatureUnit))?.label ?? 'Fahrenheit'}
+      </Text>
+      <Text style={styles.modalLabel}>Time format</Text>
+      <View style={[styles.row, themeStyle('tabs_AccountProfileManagement_8', {  }, (theme ?? _styleTheme))]}>
+        {timeFormatOptions.map((opt) => {
+          const selected = normalizeTimeFormat(accountProfile.timeFormat) === opt.key;
+          return (
+            <TouchableOpacity
+              key={opt.key}
+              testID={`preferences-time-format-${opt.key}`}
+              accessibilityRole="button"
+              accessibilityState={{ selected }}
+              style={[
+                styles.mapOptionButton,
+                selected && styles.mapOptionActive,
+                themeStyle('tabs_AccountProfileManagement_9', {  }, (theme ?? _styleTheme)),
+              ]}
+              onPress={() => {
+                setAccountProfile((p) => ({ ...p, timeFormat: opt.key }));
+              }}
+            >
+              <Text style={[styles.mapOptionText, selected && styles.mapOptionActiveText]}>{opt.label}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+      <Text style={styles.helperText}>
+        Selected: {timeFormatOptions.find((opt) => opt.key === normalizeTimeFormat(accountProfile.timeFormat))?.label}
       </Text>
       <OfflineDownloadSettings styles={styles} />
       <TouchableOpacity style={styles.button} onPress={handleProfileUpdate} accessibilityRole="button">

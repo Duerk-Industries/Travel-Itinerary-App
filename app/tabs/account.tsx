@@ -19,6 +19,7 @@ import { useBillingStatus } from '../hooks/useBillingStatus';
 import { fetchBillingPlans, type PlanInfo } from '../utils/billing';
 
 import { type Trait } from './traits';
+import { isTimeFormat, type TimeFormat } from '../utils/timeFormat';
 
 type Setter<T> = React.Dispatch<React.SetStateAction<T>>;
 
@@ -32,6 +33,7 @@ export interface AccountProfile {
   calendarPreference?: 'google' | 'apple';
   appearancePreference: AppearancePreference;
   temperatureUnit: TemperatureUnit;
+  timeFormat?: TimeFormat;
   entitlements?: {
     costTracking?: boolean;
     receiptScanning?: boolean;
@@ -116,6 +118,7 @@ export const fetchAccountProfile = async ({
       calendarPreference: isCalendarApp(data.calendarPreference) ? data.calendarPreference : 'google',
       appearancePreference: appearancePreference ?? prev.appearancePreference ?? 'auto',
       temperatureUnit,
+      timeFormat: isTimeFormat(data.timeFormat) ? data.timeFormat : undefined,
       entitlements: data.entitlements ?? prev.entitlements,
       tierKey: data.tierKey ?? prev.tierKey,
       premiumEnabled: typeof data.premiumEnabled === 'boolean' ? data.premiumEnabled : prev.premiumEnabled,

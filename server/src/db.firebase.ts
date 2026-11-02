@@ -1808,6 +1808,7 @@ export const getWebUserProfile = async (userId: string): Promise<WebUser | null>
       calendarPreference: data.calendarPreference ?? null,
       appearancePreference: data.appearancePreference ?? null,
       temperatureUnit: data.temperatureUnit ?? null,
+      timeFormat: data.timeFormat ?? null,
     };
   }
 
@@ -1825,6 +1826,7 @@ export const getWebUserProfile = async (userId: string): Promise<WebUser | null>
       calendarPreference: data.calendarPreference ?? null,
       appearancePreference: data.appearancePreference ?? null,
       temperatureUnit: data.temperatureUnit ?? null,
+      timeFormat: data.timeFormat ?? null,
     };
   }
 
@@ -1843,6 +1845,7 @@ export const updateWebUserProfile = async (
     calendarPreference?: string;
     appearancePreference?: string;
     temperatureUnit?: string;
+    timeFormat?: string;
     age?: number;
     gender?: string;
   }
@@ -1878,6 +1881,7 @@ export const updateWebUserProfile = async (
         : typeof (payload as any).temperatureUnit === 'undefined'
           ? undefined
           : null,
+    timeFormat: payload.timeFormat === '12h' || payload.timeFormat === '24h' ? payload.timeFormat : undefined,
   });
   await db.collection('web_users').doc(userId).update(updates);
   const updated = await db.collection('web_users').doc(userId).get();
@@ -1893,6 +1897,7 @@ export const updateWebUserProfile = async (
     calendarPreference: data.calendarPreference ?? null,
     appearancePreference: data.appearancePreference ?? null,
     temperatureUnit: data.temperatureUnit ?? null,
+    timeFormat: data.timeFormat ?? null,
   };
 };
 

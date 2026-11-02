@@ -24,6 +24,7 @@ import { buildDaySegments, formatGapLabel } from '../utils/blogDaySegments';
 import { useBlogMediaUrlRefresh } from '../hooks/useBlogMediaUrlRefresh';
 import { loadSession } from '../utils/session';
 import { createIdempotencyKey } from '../utils/idempotencyKey';
+import { clockOptions } from '../utils/timeFormat';
 
 type PublicBlogItem = {
   id: string;
@@ -115,7 +116,7 @@ const ROLE_LABEL = (role: string): string => (role === 'follower' ? 'Follower' :
 const formatCommentWhen = (iso: string): string => {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  return date.toLocaleString(undefined, { month: 'short', day: 'numeric', ...clockOptions() });
 };
 
 const COMMENT_PAGE = 20;

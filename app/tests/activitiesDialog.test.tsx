@@ -112,6 +112,7 @@ const renderActivityHarness = (
   featureStandardizedItemDialogs = false,
   theme?: any,
   compactActivityCards = false,
+  onOpenMap?: (address: string) => void,
 ) => {
   const Harness = () => {
     const [tours, setTours] = useState<Tour[]>(initialTours);
@@ -141,6 +142,7 @@ const renderActivityHarness = (
         featureStandardizedItemDialogs={featureStandardizedItemDialogs}
         theme={theme}
         compactActivityCards={compactActivityCards}
+        onOpenMap={onOpenMap}
       />
     );
   };
@@ -149,12 +151,37 @@ const renderActivityHarness = (
 };
 
 describe('Activity dialog layout', () => {
+  describe('start location', () => {
+    it('opens in maps from the phone card, without opening the details', () => {
+      const onOpenMap = jest.fn();
+      const screen = renderActivityHarness([sampleTour], undefined, false, undefined, true, onOpenMap);
+      fireEvent.press(screen.getByTestId('activity-details-tour-1-location'));
+      expect(onOpenMap).toHaveBeenCalledWith('Old Town');
+      expect(screen.queryByTestId('activity-details-modal')).toBeNull();
+    });
+
+    it.each([false, true])('opens in maps from the activity details (standardized dialog: %s)', (standardized) => {
+      const onOpenMap = jest.fn();
+      const screen = renderActivityHarness([sampleTour], undefined, standardized, undefined, false, onOpenMap);
+      fireEvent.press(screen.getByTestId('activity-details-tour-1'));
+      fireEvent.press(standardized ? screen.getByText('Old Town') : screen.getByTestId('activity-location-tour-1'));
+      expect(onOpenMap).toHaveBeenCalledWith('Old Town');
+    });
+
+    it('stays plain text when there is nowhere to send it', () => {
+      const screen = renderActivityHarness([sampleTour], undefined, false, undefined, true);
+      expect(screen.queryByTestId('activity-details-tour-1-location')).toBeNull();
+      expect(screen.getByText('10:00 · Old Town · 2h')).toBeTruthy();
+    });
+  });
+
   it('uses itinerary summaries on mobile and opens activity details instead of the editor', () => {
     const screen = renderActivityHarness([sampleTour], undefined, false, undefined, true);
     expect(screen.getByTestId('activity-summary-list')).toBeTruthy();
     expect(screen.queryByTestId('activity-table-header')).toBeNull();
     expect(screen.getByText('10:00 · Old Town · 2h')).toBeTruthy();
     expect(screen.getByText(sampleTour.notes!)).toBeTruthy();
+    expect(screen.getByText('Travelers: Bryan Duerk')).toBeTruthy();
     fireEvent.press(screen.getByTestId('activity-details-tour-1'));
     expect(screen.getByTestId('activity-details-modal')).toBeTruthy();
     expect(screen.queryByTestId('activity-form-modal')).toBeNull();
@@ -288,14 +315,14 @@ describe('Activity dialog layout', () => {
     const headerLabels = React.Children.toArray(getByTestId('activity-table-header').props.children).map(
       (cell: any) => cell.props.children.props.children
     );
-    expect(headerLabels).toEqual(['Date', 'Type', 'Activity', 'Start Time', 'Duration', 'Status', 'Rating']);
+    expect(headerLabels).toEqual(['Date', 'Type', 'Activity', 'Start Time', 'Duration', 'Status', 'Attendees', 'Rating']);
 
     expect(queryByText('Platform Booked On')).toBeNull();
     expect(queryByText('Free Cancel By')).toBeNull();
     expect(queryByText('Reference')).toBeNull();
     expect(queryByText('Description')).toBeNull();
     expect(queryByText('Paid by')).toBeNull();
-    expect(queryByText('Attendees')).toBeNull();
+    expect(getByTestId(`activity-attendees-${sampleTour.id}`).props.children).toBe('Bryan Duerk');
     expect(queryByText('Votes')).toBeNull();
     expect(queryByText('Actions')).toBeNull();
     expect(queryByTestId('activity-edit-tour-1')).toBeNull();
@@ -308,7 +335,7 @@ describe('Activity dialog layout', () => {
     expect(getByText('Reference')).toBeTruthy();
     expect(getByText('Description')).toBeTruthy();
     expect(getByText('Paid by')).toBeTruthy();
-    expect(getByText('Attendees')).toBeTruthy();
+    expect(within(getByTestId('activity-details-modal')).getByText('Attendees')).toBeTruthy();
     expect(queryByText('Votes')).toBeNull();
     expect(getByText('Actions')).toBeTruthy();
     expect(getByText('Viator')).toBeTruthy();

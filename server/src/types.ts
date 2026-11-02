@@ -306,6 +306,8 @@ export interface WebUser {
   calendarPreference?: 'google' | 'apple' | null;
   appearancePreference?: 'light' | 'dark' | 'auto' | null;
   temperatureUnit?: 'fahrenheit' | 'celsius' | null;
+  /** How clock times are shown: 24-hour (default) or 12-hour with AM/PM. */
+  timeFormat?: '12h' | '24h' | null;
   emailVerified?: boolean;
   firstLoginAt?: string | null;
   lastLoginAt?: string | null;

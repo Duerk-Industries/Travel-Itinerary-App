@@ -535,6 +535,7 @@ export const initDb = async (): Promise<void> => {
       calendar_preference TEXT,
       appearance_preference TEXT,
       temperature_unit TEXT,
+      time_format TEXT,
       password_hash TEXT NOT NULL,
       salt TEXT NOT NULL,
       first_login_at TIMESTAMP,
@@ -554,6 +555,7 @@ export const initDb = async (): Promise<void> => {
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS calendar_preference TEXT;`);
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS appearance_preference TEXT;`);
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS temperature_unit TEXT;`);
+  await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS time_format TEXT;`);
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS password_hash TEXT;`);
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS salt TEXT;`);
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS first_login_at TIMESTAMP;`);
@@ -2466,6 +2468,7 @@ export const getWebUserProfile = async (
   calendarPreference?: 'google' | 'apple' | null;
   appearancePreference?: 'light' | 'dark' | 'auto' | null;
   temperatureUnit?: 'fahrenheit' | 'celsius' | null;
+  timeFormat?: '12h' | '24h' | null;
 } | null> => {
   const p = getPool();
   const { rows } = await p.query<{
@@ -2479,8 +2482,9 @@ export const getWebUserProfile = async (
     calendar_preference: string | null;
     appearance_preference: string | null;
     temperature_unit: string | null;
+    time_format: string | null;
   }>(
-    `SELECT id, email, first_name, last_name, home_address, preferred_airport, map_preference, calendar_preference, appearance_preference, temperature_unit FROM web_users WHERE id = $1 LIMIT 1`,
+    `SELECT id, email, first_name, last_name, home_address, preferred_airport, map_preference, calendar_preference, appearance_preference, temperature_unit, time_format FROM web_users WHERE id = $1 LIMIT 1`,
     [userId]
   );
   if (rows.length) {
@@ -2496,6 +2500,7 @@ export const getWebUserProfile = async (
       calendarPreference: row.calendar_preference === 'google' || row.calendar_preference === 'apple' ? row.calendar_preference : null,
       appearancePreference: row.appearance_preference === 'light' || row.appearance_preference === 'dark' || row.appearance_preference === 'auto' ? row.appearance_preference : null,
       temperatureUnit: row.temperature_unit === 'fahrenheit' || row.temperature_unit === 'celsius' ? row.temperature_unit : null,
+      timeFormat: row.time_format === '12h' || row.time_format === '24h' ? row.time_format : null,
     };
   }
 
@@ -2523,6 +2528,7 @@ export const updateWebUserProfile = async (
     calendarPreference?: string;
     appearancePreference?: string;
     temperatureUnit?: string;
+    timeFormat?: string;
   }
 ): Promise<{
   id: string;
@@ -2535,6 +2541,7 @@ export const updateWebUserProfile = async (
   calendarPreference?: 'google' | 'apple' | null;
   appearancePreference?: 'light' | 'dark' | 'auto' | null;
   temperatureUnit?: 'fahrenheit' | 'celsius' | null;
+  timeFormat?: '12h' | '24h' | null;
 }> => {
   const p = getPool();
   const client = await p.connect();
@@ -2581,6 +2588,7 @@ export const updateWebUserProfile = async (
       updates.temperatureUnit === 'fahrenheit' || updates.temperatureUnit === 'celsius'
         ? updates.temperatureUnit
         : null;
+    const normalizedTimeFormat = updates.timeFormat === '12h' || updates.timeFormat === '24h' ? updates.timeFormat : null;
 
     const { rows } = await client.query(
       `
@@ -2593,7 +2601,8 @@ export const updateWebUserProfile = async (
         map_preference = CASE WHEN $6::text IS NULL THEN map_preference ELSE NULLIF($6::text, '') END,
         appearance_preference = CASE WHEN $7::text IS NULL THEN appearance_preference ELSE NULLIF($7::text, '') END,
         temperature_unit = CASE WHEN $8::text IS NULL THEN temperature_unit ELSE NULLIF($8::text, '') END,
-        calendar_preference = COALESCE($9::text, calendar_preference)
+        calendar_preference = COALESCE($9::text, calendar_preference),
+        time_format = COALESCE($10::text, time_format)
       WHERE id = $1
       RETURNING
         id,
@@ -2605,7 +2614,8 @@ export const updateWebUserProfile = async (
         map_preference as "mapPreference",
         calendar_preference as "calendarPreference",
         appearance_preference as "appearancePreference",
-        temperature_unit as "temperatureUnit"
+        temperature_unit as "temperatureUnit",
+        time_format as "timeFormat"
     `,
       [
         userId,
@@ -2617,6 +2627,7 @@ export const updateWebUserProfile = async (
         normalizedAppearancePreference,
         normalizedTemperatureUnit,
         normalizedCalendarPreference,
+        normalizedTimeFormat,
       ]
     );
 
