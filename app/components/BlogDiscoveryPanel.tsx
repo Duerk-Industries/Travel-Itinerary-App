@@ -4,11 +4,9 @@ import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useState } from 'react';
 import { ActivityIndicator, Linking, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { buildMapUrl, loadStoredMapPreference } from '../utils/mapLinks';
-import { createIdempotencyKey } from '../utils/idempotencyKey';
-import { formatStarMarks } from '../utils/votes';
+import { placeRatingProblem, saveBlogPlaceRating } from '../utils/blogPlaceRating';
 import StarRating from './StarRating';
 
-const escapeHtml = (text: string): string => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 type Props = {
   backendUrl: string;
@@ -73,30 +71,13 @@ const BlogDiscoveryPanel: React.FC<Props> = ({ backendUrl, headers, tripId, sear
 
   const saveRating = async (place: any) => {
     if (!rating || busy) return;
-    const note = rating.note.trim();
-    if (rating.stars === null && !note) { setNotice('Choose a star rating or write a note first.'); return; }
-    if (note && !place.firstDate) { setNotice('This place has no date yet, so a note cannot be filed. Give it a star rating, or add the date to its activity.'); return; }
+    const problem = placeRatingProblem({ name: place.name, firstDate: place.firstDate }, rating.stars, rating.note);
+    if (problem) { setNotice(problem); return; }
     setBusy('rate'); setNotice('');
     try {
-      const parts: string[] = [];
-      if (rating.stars !== null) {
-        const response = await fetch(`${backendUrl}/api/trips/${tripId}/blog/places/rating`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify({ place: place.name, stars: rating.stars }) });
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(data.error || 'Unable to save your rating');
-        parts.push(data.rated > 0 ? 'Your rating is saved.' : data.matched > 0 ? "Your rating will count once the activity is marked Completed." : 'No activity or stay is recorded for this place, so the rating was not kept.');
-      }
-      if (note) {
-        const mark = rating.stars !== null ? `${formatStarMarks(rating.stars)} ` : '';
-        const response = await fetch(`${backendUrl}/api/trips/${tripId}/blog/items`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Idempotency-Key': createIdempotencyKey('place-note'), ...headers },
-          body: JSON.stringify({ kindKey: 'core.text', dayDate: place.firstDate, body: `<p><strong>${mark}${escapeHtml(place.name)}</strong></p><p>${escapeHtml(note)}</p>`, tags: ['Place rating'] }),
-        });
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(`${parts.join(' ')} ${data.error || 'Your note could not be saved.'}`.trim());
-        parts.push(`Your note is on ${place.firstDate}.`);
-      }
-      setNotice(parts.join(' '));
+      const result = await saveBlogPlaceRating({ backendUrl, headers, tripId, place: { name: place.name, firstDate: place.firstDate }, stars: rating.stars, note: rating.note });
+      setNotice(result.message);
+      if (!result.ok) return;
       setRating(null);
       onRated?.();
     } catch (error: any) { setNotice(error.message || 'Unable to save your rating'); }

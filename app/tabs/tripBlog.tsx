@@ -45,6 +45,7 @@ import DayMediaGallery from '../components/DayMediaGallery';
 import DayMediaLightbox from '../components/DayMediaLightbox';
 import TripRecapCards from '../components/TripRecapCards';
 import BlogDiscoveryPanel from '../components/BlogDiscoveryPanel';
+import BlogDayPlaceRatings from '../components/BlogDayPlaceRatings';
 import BlogKeepsakeButton from '../components/BlogKeepsakeButton';
 import {
   SUPPORTED_MIME_TYPES,
@@ -1698,6 +1699,16 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], t
                   );
                 })()}
               </View>
+            ) : null}
+            {!readOnly && !publicPreview && activeTripId ? (
+              <BlogDayPlaceRatings
+                backendUrl={backendUrl}
+                headers={headers}
+                tripId={activeTripId}
+                activities={(tours as any[]).filter((tour) => String(tour?.date ?? '').slice(0, 10) === day.localDate && tour?.name).map((tour) => ({ id: String(tour.id), name: String(tour.name), date: day.localDate, userStars: tour.userStars ?? null }))}
+                onNoteAdded={() => { void load(); }}
+                theme={theme}
+              />
             ) : null}
             {!publicPreview && dayMapPoints[day.localDate] ? (
               <View style={themeStyle('tabs_tripBlog_83', {  }, (theme ?? _styleTheme))}>

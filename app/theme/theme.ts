@@ -4343,6 +4343,15 @@ const styleFactories = {
   components_ExpenseReceiptPanel_1: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ display: 'none' }),
   // components/ExpenseReceiptPanel.tsx
   components_ExpenseReceiptPanel_2: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ width: '100%', height: 320, backgroundColor: _theme.colors.surfaceMuted }),
+  // components/BlogDayPlaceRatings.tsx
+  components_BlogDayPlaceRatings_1: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ marginTop: 8, padding: 10, borderWidth: 1, borderRadius: 8, borderColor: _theme.colors.border, backgroundColor: _theme.colors.surface }),
+  components_BlogDayPlaceRatings_2: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ fontSize: 14, fontWeight: '700', color: _theme.colors.text, marginBottom: 6 }),
+  components_BlogDayPlaceRatings_3: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ marginBottom: 10 }),
+  components_BlogDayPlaceRatings_4: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ fontSize: 14, color: _theme.colors.text, marginBottom: 2 }),
+  components_BlogDayPlaceRatings_5: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ borderWidth: 1, borderColor: _theme.colors.border, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 6, color: _theme.colors.text, marginTop: 4 }),
+  components_BlogDayPlaceRatings_6: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ marginTop: 6, minHeight: 44, minWidth: 44, justifyContent: 'center', alignItems: 'center', alignSelf: 'flex-start', paddingHorizontal: 12, borderRadius: 6, backgroundColor: _theme.colors.link }),
+  components_BlogDayPlaceRatings_7: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ fontSize: 14, fontWeight: '600', color: _theme.colors.onAccent }),
+  components_BlogDayPlaceRatings_8: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ fontSize: 13, color: _theme.colors.textMuted, marginTop: 4 }),
   // components/ReceiptThumbnail.tsx
   components_ReceiptThumbnail_1: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ width: 28, height: 28, borderRadius: 4, marginRight: 6, backgroundColor: _theme.colors.surfaceMuted }),
   // components/PublicTripBlogPage.tsx
