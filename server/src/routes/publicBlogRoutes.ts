@@ -1,3 +1,4 @@
+import { evaluateBlogVisibility } from '../services/blogVisibilityService';
 import { readBlogMaps } from '../services/blogMapService';
 import { Router } from 'express';
 import { queryBlog } from '../db.postgres';
@@ -14,6 +15,17 @@ import { verifyToken } from '../auth';
 import { isFollowerCommentingEnabled, resolveActorMembership } from '../services/blogEngagementService';
 
 const router = Router();
+router.use('/:username/:tripSlug', async (req, res, next) => {
+  res.setHeader('Cache-Control', 'private, no-store');
+  try {
+    const tripId = getCurrentDbProvider() === 'firebase'
+      ? await (await import('../blog/firebasePublicationRepository')).resolveBlogAliasTripIdFirebase(req.params.username, req.params.tripSlug)
+      : (await queryBlog<{ trip_id: string }>('SELECT trip_id FROM blog_public_aliases WHERE username_slug=$1 AND trip_slug=$2 AND (redirect_until IS NULL OR redirect_until > NOW()::timestamp) ORDER BY canonical DESC LIMIT 1', [req.params.username.toLowerCase(), req.params.tripSlug.toLowerCase()])).rows[0]?.trip_id;
+    if (!tripId || !(await evaluateBlogVisibility(String(tripId))).isPublic) return void res.status(404).json({ error: 'Public blog not found' });
+    next();
+  } catch { res.status(503).json({ error: 'Public blog temporarily unavailable' }); }
+});
+
 
 // Public-reader page media — mirrors attachMediaUrls in blogRoutes.ts exactly (same rendition
 // naming, same signing), but only ever called on items whose audience is already 'public' (both
@@ -207,7 +219,7 @@ router.get('/:username/:tripSlug/engagement', async (req, res) => {
 
   const visitorId = String(req.get('X-Public-Visitor-Id') ?? '');
   const hasVisitor = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(visitorId);
-  res.setHeader('Cache-Control', hasVisitor ? 'private, no-store' : 'public, max-age=15, stale-while-revalidate=45');
+  res.setHeader('Cache-Control', 'private, no-store');
 
   if (!dayDate) {
     const postTargets = await publicPostTargets(resolved.tripId, username, tripSlug);
@@ -249,7 +261,6 @@ const resolvePublicTripIdPostgres = async (
 ): Promise<{ tripId: string; days: Array<{ id: string; localDate: string }> } | null> => {
   const alias = await queryBlog<{ trip_id: string }>(
     `SELECT a.trip_id FROM blog_public_aliases a
-     JOIN blog_publication_epochs e ON e.trip_id = a.trip_id AND e.state = 'public'
      WHERE a.username_slug = $1 AND a.trip_slug = $2 AND (a.redirect_until IS NULL OR a.redirect_until > NOW()::timestamp)
      ORDER BY a.canonical DESC LIMIT 1`,
     [username.toLowerCase(), tripSlug.toLowerCase()]
@@ -398,15 +409,15 @@ router.get('/:username/:tripSlug', async (req, res) => {
     const blog = await getPublicBlogFirebase(String(req.params.username), String(req.params.tripSlug));
     if (!blog) return res.status(404).json({ error: 'Public blog not found' });
     await attachPublicMediaUrls([...blog.days, { items: blog.tripPhotos ?? [] }]);
-    res.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
+    res.setHeader('Cache-Control', 'private, no-store');
     res.setHeader('X-Robots-Tag', blog.indexingEnabled ? 'index,follow' : 'noindex');
     return res.json(blog);
   }
-  const alias = await queryBlog<any>(`SELECT a.trip_id, a.username_slug, a.trip_slug, b.title, b.subtitle, b.introduction, b.content_revision, b.visibility_epoch, b.indexing_enabled FROM blog_public_aliases a JOIN trip_blogs b ON b.trip_id = a.trip_id JOIN blog_publication_epochs e ON e.trip_id = a.trip_id AND e.state = 'public' WHERE a.username_slug = $1 AND a.trip_slug = $2 AND (a.redirect_until IS NULL OR a.redirect_until > NOW()::timestamp) ORDER BY a.canonical DESC LIMIT 1`, [String(req.params.username).toLowerCase(), String(req.params.tripSlug).toLowerCase()]);
+  const alias = await queryBlog<any>(`SELECT a.trip_id, a.username_slug, a.trip_slug, b.title, b.subtitle, b.introduction, b.content_revision, b.visibility_epoch, b.indexing_enabled FROM blog_public_aliases a JOIN trip_blogs b ON b.trip_id = a.trip_id WHERE a.username_slug = $1 AND a.trip_slug = $2 AND (a.redirect_until IS NULL OR a.redirect_until > NOW()::timestamp) ORDER BY a.canonical DESC LIMIT 1`, [String(req.params.username).toLowerCase(), String(req.params.tripSlug).toLowerCase()]);
   if (!alias.rows[0]) return res.status(404).json({ error: 'Public blog not found' });
   const row = alias.rows[0];
   const document = await loadPostgresPublicDocument(row.trip_id, { title: row.title, subtitle: row.subtitle, introduction: row.introduction, contentRevision: row.content_revision, visibilityEpoch: row.visibility_epoch });
-  res.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=300'); res.setHeader('X-Robots-Tag', row.indexing_enabled ? 'index,follow' : 'noindex');
+  res.setHeader('Cache-Control', 'private, no-store'); res.setHeader('X-Robots-Tag', row.indexing_enabled ? 'index,follow' : 'noindex');
   res.json(document);
 });
 export default router;

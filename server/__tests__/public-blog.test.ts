@@ -91,6 +91,9 @@ describe('Public Blog API', () => {
     expect(maps.headers['cache-control']).toContain('no-store');
     expect(maps.body.days).toEqual([]);
     await setStoredVisibility(publishedTripId, 'private');
+    const db = await import('../src/db');
+    const context = await db.loadBlogVisibilityContext(publishedTripId);
+    await db.writeBlogPrivacyChoice(publishedTripId, context!.members[0].userId, { optOut: true });
     if (getCurrentDbProvider() === 'firebase') {
       const { getDb } = require('../src/db.firebase') as typeof import('../src/db.firebase');
       const epochs = await getDb().collection('blog_publication_epochs').where('tripId', '==', publishedTripId).get();

@@ -153,9 +153,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], t
   const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [publication, setPublication] = useState(null);
-  const [publicationBusy, setPublicationBusy] = useState(false);
   const [showPublicPreview, setShowPublicPreview] = useState(false);
-  const [publicationNotice, setPublicationNotice] = useState('');
   const [editMode, setEditMode] = useState(false);
   const [settingCoverForDay, setSettingCoverForDay] = useState(null);
   const [lightboxDay, setLightboxDay] = useState(null);
@@ -231,7 +229,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], t
   // figure, the traveler-only places index, search). A follower has nothing in it — don't show an
   // empty collapsible.
   const blogToolsHasContent =
-    canEdit ||
+    !readOnly ||
     Boolean(capabilities.trip_blog_search) ||
     Boolean(capabilities.trip_blog_places && !readOnly) ||
     Boolean(capabilities.trip_blog_spend_summary && !readOnly);
@@ -626,75 +624,6 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], t
 
   const refreshBlogAndPublication = async () => {
     await Promise.all([load(), loadPublicationStatus()]);
-  };
-
-  const requestPublication = async () => {
-    if (!activeTripId || !canEdit || publicationBusy) return;
-    setPublicationBusy(true);
-    setPublicationNotice('');
-    try {
-      const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/publication/request`, {
-        method: 'POST',
-        headers: { ...headers, 'Content-Type': 'application/json' },
-      });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.error || 'Unable to publish this blog');
-      setPublicationNotice(data.state === 'public'
-        ? 'Your blog is now public.'
-        : 'Publication requested. Other adult travelers must approve before it becomes public.');
-      await refreshBlogAndPublication();
-    } catch (error) {
-      setPublicationNotice(error.message || 'Unable to publish this blog');
-    } finally {
-      setPublicationBusy(false);
-    }
-  };
-
-  const respondToPublication = async (decision) => {
-    if (!activeTripId || !canEdit || !publication?.epoch || publicationBusy) return;
-    setPublicationBusy(true);
-    setPublicationNotice('');
-    try {
-      const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/publication/${publication.epoch}/consent`, {
-        method: 'POST',
-        headers: { ...headers, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ decision }),
-      });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.error || 'Unable to update publication consent');
-      setPublicationNotice(decision === 'approved' ? 'Consent recorded.' : 'Publication declined.');
-      await refreshBlogAndPublication();
-    } catch (error) {
-      setPublicationNotice(error.message || 'Unable to update publication consent');
-    } finally {
-      setPublicationBusy(false);
-    }
-  };
-
-  // Public viewing is on by default when every traveler qualifies (16+ with a date of birth, and
-  // none has a private profile default). Any traveler can opt this trip's blog out here; travelers
-  // and followers always keep access. Clearing the opt-out re-publishes it if everyone qualifies.
-  const setPublicOptOut = async (optOut) => {
-    if (!activeTripId || !canEdit || publicationBusy) return;
-    setPublicationBusy(true);
-    setPublicationNotice('');
-    try {
-      const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog`, {
-        method: 'PATCH',
-        headers: { ...headers, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ publicOptOut: optOut }),
-      });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.error || 'Unable to update public viewing');
-      if (optOut) setPublicationNotice('Public viewing is off. Travelers and followers can still see this blog.');
-      else if (data.visibilityState === 'public') setPublicationNotice('Your blog is public again.');
-      else setPublicationNotice('Public viewing is allowed again. The blog goes public once every traveler is 16+ with a date of birth in their profile and none has chosen private.');
-      await refreshBlogAndPublication();
-    } catch (error) {
-      setPublicationNotice(error.message || 'Unable to update public viewing');
-    } finally {
-      setPublicationBusy(false);
-    }
   };
 
   // Followers' approximate maps: off until a traveler has seen exactly what would be shown.
@@ -1104,7 +1033,6 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], t
     setCursor(null);
     setEditMode(false);
     setAddingDay(null);
-    setPublicationNotice('');
     setCapabilities({});
     setRecap(null);
     setRecapNotice(null);
@@ -1380,7 +1308,6 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], t
   // unmount and snap back to the top. A slim "Updating…" bar (below) signals the refresh.
   if (loading && !blog) return <View style={themeStyle('tabs_tripBlog_2', {  }, (theme ?? _styleTheme))}><ActivityIndicator /></View>;
   const publicationState = publication?.state ?? blog?.visibilityState ?? 'private';
-  const hasPendingConsent = publicationState === 'pending_consent' && publication?.userDecision === 'pending';
   // FR-A5.2: a visible Saving…/Saved/Not saved state for any autosaved field, shared by the
   // masthead, every day's headline/summary, and every item body.
   const saveStateLabel = (key) => {
@@ -2181,7 +2108,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], t
           </TouchableOpacity>
           {showBlogTools ? (
             <View testID="blog-tools-panel" style={themeStyle('tabs_tripBlog_135', { surfaceColor: surfaceColor }, (theme ?? _styleTheme))}>
-              {canEdit && activeTripId ? (
+              {!readOnly && activeTripId ? (
                 <>
                   <TouchableOpacity testID="blog-public-preview-open" accessibilityRole="button" style={styles.button} onPress={() => setShowPublicPreview(true)}>
                     <Text style={styles.buttonText}>Preview as public</Text>
@@ -2189,50 +2116,17 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], t
                   <BlogPublicPreview visible={showPublicPreview} tripId={activeTripId} headers={headers} onClose={() => setShowPublicPreview(false)} styles={styles} />
                 </>
               ) : null}
-              {canEdit ? (
+              {!readOnly ? (
                 <View style={themeStyle('tabs_tripBlog_136', { borderColor: borderColor, inputColor: inputColor }, (theme ?? _styleTheme))}>
-                  <View style={themeStyle('tabs_tripBlog_137', {  }, (theme ?? _styleTheme))}>
-                    <Text style={themeStyle('tabs_tripBlog_138', { textColor: textColor }, (theme ?? _styleTheme))}>
-                      Public viewing: {publicationState === 'public' ? 'On' : publicationState === 'pending_consent' ? 'Awaiting consent' : 'Off'}
-                    </Text>
-                    {publicationState === 'public' ? (
-                      <TouchableOpacity testID="blog-make-private" accessibilityRole="button" style={[styles.button, themeStyle('tabs_tripBlog_139', { theme: theme }, (theme ?? _styleTheme))]} disabled={publicationBusy} onPress={() => setPublicOptOut(true)}>
-                        <Text style={themeStyle('tabs_tripBlog_140', { textColor: textColor }, (theme ?? _styleTheme))}>{publicationBusy ? 'Updating…' : 'Make private'}</Text>
-                      </TouchableOpacity>
-                    ) : hasPendingConsent ? (
-                      <View style={themeStyle('tabs_tripBlog_141', {  }, (theme ?? _styleTheme))}>
-                        <TouchableOpacity style={[styles.button, themeStyle('tabs_tripBlog_142', {  }, (theme ?? _styleTheme))]} disabled={publicationBusy} onPress={() => respondToPublication('approved')}>
-                          <Text style={styles.buttonText}>{publicationBusy ? 'Updating…' : 'Approve'}</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={[styles.button, themeStyle('tabs_tripBlog_143', { theme: theme }, (theme ?? _styleTheme))]} disabled={publicationBusy} onPress={() => respondToPublication('declined')}>
-                          <Text style={themeStyle('tabs_tripBlog_144', { textColor: textColor }, (theme ?? _styleTheme))}>Decline</Text>
-                        </TouchableOpacity>
-                      </View>
-                    ) : publicationState === 'pending_consent' ? (
-                      <Text style={themeStyle('tabs_tripBlog_145', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>Waiting for other adult travelers</Text>
-                    ) : blog?.publicOptOut ? (
-                      <TouchableOpacity testID="blog-allow-public" accessibilityRole="button" style={[styles.button, themeStyle('tabs_tripBlog_146', {  }, (theme ?? _styleTheme))]} disabled={publicationBusy} onPress={() => setPublicOptOut(false)}>
-                        <Text style={styles.buttonText}>{publicationBusy ? 'Updating…' : 'Allow public viewing'}</Text>
-                      </TouchableOpacity>
-                    ) : (
-                      <TouchableOpacity style={[styles.button, themeStyle('tabs_tripBlog_147', {  }, (theme ?? _styleTheme))]} disabled={publicationBusy} onPress={requestPublication}>
-                        <Text style={styles.buttonText}>{publicationBusy ? 'Requesting…' : 'Make public'}</Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                  {publicationState !== 'public' && activeTripId ? <BlogPublicationChecklist tripId={activeTripId} backendUrl={backendUrl} headers={headers} refreshKey={`${publicationState}:${blog?.publicOptOut ? 1 : 0}:${missingAccessibilityCount}`} styles={styles} /> : null}
-                  {publicationNotice ? <Text style={themeStyle('tabs_tripBlog_148', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>{publicationNotice}</Text> : null}
-                  {publicationState === 'public' && capabilities.trip_blog_alt_text && missingAccessibilityCount > 0 ? (
-                    <Text testID="blog-accessibility-remediation" style={themeStyle('tabs_tripBlog_149', {  }, (theme ?? _styleTheme))}>
-                      Accessibility reminder: {missingAccessibilityCount} public {missingAccessibilityCount === 1 ? 'photo needs' : 'photos need'} alt text or a decorative mark. Your existing public blog remains available while you fix this.
-                    </Text>
-                  ) : null}
+                  {activeTripId ? <BlogPublicationChecklist tripId={activeTripId} backendUrl={backendUrl} headers={headers}
+                    refreshKey={`${publicationState}:${blog?.publicOptOut ? 1 : 0}:${missingAccessibilityCount}`}
+                    styles={styles} onChanged={refreshBlogAndPublication} /> : null}
                   <Text style={themeStyle('tabs_tripBlog_150', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>
                     {publicationState === 'public'
                       ? 'Anyone can view this blog on the web. Any traveler can make it private.'
                       : blog?.publicOptOut
                         ? 'A traveler made this blog private for public viewing.'
-                        : 'The blog goes public automatically when the trip starts, if every traveler is 16+ with a date of birth in their profile, public photos have alt text, and no one has chosen private. Otherwise, public viewing needs consent from all adult account travelers.'}
+                        : 'The blog goes public from the trip’s first local day when no account traveler is under 16 or missing a date of birth and no traveler has an active opt-out. Photo alt text is optional.'}
                     {' '}Travelers and followers can always see this blog.
                   </Text>
                 </View>

@@ -112,7 +112,7 @@ describe('public blog engagement endpoint', () => {
       .expect(200);
 
     const res = await request(app).get(`/public/blog/${usernameSlug}/${tripSlug}/engagement`).expect(200);
-    expect(res.headers['cache-control']).toMatch(/max-age=15/);
+    expect(res.headers['cache-control']).toContain('no-store');
     expect(Array.isArray(res.body.days)).toBe(true);
     const day = res.body.days.find((d: any) => d.localDate === dayDate);
     expect(day).toBeTruthy();

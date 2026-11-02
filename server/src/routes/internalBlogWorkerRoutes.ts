@@ -4,6 +4,7 @@ import bodyParser from 'body-parser';
 import { getEnvValue } from '../env';
 import { processMediaUpload } from '../services/blogMediaProcessingService';
 import { logError, logInfo } from '../logger';
+import { runBlogVisibilityJob } from '../services/blogBackgroundWorker';
 
 const router = Router();
 router.use(bodyParser.json());
@@ -23,6 +24,12 @@ const authenticateWorker = (req: any, res: any, next: any) => {
   }
   next();
 };
+
+// An external hourly scheduler can invoke this when Cloud Run suspends idle timers.
+router.post('/blog-visibility', authenticateWorker, async (_req, res) => {
+  try { res.setHeader('Cache-Control', 'no-store'); res.json({ published: await runBlogVisibilityJob() }); }
+  catch { res.status(503).json({ error: 'Blog visibility worker unavailable' }); }
+});
 
 router.get('/geocoding', authenticateWorker, async (_req, res) => {
   try { res.setHeader('Cache-Control', 'no-store'); res.json(await geocodingStatus()); }

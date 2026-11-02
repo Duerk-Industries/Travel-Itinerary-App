@@ -41,6 +41,11 @@ export const closePool = async (): Promise<void> => {
   return adapter().closePool();
 };
 export const initDb = async (): Promise<void> => adapter().initDb();
+export const loadBlogVisibilityContext = async (...args: Parameters<ReturnType<typeof adapter>['loadBlogVisibilityContext']>) => adapter().loadBlogVisibilityContext(...args);
+export const writeBlogPrivacyChoice = async (...args: Parameters<ReturnType<typeof adapter>['writeBlogPrivacyChoice']>) => adapter().writeBlogPrivacyChoice(...args);
+export const persistBlogVisibility = async (...args: Parameters<ReturnType<typeof adapter>['persistBlogVisibility']>) => adapter().persistBlogVisibility(...args);
+export const writeBlogEarlyRelease = async (...args: Parameters<ReturnType<typeof adapter>['writeBlogEarlyRelease']>) => adapter().writeBlogEarlyRelease(...args);
+export const listTripsForBlogVisibility = async () => adapter().listTripsForBlogVisibility();
 export const getPrivacyPreferences = async (...args: Parameters<ReturnType<typeof adapter>['getPrivacyPreferences']>) =>
   adapter().getPrivacyPreferences(...args);
 export const updatePrivacyPreferences = async (...args: Parameters<ReturnType<typeof adapter>['updatePrivacyPreferences']>) =>

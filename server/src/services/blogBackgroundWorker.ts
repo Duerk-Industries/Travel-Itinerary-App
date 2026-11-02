@@ -1,3 +1,5 @@
+import { listTripsForBlogVisibility } from '../db';
+import { synchronizeBlogVisibility } from './blogVisibilityService';
 import { queryBlog, withBlogTransaction } from '../db.postgres';
 import { getDb } from '../db.firebase';
 import { getCurrentDbProvider } from '../db';
@@ -5,7 +7,6 @@ import { notify } from './notificationService';
 import { logError, logInfo } from '../logger';
 import { randomUUID } from 'crypto';
 import { isFeatureEnabled } from './entitlementService';
-import { autoPublishBlogIfEligible } from '../routes/blogPublicationRoutes';
 import { getBlogDayByDate, getVisibleMediaForDay, getGroupMemberUserIdsForTrip } from '../blog/firebaseBlogDayData';
 
 const LEASE_SECONDS = 300;
@@ -25,84 +26,35 @@ export const runBlogBackgroundJobs = async () => {
   await runDayPhotoReminderJob();
 };
 
-// End-of-day reminder gate: this worker has no per-trip timezone to compute a real local
-// end-of-day against (trips carry no timezone column — see blogDayFactsService.ts's own
-// "straight-line only" caveat for the same kind of honest approximation), so "end of day" is
-// approximated as a fixed UTC evening window rather than pretending to a precision the data
-// doesn't support. Runs hourly like the rest of this file; the window keeps it from firing at
-// 2pm UTC for someone on the other side of the world.
+// Photo reminders retain their existing UTC evening window. This is independent
+// of R1 publication, which evaluates the trip's stored IANA timezone.
 const isEndOfDayWindow = (): boolean => {
   const hour = new Date().getUTCHours();
   return hour >= 20 || hour < 2;
 };
 
-// --- Go live at trip start ---------------------------------------------------------------------
-// A blog is public from the day its trip starts, whether or not anyone has opened it by then.
-// autoPublishBlogIfEligible does the real gating (start date, opt-out, ages, profile defaults,
-// alt text) and does nothing once a publication decision exists, so this only has to offer it
-// every trip that is under way. Trips are in progress from one day before start_date (see
-// utils/blogGoLive.ts) until end_date.
-const goLive = async (trips: Array<{ id: string; userIds: string[] }>): Promise<number> => {
+// R1: scan all trips, including ended and not-yet-opened blogs. Public reads evaluate
+// independently; this worker persists transitions for notifications and compatibility projections.
+export const runBlogVisibilityJob = async (now = new Date()): Promise<number> => {
   let published = 0;
-  for (const trip of trips) {
-    for (const userId of trip.userIds) {
-      try {
-        if (await autoPublishBlogIfEligible(trip.id, userId)) published += 1;
-        break; // the first member decides: eligibility is a property of the whole trip
-      } catch (error) {
-        logError('[blog] go-live check failed', error);
-      }
-    }
+  for (const tripId of await listTripsForBlogVisibility()) {
+    try {
+      if (await synchronizeBlogVisibility(tripId, now)) published += 1;
+    } catch (error) { logError('[blog] visibility check failed', error); }
   }
   return published;
 };
-
 const runGoLiveJob = async () => {
-  if (!(await isFeatureEnabled('trip_blog_public_sharing'))) return;
-  const jobKey = 'blog:go_live';
-  if (!await claimLease(jobKey)) return;
+  if (!await claimLease('blog:go_live')) return;
   let success = false;
-  try {
-    const trips = await queryBlog<{ id: string; user_id: string }>(
-      `SELECT t.id, gm.user_id FROM trips t
-       JOIN group_members gm ON gm.group_id = t.group_id
-       WHERE t.start_date <= $2::date AND t.end_date >= $1::date
-         AND gm.removed_at IS NULL AND gm.user_id IS NOT NULL`,
-      [new Date().toISOString().slice(0, 10), new Date(Date.now() + 86_400_000).toISOString().slice(0, 10)]
-    );
-    const byTrip = new Map<string, string[]>();
-    for (const row of trips.rows) byTrip.set(String(row.id), [...(byTrip.get(String(row.id)) ?? []), String(row.user_id)]);
-    const published = await goLive([...byTrip].map(([id, userIds]) => ({ id, userIds })));
-    if (published) logInfo(`[blog] went live at trip start: ${published}`);
-    success = true;
-  } catch (error) {
-    logError('[blog] go-live job failed', error);
-  } finally {
-    await releaseLease(jobKey, success);
-  }
+  try { await runBlogVisibilityJob(); success = true; }
+  finally { await releaseLease('blog:go_live', success); }
 };
-
 const runGoLiveJobFirebase = async () => {
-  if (!(await isFeatureEnabled('trip_blog_public_sharing'))) return;
-  const jobKey = 'blog:go_live';
-  if (!await claimLeaseFirebase(jobKey)) return;
+  if (!await claimLeaseFirebase('blog:go_live')) return;
   let success = false;
-  try {
-    const db = getDb();
-    const today = new Date().toISOString().slice(0, 10);
-    const tomorrow = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
-    const snap = await db.collection('trips').where('startDate', '<=', tomorrow).get();
-    const active = snap.docs.map((doc) => ({ id: doc.id, ...(doc.data() as any) })).filter((t) => t.endDate && t.endDate >= today);
-    const trips: Array<{ id: string; userIds: string[] }> = [];
-    for (const trip of active) trips.push({ id: trip.id, userIds: await getGroupMemberUserIdsForTrip(trip.id) });
-    const published = await goLive(trips);
-    if (published) logInfo(`[blog] went live at trip start: ${published}`);
-    success = true;
-  } catch (error) {
-    logError('[blog] go-live job failed', error);
-  } finally {
-    await releaseLeaseFirebase(jobKey, success);
-  }
+  try { await runBlogVisibilityJob(); success = true; }
+  finally { await releaseLeaseFirebase('blog:go_live', success); }
 };
 
 // --- Firebase lease primitive -----------------------------------------------------------------

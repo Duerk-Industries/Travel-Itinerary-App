@@ -101,6 +101,11 @@ export const setStoredVisibility = async (tripId: string, state: 'public' | 'pri
   else await sql('UPDATE trip_blogs SET visibility_state = $2 WHERE trip_id = $1', [tripId, state]);
 };
 export const insertPublicEpoch = async (tripId: string, requestedBy: string, epoch = 1): Promise<void> => {
+  const db = await import('../src/db');
+  await db.writeBlogEarlyRelease(tripId);
+  const context = await db.loadBlogVisibilityContext(tripId);
+  for (const member of context?.members ?? []) if (!member.dateOfBirth) await setDateOfBirth(member.userId, '1990-01-01');
+
   if (isFirebase()) await firestore().collection('blog_publication_epochs').doc(randomUUID()).set({ tripId, epoch, state: 'public', requestedBy, expiresAt: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
   else await sql("INSERT INTO blog_publication_epochs (id, trip_id, epoch, state, requested_by) VALUES ($1, $2, $3, 'public', $4)", [randomUUID(), tripId, epoch, requestedBy]);
 };

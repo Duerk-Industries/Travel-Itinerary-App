@@ -80,7 +80,7 @@ const BlogPublicDefaultToggle: React.FC<Props> = ({ backendUrl, headers, styles,
         />
       </View>
       <Text style={styles.helperText}>
-        A trip blog is shown on the public web only when every traveler is 16+ with a date of birth in their profile and none has chosen private. Travelers and followers can always see the blog.
+        A trip blog goes public from its first local day when all account travelers are 16 or older with a date of birth and nobody has opted out. You can allow an individual trip even when this default is off. Travelers and followers can always read it.
       </Text>
       {error ? <Text style={[styles.helperText, themeStyle('components_BlogPublicDefaultToggle_4', { theme: theme }, (theme ?? _styleTheme))]}>{error}</Text> : null}
     </View>

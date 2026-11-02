@@ -546,7 +546,7 @@ const PublicTripBlogPage: React.FC<Props> = ({ username, tripSlug, preview }) =>
   if (state.status === 'not-found') {
     return (
       <View style={themeStyle('components_PublicTripBlogPage_21', {  }, _styleTheme)}>
-        <Text style={themeStyle('components_PublicTripBlogPage_22', { displayFont: displayFont }, _styleTheme)}>This trip blog isn't public</Text>
+        <Text style={themeStyle('components_PublicTripBlogPage_22', { displayFont: displayFont }, _styleTheme)}>This trip's story hasn't been shared publicly yet.</Text>
         <Text style={themeStyle('components_PublicTripBlogPage_23', {  }, _styleTheme)}>
           The link may be out of date, or the traveler may have made this trip private again.
         </Text>

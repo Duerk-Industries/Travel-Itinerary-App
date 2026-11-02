@@ -3,7 +3,7 @@ import { randomUUID } from 'crypto';
 import { app } from '../src/app';
 import { initDb, setFeatureFlag } from '../src/db';
 import { addTripGuests, addTripMember, setDateOfBirth, storedBlog } from './providerRows';
-import { runBlogBackgroundJobs } from '../src/services/blogBackgroundWorker';
+import { runBlogBackgroundJobs, runBlogVisibilityJob } from '../src/services/blogBackgroundWorker';
 import { confirmWebUser, loginWebUser, cleanupTestUsersByEmail, futureDateString } from './helpers';
 
 const TRIP_DAY = futureDateString();
@@ -62,6 +62,8 @@ describe('trip blog is public by default (opt-out)', () => {
     const tripId = await createTrip(solo.token, 'Auto Public Trip');
     const res = await openBlog(tripId, solo.token);
     expect(res.body.visibilityState).toBe('public');
+    expect(await visibility(tripId)).toBe('private'); // reading does not publish
+    await runBlogVisibilityJob();
     expect(await visibility(tripId)).toBe('public');
 
     // A traveler makes the blog private: off the public web, still readable by travelers.
@@ -74,6 +76,7 @@ describe('trip blog is public by default (opt-out)', () => {
     // Clearing the toggle publishes again because the travelers still qualify.
     const back = await request(app).patch(`/api/trips/${tripId}/blog`).set('Authorization', `Bearer ${solo.token}`).send({ publicOptOut: false }).expect(200);
     expect(back.body.visibilityState).toBe('public');
+    await runBlogVisibilityJob();
     expect(await visibility(tripId)).toBe('public');
   });
 
@@ -137,6 +140,7 @@ describe('trip blog is public by default (opt-out)', () => {
     const owner = await signUp(adult2, '1991-01-01');
     const tripId = await createTrip(owner.token, 'Guest Ignored Trip', [], 2);
     await openBlog(tripId, owner.token);
+    await runBlogVisibilityJob();
     expect(await visibility(tripId)).toBe('public');
   });
 
@@ -162,6 +166,7 @@ describe('trip blog is public by default (opt-out)', () => {
     await request(app).patch('/api/account/blog-defaults').set('Authorization', `Bearer ${owner.token}`).send({ publicByDefault: true }).expect(200);
     const otherTrip = await createTrip(owner.token, 'Profile Public Trip');
     await openBlog(otherTrip, owner.token);
+    await runBlogVisibilityJob();
     expect(await visibility(otherTrip)).toBe('public');
   });
 });

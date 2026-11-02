@@ -844,6 +844,8 @@ export const initDb = async (): Promise<void> => {
     throw error;
   }
 
+  await (await import('./blog/visibilityFirebase')).migrateBlogVisibilityTestUsers();
+
   // Seed tiers (skip if already present)
   const tierSeeds: Array<{ key: string; displayName: string; rank: number }> = [
     { key: 'free',    displayName: 'Free',    rank: 1 },
@@ -2031,7 +2033,7 @@ export const deleteWebUserAndCleanup = async (userId: string): Promise<void> => 
     db.collection('billing_subscriptions').where('userId', '==', userId).get(),
     db.collection('privacy_choice_events').where('userId', '==', userId).get(),
   ]);
-  for (const [collection, field] of [['operation_receipts', 'userId'], ['notification_work', 'data.userId'], ['notification_work', 'data.ownerId']]) {
+  for (const [collection, field] of [['trip_blog_privacy_choices', 'userId'], ['operation_receipts', 'userId'], ['notification_work', 'data.userId'], ['notification_work', 'data.ownerId']]) {
     for (;;) {
       const page = await db.collection(collection).where(field, '==', userId).limit(200).get();
       if (page.empty) break;
@@ -2685,6 +2687,13 @@ export const updateTripCovering = async (
 // collection must be cleared explicitly here.
 const deleteAllTripArtifacts = async (tripId: string): Promise<void> => {
   const db = getDb();
+  for (const collection of ['trip_blog_privacy_choices', 'blog_visibility_transitions']) {
+    for (;;) {
+      const page = await db.collection(collection).where('tripId', '==', tripId).limit(200).get();
+      if (page.empty) break;
+      await deleteDocRefsInBatches(page.docs.map(doc => doc.ref));
+    }
+  }
 
   const deleteQueryBatch = async (query: any): Promise<void> => {
     const snap = await query.get();
@@ -9974,6 +9983,8 @@ export const setAnalyticsSubjectTimezone = async (subjectId: string, timezone: s
   const snap = await getDb().collection(ANALYTICS_SUBJECTS).where('subjectId', '==', subjectId).limit(1).get();
   if (!snap.empty) await snap.docs[0].ref.update({ lastDeviceTimezone: timezone });
 };
+
+export { loadBlogVisibilityContext, writeBlogPrivacyChoice, persistBlogVisibility, writeBlogEarlyRelease, listTripsForBlogVisibility } from './blog/visibilityFirebase';
 
 export const getTripTimezone = async (tripId: string): Promise<string | null> => {
   const doc = await getDb().collection('trips').doc(tripId).get();
