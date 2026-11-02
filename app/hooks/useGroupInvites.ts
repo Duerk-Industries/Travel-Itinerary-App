@@ -5,7 +5,7 @@ import type { GroupInvite, PendingTripShareInvite } from '../types/invites';
 export type { GroupInvite, PendingTripShareInvite };
 
 export type InviteActionResult =
-  | { ok: true; nextTripId?: string | null }
+  | { ok: true; nextTripId?: string | null; /** What the accepted trip-share invite granted. */ role?: 'member' | 'follower' }
   | { ok: false; error: string };
 
 type UseGroupInvitesParams = {
@@ -129,7 +129,7 @@ export const useGroupInvites = ({ backendUrl, userToken }: UseGroupInvitesParams
         });
         setPendingTripShareInvites((prev) => prev.filter((entry) => entry.id !== invite.id));
         await fetchPendingTripShareInvites();
-        return { ok: true, nextTripId: invite.tripId ?? null };
+        return { ok: true, nextTripId: invite.tripId ?? null, role: invite.role };
       } catch (err) {
         return { ok: false, error: await errorMessageFromAction(err, 'Unable to accept invite') };
       }

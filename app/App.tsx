@@ -2287,6 +2287,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     }
     if (result.nextTripId) {
       setActiveTripId(result.nextTripId);
+      // A follower is not in the trip's group, so group-only requests (its member list) are denied. Mark the trip as
+      // followed now: waiting for the followed-trips refresh below leaves a moment where the app treats it as a member trip.
+      setSelectedFollowedTripId(result.role === 'follower' ? result.nextTripId : null);
     }
     if (isFirstLogin) {
       setDeferFirstLoginRedirect(false);

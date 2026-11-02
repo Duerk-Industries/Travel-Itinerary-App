@@ -136,7 +136,18 @@ describe('useGroupInvites', () => {
         result.current.pendingTripShareInvites[0]
       );
     });
-    expect(action).toEqual({ ok: true, nextTripId: 'trip-9' });
+    expect(action).toEqual({ ok: true, nextTripId: 'trip-9', role: 'member' });
+  });
+
+  it('reports a follower role, so the app does not treat the trip as one the traveler belongs to', async () => {
+    const { result } = renderHook(() =>
+      useGroupInvites({ backendUrl: BACKEND, userToken: 't' })
+    );
+    let action;
+    await act(async () => {
+      action = await result.current.acceptPendingTripShareInvite({ id: 'share-2', tripId: 'trip-3', tripName: 'Oslo', role: 'follower', status: 'pending' });
+    });
+    expect(action).toEqual({ ok: true, nextTripId: 'trip-3', role: 'follower' });
   });
 
   it('returns { ok: false, error } on HTTP failure', async () => {

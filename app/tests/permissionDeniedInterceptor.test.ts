@@ -28,6 +28,7 @@ describe('installPermissionDeniedInterceptor', () => {
       if (url.includes('/api/auth')) return jsonResponse(403, { error: 'auth endpoint denied' });
       if (url.includes('/api/web-auth')) return jsonResponse(403, { error: 'web-auth endpoint denied' });
       if (url.includes('/api/maps')) return jsonResponse(403, { error: 'Trip day map is currently disabled' });
+      if (url.includes('/api/groups/')) return jsonResponse(403, { error: 'Not authorized to view members for this group' });
       if (url.includes('/api/other')) return jsonResponse(403, { error: 'generic denial' });
       if (url.includes('/api/trips')) return jsonResponse(403, { error: 'Date of birth required before accessing this endpoint.', code: 'AGE_VERIFICATION_REQUIRED' });
       return jsonResponse(200, {});
@@ -77,4 +78,17 @@ describe('installPermissionDeniedInterceptor', () => {
     const response = await fetch('/api/maps/trip-day?points=%5B%5D');
     expect(response.status).toBe(403);
   });
+
+  it('does not open the dialog when the background member-list load is refused (a new follower is not in the group)', async () => {
+    await fetch('/api/groups/g1/members');
+    await fetch('https://api.example.test/api/groups/g1/members', { method: 'GET' });
+    expect(messages).toEqual([]);
+  });
+
+  it('still reports a refusal of something the traveler did to a group', async () => {
+    await fetch('/api/groups/g1/members', { method: 'POST' });
+    await fetch('/api/groups/g1/members/m1', { method: 'DELETE' });
+    expect(messages).toEqual(['Not authorized to view members for this group', 'Not authorized to view members for this group']);
+  });
+
 });

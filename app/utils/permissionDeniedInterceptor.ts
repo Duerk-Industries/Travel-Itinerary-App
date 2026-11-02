@@ -12,8 +12,15 @@ import { isAgeVerificationRequiredBody, notifyAgeVerificationRequired } from './
 // already covers this; without this exclusion, TripDayMap's web-path authenticated fetch() (added
 // to work around react-native-web dropping <Image source.headers>) gets caught by this global
 // interceptor before that component-level handling ever runs.
-const isExcludedUrl = (url: string): boolean =>
-  url.includes('/api/auth') || url.includes('/api/web-auth') || url.includes('/api/maps');
+//
+// The group member list is loaded in the background for whichever trip is active (useTripsData already handles a refusal
+// quietly). Someone who has just been given follower access, or lost access, is refused there, and that is not
+// something they did, so it must not open a dialog.
+const isBackgroundMemberLoad = (url: string, init?: RequestInit): boolean =>
+  (init?.method ?? 'GET').toUpperCase() === 'GET' && /\/api\/groups\/[^/?]+\/members(\?|$)/.test(url);
+
+const isExcludedUrl = (url: string, init?: RequestInit): boolean =>
+  url.includes('/api/auth') || url.includes('/api/web-auth') || url.includes('/api/maps') || isBackgroundMemberLoad(url, init);
 
 let installed = false;
 
@@ -25,7 +32,7 @@ export const installPermissionDeniedInterceptor = (): void => {
     const response = await originalFetch(...args);
     if (response.status === 403) {
       const url = typeof args[0] === 'string' ? args[0] : (args[0] as Request)?.url ?? '';
-      if (!isExcludedUrl(url)) {
+      if (!isExcludedUrl(url, args[1])) {
         try {
           const data = await response.clone().json();
           // No date of birth on file yet: show that prompt, not "Permission Denied".
