@@ -152,6 +152,7 @@ import { subscribeAgeVerificationRequired } from './utils/ageVerificationRequire
 import { markLoginStarted, markTripReady, useScreenReadyMark } from './utils/readinessMarks';
 import { configureAnalytics, startItemSaveTask, taskFailure, track, useTrackView } from './utils/analytics/track';
 import { analyticsViewForPage } from './utils/analytics/features';
+import ActionDropdown, { type DropdownAction } from './components/ActionDropdown';
 import PremiumPlanComparisonDialog from './components/PremiumPlanComparisonDialog';
 import { arePremiumTrialsEnabled } from './config/premiumTrials';
 import DropdownOptionButton from './components/DropdownOptionButton';
@@ -3343,6 +3344,12 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     () => activeTripForHome ?? activeTrip ?? undefined,
     [activeTrip, activeTripForHome]
   );
+  // Profile, Admin (admins only) and Log out hang off the name in the top bar instead of being separate buttons.
+  const userMenuActions = useMemo<DropdownAction[]>(() => [
+    { id: 'topbar-profile', label: 'Profile', onSelect: () => requestPageChange('account') },
+    ...(userRole === 'admin' ? [{ id: 'topbar-admin', label: 'Admin', onSelect: () => openAdminSection('overview') }] : []),
+    { id: 'topbar-logout', label: 'Log out', onSelect: requestLogout },
+  ], [userRole, requestPageChange, openAdminSection, requestLogout]);
   const handleHomeNavigate = useCallback((page: string) => requestPageChange(page as Page), [requestPageChange]);
   const handleOpenShareTrip = useCallback(() => {
     const tripToShare = isFollowingMode ? null : activeTrip;
@@ -3544,12 +3551,23 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                       theme={theme}
                     />
                   )}
-                  <TouchableOpacity
-                    style={[styles.userNameButton, styles.smallButton, styles.topBarActionButton]}
-                    onPress={() => requestPageChange('account')}
-                  >
-                    <Text style={styles.userNameButtonText}>{userName ?? 'Traveler'}</Text>
-                  </TouchableOpacity>
+                  {showBottomTabs ? (
+                    <TouchableOpacity
+                      style={[styles.userNameButton, styles.smallButton, styles.topBarActionButton]}
+                      onPress={() => requestPageChange('account')}
+                    >
+                      <Text style={styles.userNameButtonText}>{userName ?? 'Traveler'}</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <ActionDropdown
+                      testID="topbar-user-menu"
+                      label={userName ?? 'Traveler'}
+                      accessibilityLabel="Account menu"
+                      triggerStyle={[styles.userNameButton, styles.smallButton, styles.topBarActionButton]}
+                      styles={styles}
+                      actions={userMenuActions}
+                    />
+                  )}
                 </View>
               ) : showBottomTabs ? null : (
                 // Phone layout drops the full name pill (and presence avatars) to
@@ -3558,34 +3576,16 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                 // out of the Home tab list too (see regularUserHiddenHomePages),
                 // so mobile users had no path to their profile at all. Keep a
                 // compact icon-only entry point instead of removing it outright.
-                <TouchableOpacity
-                  style={[styles.userNameButton, styles.smallButton, styles.topBarActionButton]}
-                  onPress={() => requestPageChange('account')}
-                  accessibilityLabel="Account"
-                  hitSlop={hitSlop.small}
-                >
-                  <IconText style={styles.userNameButtonText}>👤</IconText>
-                </TouchableOpacity>
+                <ActionDropdown
+                  testID="topbar-user-menu"
+                  label="👤"
+                  accessibilityLabel="Account menu"
+                  triggerStyle={[styles.userNameButton, styles.smallButton, styles.topBarActionButton]}
+                  styles={styles}
+                  actions={userMenuActions}
+                />
               )}
-              {/* On phones, Admin lives on the Profile tab so the header stays one short row. */}
-              {userRole === 'admin' && !showBottomTabs ? (
-                <TouchableOpacity
-                  style={[styles.button, styles.smallButton, styles.topBarActionButton]}
-                  onPress={() => openAdminSection('overview')}
-                >
-                  <Text style={styles.buttonText}>Admin</Text>
-                </TouchableOpacity>
-              ) : null}
-              {/* On phones, Log out lives on the Profile tab's Account page. */}
-              {!showBottomTabs ? (
-                <TouchableOpacity
-                  style={[styles.button, styles.smallButton, styles.topBarActionButton]}
-                  onPress={requestLogout}
-                  testID="topbar-logout"
-                >
-                  <Text style={styles.buttonText}>Logout</Text>
-                </TouchableOpacity>
-              ) : null}
+              {/* With bottom tabs (phones), Profile, Admin and Log out live on the Profile tab instead. */}
             </View>
           </View>
         ) : null}

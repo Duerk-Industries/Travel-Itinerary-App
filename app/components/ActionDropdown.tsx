@@ -6,10 +6,14 @@ import { useAppTheme } from '../theme/ThemeContext';
 
 export type DropdownAction = { id: string; label: string; onSelect: () => void };
 
-export default function ActionDropdown({ actions, styles, testID }: {
+export default function ActionDropdown({ actions, styles, testID, label = 'Menu', accessibilityLabel = 'Menu', triggerStyle }: {
   actions: DropdownAction[];
   styles: Record<string, any>;
   testID: string;
+  /** Text on the button that opens the menu (a caret is added). */
+  label?: string;
+  accessibilityLabel?: string;
+  triggerStyle?: any;
 }) {
   const theme = useAppTheme();
   const { width, height } = useWindowDimensions();
@@ -25,8 +29,8 @@ export default function ActionDropdown({ actions, styles, testID }: {
   };
   return <>
     <View ref={anchor} collapsable={false}>
-      <TouchableOpacity testID={testID} accessibilityRole="button" accessibilityLabel="Menu" accessibilityState={{ expanded: open }} style={[styles.button, styles.smallButton]} onPress={showMenu}>
-        <IconText style={styles.buttonText}>Menu ▾</IconText>
+      <TouchableOpacity testID={testID} accessibilityRole="button" accessibilityLabel={accessibilityLabel} accessibilityState={{ expanded: open }} style={triggerStyle ?? [styles.button, styles.smallButton]} onPress={showMenu}>
+        <IconText style={triggerStyle ? styles.userNameButtonText : styles.buttonText}>{label} ▾</IconText>
       </TouchableOpacity>
     </View>
     {open ? <Modal visible transparent animationType="fade" onRequestClose={() => setOpen(false)}>
