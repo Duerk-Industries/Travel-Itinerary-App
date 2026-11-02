@@ -1,4 +1,5 @@
 import { validateSpendBatch, validateActualSpend } from './utils/apiSpendValidation';
+import { migrateBlogVisibilityTestUsers } from './blog/visibilityFirebase';
 import { planningFirestore } from './services/planningFirestore';
 // Firebase adapter (Firestore-backed)
 import { initializeApp, cert, deleteApp, getApps, App } from 'firebase-admin/app';
@@ -844,7 +845,7 @@ export const initDb = async (): Promise<void> => {
     throw error;
   }
 
-  await (await import('./blog/visibilityFirebase')).migrateBlogVisibilityTestUsers();
+  await migrateBlogVisibilityTestUsers();
 
   // Seed tiers (skip if already present)
   const tierSeeds: Array<{ key: string; displayName: string; rank: number }> = [

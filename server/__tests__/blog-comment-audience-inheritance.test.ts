@@ -1,7 +1,7 @@
 import request from 'supertest';
 import { randomUUID } from 'crypto';
 import { app } from '../src/app';
-import { initDb, setFeatureFlag } from '../src/db';
+import { initDb, setFeatureFlag, writeBlogPrivacyChoice } from '../src/db';
 import { followTripAs, setStoredVisibility, insertPublicEpoch, insertPublicAlias, revokeEpochs } from './providerRows';
 import { cleanupTestUsersByEmail, confirmWebUser, loginWebUser, registerWebUser } from './helpers';
 
@@ -110,8 +110,7 @@ describe('comment audience is frozen at creation, not re-derived from current pu
   });
 
   it('revoking publication does not relabel the public comment, but it disappears from the unauthenticated route', async () => {
-    const db = await import('../src/db');
-    await db.writeBlogPrivacyChoice(tripId, ownerId, { optOut: true });
+    await writeBlogPrivacyChoice(tripId, ownerId, { optOut: true });
     await setStoredVisibility(tripId, 'private');
     await revokeEpochs(tripId);
 

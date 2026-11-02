@@ -3,7 +3,7 @@ import { readBlogMaps } from '../services/blogMapService';
 import { Router } from 'express';
 import { queryBlog } from '../db.postgres';
 import { getCurrentDbProvider } from '../db';
-import { getPublicBlogFirebase, loadPublicBlogDocumentFirebase, resolvePublicTripIdFirebase } from '../blog/firebasePublicationRepository';
+import { getPublicBlogFirebase, loadPublicBlogDocumentFirebase, resolvePublicTripIdFirebase, resolveBlogAliasTripIdFirebase } from '../blog/firebasePublicationRepository';
 import { isFeatureEnabled } from '../services/entitlementService';
 import { HttpRateLimitExceededError, reserveHttpRateLimitOrThrow } from '../services/httpRateLimitService';
 import { getApiCacheSetting } from '../config/apiLimits';
@@ -19,7 +19,7 @@ router.use('/:username/:tripSlug', async (req, res, next) => {
   res.setHeader('Cache-Control', 'private, no-store');
   try {
     const tripId = getCurrentDbProvider() === 'firebase'
-      ? await (await import('../blog/firebasePublicationRepository')).resolveBlogAliasTripIdFirebase(req.params.username, req.params.tripSlug)
+      ? await resolveBlogAliasTripIdFirebase(req.params.username, req.params.tripSlug)
       : (await queryBlog<{ trip_id: string }>('SELECT trip_id FROM blog_public_aliases WHERE username_slug=$1 AND trip_slug=$2 AND (redirect_until IS NULL OR redirect_until > NOW()::timestamp) ORDER BY canonical DESC LIMIT 1', [req.params.username.toLowerCase(), req.params.tripSlug.toLowerCase()])).rows[0]?.trip_id;
     if (!tripId || !(await evaluateBlogVisibility(String(tripId))).isPublic) return void res.status(404).json({ error: 'Public blog not found' });
     next();

@@ -5,7 +5,7 @@ import { migrateBlogVisibilityTestUsers } from '../src/blog/visibilityFirebase';
 
 const firestoreTest = getCurrentDbProvider() === 'firebase' ? it : it.skip;
 firestoreTest('migrates existing Firestore test accounts once and preserves subsequent privacy choices', async () => {
-  if (!process.env.FIRESTORE_EMULATOR_HOST || !String(process.env.GCLOUD_PROJECT_ID).startsWith('demo-')) throw new Error('This migration test requires a demo Firestore emulator project');
+  if (!process.env.FIRESTORE_EMULATOR_HOST || !/^(demo-|jest-)/.test(String(process.env.GCLOUD_PROJECT_ID))) throw new Error('This migration test requires a throwaway demo- or jest- Firestore emulator project');
   const db = getDb(), user = db.collection('users').doc(randomUUID()), blog = db.collection('trip_blogs').doc(randomUUID());
   const marker = db.collection('schema_migrations').doc('r1_blog_visibility');
   const later = db.collection('users').doc(randomUUID());

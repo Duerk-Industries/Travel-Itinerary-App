@@ -9,7 +9,7 @@ import { getBlogItemDescriptor, listBlogItemDescriptors } from '../blog/registry
 import { blogMediaRepository, blogRepository } from '../blog/repository';
 import { blogEngagementRepository } from '../blog/engagementRepository';
 import { BlogAudience } from '../blog/types';
-import { ensureUserInTrip, ensureUserCanReadTrip, getCurrentDbProvider } from '../db';
+import { ensureUserInTrip, ensureUserCanReadTrip, getCurrentDbProvider, loadBlogVisibilityContext } from '../db';
 import { assertCanUseFeature, getUserTierKey } from '../services/entitlementService';
 import { ApiLimitExceededError, commitCapacityReservation, releaseCapacityReservation, reserveApiUsageOrThrow, reserveCapacityOrThrow } from '../apis/usageLimiter';
 import { validateVideoEnvelope } from '../services/blogVideoProcessingService';
@@ -113,7 +113,7 @@ router.get('/:tripId/blog', async (req, res) => {
     const blog = await blogRepository().getBlog(userIdOf(req), req.params.tripId, options);
     const visibility = await evaluateBlogVisibility(req.params.tripId);
     blog.visibilityState = visibility.isPublic ? 'public' : 'private';
-    const context = await (await import('../db')).loadBlogVisibilityContext(req.params.tripId);
+    const context = await loadBlogVisibilityContext(req.params.tripId);
     blog.publicOptOut = context?.members.find(m => m.userId === userIdOf(req))?.optOut === true;
     const media = await blogMediaRepository().listMedia(userIdOf(req), req.params.tripId);
     const withUrls = await attachMediaUrls(media);
