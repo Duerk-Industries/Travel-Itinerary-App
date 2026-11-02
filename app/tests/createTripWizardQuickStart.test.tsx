@@ -191,4 +191,72 @@ describe('CreateTripWizard Quick Start', () => {
     expect(baseProps.onTripCreated).not.toHaveBeenCalled();
   });
 
+  describe('creating the trip', () => {
+    const wizardCall = (response: () => Promise<any>) => {
+      fetchMock.mockImplementation((url: string) => String(url).endsWith('/api/trips/wizard') ? response() : Promise.resolve({ ok: true, json: async () => [] }));
+    };
+    const fillAndCreate = async (ui: ReturnType<typeof render>) => {
+      fireEvent.changeText(ui.getByTestId('quick-start-trip-name'), 'Kyoto Trip');
+      const destination = ui.getByPlaceholderText('Search destinations, countries, or states');
+      fireEvent(destination, 'focus');
+      fireEvent.changeText(destination, 'Japan');
+      fireEvent.press(await ui.findByTestId('manual-country-option'));
+      fireEvent.press(ui.getByTestId('quick-start-create'));
+    };
+    const wizardPosts = () => fetchMock.mock.calls.filter(([url]) => String(url).endsWith('/api/trips/wizard')).length;
+
+    beforeEach(() => { (baseProps.onTripCreated as jest.Mock).mockClear(); });
+
+    it('keeps the inputs and shows the server error with Retry when the trip is not saved', async () => {
+      wizardCall(async () => ({ ok: false, status: 500, json: async () => ({ error: 'Database unavailable' }) }));
+      const ui = render(<CreateTripWizard {...baseProps} />);
+      await fillAndCreate(ui);
+      expect(await ui.findByText('Database unavailable')).toBeTruthy();
+      expect(ui.getByTestId('quick-start-trip-name').props.value).toBe('Kyoto Trip');
+      expect(ui.getByTestId('wizard-create-retry')).toBeTruthy();
+      expect(baseProps.onTripCreated).not.toHaveBeenCalled();
+    });
+
+    it('says the trip was not created when the server cannot be reached, and Retry then succeeds', async () => {
+      wizardCall(async () => { throw new TypeError('Failed to fetch'); });
+      const ui = render(<CreateTripWizard {...baseProps} />);
+      await fillAndCreate(ui);
+      expect(await ui.findByText(/Could not reach the server, so your trip was not created/)).toBeTruthy();
+      expect(baseProps.onTripCreated).not.toHaveBeenCalled();
+      wizardCall(async () => ({ ok: true, status: 201, json: async () => ({ trip: { id: 'trip-1' }, groupId: 'g1' }) }));
+      fireEvent.press(ui.getByTestId('wizard-create-retry'));
+      await waitFor(() => expect(baseProps.onTripCreated).toHaveBeenCalledWith('trip-1'));
+      expect(wizardPosts()).toBe(2);
+    });
+
+    it('does not treat a response without a trip id as saved', async () => {
+      wizardCall(async () => ({ ok: true, status: 201, json: async () => ({}) }));
+      const ui = render(<CreateTripWizard {...baseProps} />);
+      await fillAndCreate(ui);
+      expect(await ui.findByText(/did not confirm the trip/)).toBeTruthy();
+      expect(baseProps.onTripCreated).not.toHaveBeenCalled();
+      expect(ui.getByTestId('wizard-create-retry')).toBeTruthy();
+    });
+
+    it('shows a spinner until the server confirms, then opens the trip', async () => {
+      let confirm: (value: any) => void = () => undefined;
+      wizardCall(() => new Promise((resolve) => { confirm = resolve; }));
+      const ui = render(<CreateTripWizard {...baseProps} />);
+      await fillAndCreate(ui);
+      expect(await ui.findByTestId('quick-start-creating-spinner')).toBeTruthy();
+      expect(baseProps.onTripCreated).not.toHaveBeenCalled();
+      confirm({ ok: true, status: 201, json: async () => ({ trip: { id: 'trip-2' }, groupId: 'g1' }) });
+      await waitFor(() => expect(baseProps.onTripCreated).toHaveBeenCalledWith('trip-2'));
+    });
+
+    it('does not start a second request while the first is pending', async () => {
+      wizardCall(() => new Promise(() => undefined));
+      const ui = render(<CreateTripWizard {...baseProps} />);
+      await fillAndCreate(ui);
+      await ui.findByTestId('quick-start-creating-spinner');
+      fireEvent.press(ui.getByTestId('quick-start-create'));
+      expect(wizardPosts()).toBe(1);
+    });
+  });
+
 });
