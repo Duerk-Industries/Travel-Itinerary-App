@@ -14,6 +14,7 @@ import { Platform, ScrollView, Text, TouchableOpacity, View, useWindowDimensions
 import HorizontalTableScroll from '../components/HorizontalTableScroll';
 import ConfirmDialog from '../components/ConfirmDialog';
 import ExpenseReceiptPanel from '../components/ExpenseReceiptPanel';
+import ReceiptThumbnail from '../components/ReceiptThumbnail';
 import DialogShell from '../components/DialogShell';
 import PlaidImportQueue from '../components/PlaidImportQueue';
 import DraftTextInput from '../components/DraftTextInput';
@@ -1172,6 +1173,9 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                                 accessibilityLabel={receiptExpenseIds.has(expense.id) ? 'View receipt' : 'Attach receipt'}
                                 testID={`expense-receipt-${expense.id}`}
                               >
+                                {receiptExpenseIds.has(expense.id) ? (
+                                  <ReceiptThumbnail backendUrl={backendUrl} headers={headers} expenseId={expense.id} title={expense.vendor || expense.notes || 'expense'} testID={`expense-receipt-thumb-${expense.id}`} />
+                                ) : null}
                                 <Text style={styles.buttonText}>{receiptExpenseIds.has(expense.id) ? 'Receipt' : '+ Receipt'}</Text>
                               </TouchableOpacity>
                             ) : null}

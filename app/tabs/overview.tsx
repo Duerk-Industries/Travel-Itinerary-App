@@ -478,6 +478,8 @@ export const isWithinOverviewWeatherWindow = (
 };
 
 /** The day's optional activities plus template suggestions offered in the "Add activity" menu, in all. */
+/** How long "Add activity" waits for template suggestions before opening the form without them. */
+const SUGGESTION_WAIT_MS = 800;
 const MAX_POPOVER_ACTIVITIES = 4;
 
 const localTodayIso = (): string => {
@@ -2177,13 +2179,23 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     setShowAddLodging(true);
   };
 
+  // "Add activity" opens the form straight away. The menu only appears when it has something besides "Add a new activity"
+  // to offer for the day: an optional activity already on the trip, or a template suggestion for the day's city.
   const addTourForDay = (dateIso: string) => {
     if (readOnly) return;
     setSelectedTour(null);
     setReturnToOverviewViewAfterItemEdit(true);
+    const date = dateIso.startsWith('unscheduled-') ? null : dateIso;
     setAddPopoverDay(Math.max(1, dayCards.findIndex((day) => day.date === dateIso) + 1));
-    setAddPopoverDate(dateIso.startsWith('unscheduled-') ? null : dateIso);
-    setAddPopoverOpen(true);
+    setAddPopoverDate(date);
+    const openForm = () => { setActiveAddDialog(null); setAddPopoverOpen(false); openCustomActivityDialog(date); };
+    if (optionalActivitiesForDay(tours, lodgings, date, trip ?? {}).length) { setAddPopoverOpen(true); return; }
+    const token = (headers.Authorization ?? '').replace(/^Bearer\s+/i, '');
+    if (!date || !trip?.id || !token) { openForm(); return; }
+    // Suggestions come from the server; do not make the traveler wait long for them.
+    const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), SUGGESTION_WAIT_MS));
+    Promise.race([fetchActivitySuggestions({ backendUrl, activeTripId: trip.id, token, date }), timeout])
+      .then((found) => { if (found && found.suggestions.length) setAddPopoverOpen(true); else openForm(); }, openForm);
   };
 
   // Reuse the day's add flows and selected date, falling back to today during the trip

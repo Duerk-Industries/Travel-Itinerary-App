@@ -178,7 +178,8 @@ export const createInitialActivityState = (preferredDate?: string | null): TourD
   startTime: '',
   duration: '',
   cost: '0',
-  freeCancelBy: new Date().toISOString().slice(0, 10),
+  // Empty unless the traveler sets it: a made-up date reads as a real cancellation deadline.
+  freeCancelBy: '',
   bookedOn: '',
   reference: '',
   notes: '',
@@ -1277,7 +1278,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
                 )}
                 {renderDetailRow('Cost', selectedTour.cost ? formatMoney(Number(selectedTour.cost), selectedTour.currency ?? 'USD') : '-')}
                 {renderDetailRow('Platform Booked On', selectedTour.bookedOn || '-')}
-                {renderDetailRow('Free Cancel By', selectedTour.freeCancelBy ? formatDateLong(selectedTour.freeCancelBy) : '-')}
+                {renderDetailRow('Free Cancel By', selectedTour.freeCancelBy ? formatDateLong(selectedTour.freeCancelBy) : 'N/A')}
                 {renderDetailRow('Reference', selectedTour.reference || '-')}
                 {renderDetailRow('Description', selectedTour.notes || '-')}
                 {renderDetailRow('Paid by', formatPeopleList(selectedTour.paidBy))}
@@ -1339,7 +1340,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
             { label: 'Duration', value: selectedTour.duration || '-' },
             { label: 'Cost', value: selectedTour.cost ? formatMoney(Number(selectedTour.cost), selectedTour.currency ?? 'USD') : '-' },
             { label: 'Platform Booked On', value: selectedTour.bookedOn || '-' },
-            { label: 'Free Cancel By', value: selectedTour.freeCancelBy ? formatDateLong(selectedTour.freeCancelBy) : '-' },
+            { label: 'Free Cancel By', value: selectedTour.freeCancelBy ? formatDateLong(selectedTour.freeCancelBy) : 'N/A' },
             { label: 'Reference', value: selectedTour.reference || '-' },
             { label: 'Description', value: selectedTour.notes || '-' },
             { label: 'Paid by', value: formatPeopleList(selectedTour.paidBy) },

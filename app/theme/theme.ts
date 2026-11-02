@@ -4343,6 +4343,8 @@ const styleFactories = {
   components_ExpenseReceiptPanel_1: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ display: 'none' }),
   // components/ExpenseReceiptPanel.tsx
   components_ExpenseReceiptPanel_2: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ width: '100%', height: 320, backgroundColor: _theme.colors.surfaceMuted }),
+  // components/ReceiptThumbnail.tsx
+  components_ReceiptThumbnail_1: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ width: 28, height: 28, borderRadius: 4, marginRight: 6, backgroundColor: _theme.colors.surfaceMuted }),
   // components/PublicTripBlogPage.tsx
   components_PublicTripBlogPage_57: (_theme: AppTheme, { bodyFont }: ThemeStyleValues): any => ({ minHeight: 72, borderWidth: 1, borderColor: _theme.colors.border, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, marginBottom: 8, fontFamily: bodyFont, fontSize: 15, color: _theme.colors.text, textAlignVertical: 'top' }),
   // components/PublicTripBlogPage.tsx
