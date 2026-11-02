@@ -4,6 +4,7 @@ import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { FollowedTrip } from './follow';
+import { formatClockTime } from '../utils/timeFormat';
 
 type FollowingTabProps = {
   backendUrl: string;
@@ -410,7 +411,7 @@ const FollowingTab: React.FC<FollowingTabProps> = ({
               <Text style={styles.headerText}>Flights ({detail?.flights.length ?? 0})</Text>
               {(detail?.flights ?? []).slice(0, 8).map((f: any) => (
                 <Text key={f.id ?? `${f.departureDate}-${f.departureTime}`} style={styles.bodyText}>
-                  {`${f.departureDate ?? ''} ${f.departureTime ?? ''}  ${f.departureLocation ?? f.departure_airport_code ?? ''} -> ${f.arrivalLocation ?? f.arrival_airport_code ?? ''}`}
+                  {`${f.departureDate ?? ''} ${formatClockTime(f.departureTime)}  ${f.departureLocation ?? f.departure_airport_code ?? ''} -> ${f.arrivalLocation ?? f.arrival_airport_code ?? ''}`}
                 </Text>
               ))}
               {detail?.flights?.length ? null : <Text style={styles.helperText}>No flights shared yet.</Text>}
@@ -426,7 +427,7 @@ const FollowingTab: React.FC<FollowingTabProps> = ({
               <Text style={styles.headerText}>Activities ({detail?.tours.length ?? 0})</Text>
               {(detail?.tours ?? []).slice(0, 8).map((t: any) => (
                 <Text key={t.id ?? `${t.date}-${t.name}`} style={styles.bodyText}>
-                  {`${t.date ?? ''}  ${t.name ?? 'Activity'}${t.startTime ? ` at ${t.startTime}` : ''}`}
+                  {`${t.date ?? ''}  ${t.name ?? 'Activity'}${t.startTime ? ` at ${formatClockTime(t.startTime)}` : ''}`}
                 </Text>
               ))}
               {detail?.tours?.length ? null : <Text style={styles.helperText}>No activities shared yet.</Text>}
@@ -454,7 +455,7 @@ const FollowingTab: React.FC<FollowingTabProps> = ({
                             key={item?.id ?? `${itineraryId}-${item?.day}-${item?.activity}`}
                             style={styles.bodyText}
                           >
-                            {`Day ${item?.day ?? '?'}${item?.time ? ` ${item.time}` : ''} · ${item?.activity ?? ''}`}
+                            {`Day ${item?.day ?? '?'}${item?.time ? ` ${formatClockTime(item.time)}` : ''} · ${item?.activity ?? ''}`}
                           </Text>
                         ))
                       ) : (

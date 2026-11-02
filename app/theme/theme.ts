@@ -307,6 +307,9 @@ const styleFactories = {
   components_ActivityEditForm_layout2: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ width: 128 }),
   components_ActivityEditForm_layout3: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ width: '100%', minWidth: 0 }),
   components_ActivityEditForm_layout4: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ flex: 1, minWidth: 0 }),
+  components_ActivityEditForm_label: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ marginTop: 16, marginBottom: 6 }),
+  components_ActivityEditForm_clearRow: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ flexDirection: 'row', alignItems: 'center', gap: 12 }),
+  components_ActivityEditForm_clearButton: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ paddingVertical: 8, paddingHorizontal: 4 }),
   components_BannerPicturePicker_layout1: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ width: '90%', maxWidth: 480, padding: 20, gap: 12 }),
   tabs_allTrips_layout1: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ flex: 1 }),
   tabs_allTrips_layout2: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ flexWrap: 'wrap', justifyContent: 'space-between', gap: 8 }),
@@ -2369,10 +2372,12 @@ const styleFactories = {
   // components/CsvTransferControls.tsx
   components_CsvTransferControls_13: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ minHeight: 44, justifyContent: 'center' }),
   // components/DateField.tsx
-  components_DateField_1: (_theme: AppTheme, { flattenStyle, styles, style }: ThemeStyleValues): any => ({
+  components_DateField_1: (_theme: AppTheme, { flattenStyle, styles, style, empty }: ThemeStyleValues): any => ({
       ...flattenStyle(styles.input),
       width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box',
       ...flattenStyle(style),
+      // An empty field shows the browser's mm/dd/yyyy hint; grey it like any other placeholder.
+      ...(empty ? { color: _theme.colors.textMuted } : {}),
     }),
   // components/DateField.tsx
   components_DateField_2: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ justifyContent: 'center' }),

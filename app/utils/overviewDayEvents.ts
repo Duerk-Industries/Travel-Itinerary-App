@@ -108,3 +108,68 @@ export const buildDayEventsMap = <
   });
   return map;
 };
+
+type PlanFlight = FlightForDay & {
+  departure_time?: string | null;
+  arrival_time?: string | null;
+  departure_location?: string | null;
+  departure_airport_code?: string | null;
+  arrival_location?: string | null;
+  arrival_airport_code?: string | null;
+};
+type PlanTour = { name?: string | null; startTime?: string | null };
+type PlanDetail = { kind?: string | null; time?: string | null; activity?: string | null };
+
+const CLOCK = /^(\d{1,2}):(\d{2})/;
+const minutesOf = (time: string | null | undefined): number | null => {
+  const match = CLOCK.exec(String(time ?? '').trim());
+  return match ? Number(match[1]) * 60 + Number(match[2]) : null;
+};
+
+/**
+ * When a transfer leaves, or null when that is not known. Template transfers whose time depends on the
+ * traveler's flight are saved at 00:00 with no arrival time, so that pair means "not set", not midnight.
+ */
+export const transferDepartureTime = (flight: Pick<PlanFlight, 'departure_time' | 'arrival_time'>): string | null => {
+  const departure = String(flight.departure_time ?? '').trim();
+  if (!departure || (minutesOf(departure) === 0 && !String(flight.arrival_time ?? '').trim())) return null;
+  return departure;
+};
+
+/**
+ * One line per thing happening on a day, earliest first. A transfer that set off on an earlier day shows as
+ * its arrival on this one; anything without a time follows the timed lines, transfers before stays and rentals.
+ */
+export const buildDayPlanLines = (
+  date: string,
+  info: { flights: PlanFlight[]; tours: PlanTour[]; details: PlanDetail[]; lodgings: Array<{ name?: string | null }>; rentals: Array<{ vendor?: string | null; pickupLocation?: string | null }> },
+  formatTime: (time: string) => string = (time) => time,
+): string[] => {
+  const lines: Array<{ minutes: number | null; rank: number; text: string }> = [];
+  const add = (time: string | null | undefined, rank: number, text: string) => {
+    const minutes = minutesOf(time);
+    lines.push({ minutes, rank, text: minutes === null ? text : `${formatTime(String(time).trim())} · ${text}` });
+  };
+  info.flights.forEach((flight) => {
+    const route = `${flight.departure_location || flight.departure_airport_code || 'Departure'} → ${flight.arrival_location || flight.arrival_airport_code || 'Arrival'}`;
+    if (flight.departure_date !== date && flight.arrival_date === date) {
+      const arrival = String(flight.arrival_time ?? '').trim();
+      add(arrival, 0, `Arrive: ${route}`);
+    } else {
+      add(transferDepartureTime(flight), 0, route);
+    }
+  });
+  info.tours.forEach((tour) => add(tour.startTime, 1, String(tour.name ?? '')));
+  info.details.filter((detail) => !detail.kind || detail.kind === 'activity').forEach((detail) => add(detail.time, 1, String(detail.activity ?? '')));
+  info.lodgings.forEach((lodging) => lines.push({ minutes: null, rank: 2, text: `Stay: ${lodging.name}` }));
+  info.rentals.forEach((rental) => lines.push({ minutes: null, rank: 3, text: `Rental car: ${rental.vendor || rental.pickupLocation}` }));
+  return lines
+    .map((line, index) => ({ ...line, index }))
+    .sort((a, b) => {
+      if ((a.minutes === null) !== (b.minutes === null)) return a.minutes === null ? 1 : -1;
+      if (a.minutes !== null && b.minutes !== null && a.minutes !== b.minutes) return a.minutes - b.minutes;
+      return a.rank - b.rank || a.index - b.index;
+    })
+    .map((line) => line.text)
+    .filter(Boolean);
+};

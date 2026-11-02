@@ -192,6 +192,7 @@ describe('Password validation', () => {
         calendarPreference: 'apple',
         appearancePreference: 'dark',
         temperatureUnit: 'celsius',
+        timeFormat: '12h',
       })
       .expect(200);
 
@@ -200,6 +201,7 @@ describe('Password validation', () => {
     expect(updateRes.body.user.mapPreference).toBe('apple');
     expect(updateRes.body.user.appearancePreference).toBe('dark');
     expect(updateRes.body.user.temperatureUnit).toBe('celsius');
+    expect(updateRes.body.user.timeFormat).toBe('12h');
 
     const profileRes = await request(app)
       .get('/api/account')
@@ -212,6 +214,9 @@ describe('Password validation', () => {
     expect(profileRes.body.calendarPreference).toBe('apple');
     expect(profileRes.body.appearancePreference).toBe('dark');
     expect(profileRes.body.temperatureUnit).toBe('celsius');
+    expect(profileRes.body.timeFormat).toBe('12h');
+
+    await request(app).patch('/api/account/profile').set('Authorization', `Bearer ${token}`).send({ timeFormat: 'am/pm' }).expect(400);
 
     const clearRes = await request(app)
       .patch('/api/account/profile')

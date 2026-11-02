@@ -1,4 +1,5 @@
 import { printableItineraryCss } from '../theme/theme';
+import { formatClockTime } from './timeFormat';
 type PrintableRecord = Record<string, any>;
 
 export type PrintableItineraryInput = {
@@ -100,8 +101,8 @@ const renderFlight = (flight: PrintableRecord, currency: string): string => {
     <div class="item-heading"><span class="item-kind">${text(flight.transfer_type || flight.transferType || 'Transfer')}</span><h3>${text(route)}</h3></div>
     <div class="fields">
       ${field('Carrier', flight.carrier)}${field('Number', flight.flight_number || flight.flightNumber)}
-      ${field('Departure', `${flight.departure_time || 'Time TBD'} · ${flight.departure_airport_code || dep}`)}
-      ${field('Arrival', `${flight.arrival_time || 'Time TBD'} · ${flight.arrival_airport_code || arr}`)}
+      ${field('Departure', `${formatClockTime(flight.departure_time) || 'Time TBD'} · ${flight.departure_airport_code || dep}`)}
+      ${field('Arrival', `${formatClockTime(flight.arrival_time) || 'Time TBD'} · ${flight.arrival_airport_code || arr}`)}
       ${field('Travelers', flight.passenger_name)}${field('Booking reference', flight.booking_reference || flight.bookingReference)}
       ${field('Layover', flight.layover_location || flight.layover_location_code)}${field('Layover duration', flight.layover_duration)}
       ${flight.cost !== undefined && flight.cost !== null ? field('Cost', money(flight.cost, currency)) : ''}
@@ -156,7 +157,7 @@ const renderDetail = (detail: PrintableRecord): string => {
     : '';
   return `<article class="item note">
     <div class="item-heading"><span class="item-kind">${text(detail.kind || 'Note')}</span><h3>${text(detail.activity)}</h3></div>
-    ${detail.time ? `<div class="time">${text(detail.time)}</div>` : ''}
+    ${detail.time ? `<div class="time">${text(formatClockTime(detail.time))}</div>` : ''}
     ${detail.cost !== undefined && detail.cost !== null ? `<div class="time">Cost: ${money(detail.cost, '')}</div>` : ''}
     ${place}
     ${quoteLines(detail.noteBody)}

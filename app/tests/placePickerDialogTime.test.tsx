@@ -54,6 +54,9 @@ describe('PlacePickerDialog time field', () => {
     const input = getByTestId('place-dialog-time') as any;
     expect(input.props.type).toBe('time');
     expect(input.props.style.colorScheme).toBe('dark');
-    expect(input.props.style.color).toBe(theme.colors.text);
+    // Empty, the browser's --:-- hint is greyed like a placeholder; a chosen time is in the text color.
+    expect(input.props.style.color).toBe(theme.colors.textMuted);
+    fireEvent(input, 'change', { target: { value: '14:30' } });
+    expect((getByTestId('place-dialog-time') as any).props.style.color).toBe(theme.colors.text);
   });
 });

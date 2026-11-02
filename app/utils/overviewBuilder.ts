@@ -1,5 +1,6 @@
 import { isFlightTransfer } from './transferCategory';
 import { MapApp, buildMapUrl } from './mapLinks';
+import { formatClockTime, formatTimeOfDay } from './timeFormat';
 
 type FlightLike = {
   transfer_type?: string;
@@ -126,7 +127,7 @@ export const formatFriendlyDate = (dateStr?: string | null, timeStr?: string | n
     if (match) {
       const withTime = new Date(date);
       withTime.setHours(Number(match[1]), Number(match[2]), 0, 0);
-      const timeText = withTime.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+      const timeText = formatTimeOfDay(withTime);
       return `${dateText} at ${timeText}`;
     }
   }
@@ -205,16 +206,17 @@ export const formatLodgingDetails = (lodging: LodgingLike, mapApp: MapApp = 'goo
 
 export const formatTourSummary = (tour: TourLike): string => {
   const location = tour.startLocation || 'Location TBD';
-  const time = tour.startTime ? ` at ${tour.startTime}` : '';
+  const time = tour.startTime ? ` at ${formatClockTime(tour.startTime)}` : '';
   return time ? `${tour.name}${time} at ${location}` : `${tour.name} at ${location}`;
 };
 
-export const formatTourDetails = (tour: TourLike): DetailItem[] => {
+export const formatTourDetails = (tour: TourLike, onOpenLocation?: (address: string) => void): DetailItem[] => {
+  const location = tour.startLocation?.trim() ?? '';
   return [
     { label: 'Name', value: tour.name },
     { label: 'Date', value: formatFriendlyDate(tour.date, tour.startTime) || tour.date || 'N/A' },
-    { label: 'Start Time', value: tour.startTime || 'N/A' },
-    { label: 'Start Location', value: tour.startLocation || 'N/A' },
+    { label: 'Start Time', value: formatClockTime(tour.startTime) || 'N/A' },
+    { label: 'Start Location', value: location || 'N/A', onPress: location && onOpenLocation ? () => onOpenLocation(location) : undefined },
     { label: 'Duration', value: tour.duration || 'N/A' },
     { label: 'Booking Reference', value: tour.reference || 'N/A' },
     { label: 'Booked On', value: formatFriendlyDate(tour.bookedOn) || tour.bookedOn || 'N/A' },

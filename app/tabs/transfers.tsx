@@ -36,6 +36,7 @@ import DateField from '../components/DateField';
 import { fixedTableColumn } from '../utils/tableColumns';
 import CsvTransferControls from '../components/CsvTransferControls';
 import { startItemSaveTask } from '../utils/analytics/track';
+import { formatClockTime } from '../utils/timeFormat';
 import {
   ITINERARY_STATUSES,
   DEFAULT_NEW_ITINERARY_STATUS,
@@ -930,6 +931,9 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
         const ids = Array.isArray(item.passenger_ids) ? item.passenger_ids : [];
         return formatTravelerListDisplay(ids, baseDisplay, groupMembers) || baseDisplay;
       }
+      case 'departure_time':
+      case 'arrival_time':
+        return formatClockTime(baseDisplay);
       case 'cost':
         return `$${value}`;
       case 'costPerPerson': {

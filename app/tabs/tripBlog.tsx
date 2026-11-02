@@ -62,6 +62,7 @@ import PhotoFirstComposer from '../components/PhotoFirstComposer';
 import DropdownOptionButton from '../components/DropdownOptionButton';
 import { isTripActiveToday, localDateString } from '../utils/offlineTripCache';
 import { trimBlogNoteEnd } from '../utils/trimBlogNoteEnd';
+import { formatClockTime, formatTimeOfDay } from '../utils/timeFormat';
 
 // Re-exported for backward compatibility — app/tests/tripBlogMedia.test.ts and any other existing
 // consumer imports these names from this file; the actual implementations now live in
@@ -1388,7 +1389,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], t
     if (!state || state.status === 'idle') return null;
     if (state.status === 'pending') return 'Editing…';
     if (state.status === 'saving') return 'Saving…';
-    if (state.status === 'saved') return `Saved ${new Date(state.savedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    if (state.status === 'saved') return `Saved ${formatTimeOfDay(new Date(state.savedAt))}`;
     return 'Not saved — retrying';
   };
   // Phase 0 of the visual redesign — the trip blog gets its own page shell (renderBoundedPage in
@@ -2047,7 +2048,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], t
                 {(day.activities || []).map((activity) => (
                   <View key={activity.id} style={themeStyle('tabs_tripBlog_112', { theme: theme }, (theme ?? _styleTheme))}>
                     <Text style={themeStyle('tabs_tripBlog_113', { textColor: textColor }, (theme ?? _styleTheme))}>{activity.name}</Text>
-                    <Text style={themeStyle('tabs_tripBlog_114', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>{activity.activityType}{activity.startTime ? ` · ${activity.startTime}` : ''}{activity.startLocation ? ` · ${activity.startLocation}` : ''}</Text>
+                    <Text style={themeStyle('tabs_tripBlog_114', { mutedColor: mutedColor }, (theme ?? _styleTheme))}>{activity.activityType}{activity.startTime ? ` · ${formatClockTime(activity.startTime)}` : ''}{activity.startLocation ? ` · ${activity.startLocation}` : ''}</Text>
                   </View>
                 ))}
               </View>

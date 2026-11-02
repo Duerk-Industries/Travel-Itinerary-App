@@ -52,6 +52,7 @@ import {
 const fixedColumnStyle = fixedTableColumn;
 
 import { ACTIVITY_TYPES, type ActivityType } from '../utils/activityTypes';
+import { formatClockTime } from '../utils/timeFormat';
 export { ACTIVITY_TYPES, type ActivityType } from '../utils/activityTypes';
 
 export type Tour = PlanningCoordinates & Pick<Activity, 'nearLodgingId'> & {
@@ -115,7 +116,7 @@ const activitySortValue = (tour: Tour, key: string): string | number => {
   return String(value);
 };
 
-const sortActivityRows = (rows: Tour[], sort: ActivitySort, lodgings: ActivityFormLodging[] = []): Tour[] => {
+export const sortActivityRows = (rows: Tour[], sort: ActivitySort, lodgings: ActivityFormLodging[] = []): Tour[] => {
   const key = sort.key ?? 'date';
   const direction = sort.direction === 'asc' ? 1 : -1;
   const hotelEndDates = new Map(lodgings.map((hotel) => [hotel.id, hotel.checkOutDate?.slice(0, 10) ?? '']));
@@ -136,14 +137,24 @@ const sortActivityRows = (rows: Tour[], sort: ActivitySort, lodgings: ActivityFo
       const comparison = String(leftValue).localeCompare(String(rightValue), undefined, { sensitivity: 'base', numeric: true });
       if (comparison !== 0) return comparison * direction;
     }
-    // Optional choices follow every scheduled activity on the hotel's checkout day.
-    if (key === 'date' && Boolean(left.date) !== Boolean(right.date)) return left.date ? -1 : 1;
-    if (sort.key === null && key === 'date') {
-      const timeComparison = String(left.startTime ?? '').localeCompare(String(right.startTime ?? ''), undefined, { numeric: true });
-      if (timeComparison !== 0) return timeComparison;
-      return String(left.name ?? '').localeCompare(String(right.name ?? ''), undefined, { sensitivity: 'base', numeric: true });
+    // Ties fall back to the trip's order, whatever column is sorted: by day, then by start time within a day,
+    // earliest first whichever way the column runs, so a day always reads in the order it happens.
+    if (key !== 'date') {
+      const leftDate = activityDate(left);
+      const rightDate = activityDate(right);
+      if (Boolean(leftDate) !== Boolean(rightDate)) return leftDate ? -1 : 1;
+      const dateComparison = leftDate.localeCompare(rightDate);
+      if (dateComparison !== 0) return dateComparison;
     }
-    return 0;
+    // Optional choices follow every scheduled activity on the hotel's checkout day.
+    if (Boolean(left.date) !== Boolean(right.date)) return left.date ? -1 : 1;
+    const leftTime = String(left.startTime ?? '').trim();
+    const rightTime = String(right.startTime ?? '').trim();
+    // An activity with no start time comes after the timed ones that day.
+    if (Boolean(leftTime) !== Boolean(rightTime)) return leftTime ? -1 : 1;
+    const timeComparison = leftTime.localeCompare(rightTime, undefined, { numeric: true });
+    if (timeComparison !== 0) return timeComparison;
+    return String(left.name ?? '').localeCompare(String(right.name ?? ''), undefined, { sensitivity: 'base', numeric: true });
   });
 };
 
@@ -404,6 +415,8 @@ type TourTabProps = {
   featureTapToEditTables?: boolean;
   featureActivityRecap?: boolean;
   onOpenActivityRecap?: (activity: Tour) => void;
+  /** Opens an address in the traveler's maps app. */
+  onOpenMap?: (address: string) => void;
   /** Offer template activities that fit the days and cities of this trip. Off unless the page asks for it. */
   showSuggestions?: boolean;
   compactActivityCards?: boolean;
@@ -443,6 +456,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
   featureTapToEditTables = true,
   featureActivityRecap = false,
   onOpenActivityRecap,
+  onOpenMap,
   showSuggestions = false,
   compactActivityCards = false,
 }) => {
@@ -1109,8 +1123,9 @@ export const ActivityTab: React.FC<TourTabProps> = ({
         <View style={themeStyle('compactItemList', {}, theme)} testID="activity-summary-list">
           {sortedTours.map((tour) => (
             <ActivitySummaryCard key={tour.id} activity={tour} styles={styles} theme={theme}
+              travelers={tour.travelerIds?.length ? formatPeopleList(tour.travelerIds) : undefined}
               testID={`activity-details-${tour.id}`} photoTestID={`activity-photo-${tour.id}`}
-              onPress={() => setSelectedTourId(tour.id)} backendUrl={backendUrl} headers={jsonHeaders} destination={destination} />
+              onPress={() => setSelectedTourId(tour.id)} backendUrl={backendUrl} headers={jsonHeaders} destination={destination} onOpenLocation={onOpenMap} />
           ))}
         </View>
       ) : !tableEditing ? <>
@@ -1127,8 +1142,14 @@ export const ActivityTab: React.FC<TourTabProps> = ({
               { key: 'startTime', label: 'Start Time', width: 120 },
               { key: 'duration', label: 'Duration', width: 120 },
               { key: 'status', label: 'Status', width: 130 },
+              { key: 'travelerIds', label: 'Attendees', width: 200 },
               { key: 'averageRating', label: 'Rating', width: 120 },
-            ].map((col, idx, arr) => (
+            ].map((col, idx, arr) => col.key === 'travelerIds' ? (
+              // Not sortable: the stored values are member ids, so sorting would not follow the names shown.
+              <View key={col.key} style={[styles.cell, fixedColumnStyle(col.width)]}>
+                <IconText style={styles.headerText}>{col.label}</IconText>
+              </View>
+            ) : (
               <TouchableOpacity
                 key={col.key}
                 style={[styles.cell, fixedColumnStyle(col.width), col.key === 'name' && Platform.OS === 'web' && featureTapToEditTables && (themeStyle('tabs_activities_11', { theme: theme }, (theme ?? _styleTheme)) as any), idx === arr.length - 1 && styles.lastCell]}
@@ -1170,13 +1191,16 @@ export const ActivityTab: React.FC<TourTabProps> = ({
                 ) : null}
               </View>
               <View style={[styles.cell, fixedColumnStyle(120)]}>
-                <Text style={styles.cellText}>{t.startTime || '-'}</Text>
+                <Text style={styles.cellText}>{formatClockTime(t.startTime) || '-'}</Text>
               </View>
               <View style={[styles.cell, fixedColumnStyle(120)]}>
                 <Text style={styles.cellText}>{t.duration || '-'}</Text>
               </View>
               <View style={[styles.cell, fixedColumnStyle(130)]}>
                 <Text style={styles.cellText}>{normalizeItineraryStatus(t.status, LEGACY_ITINERARY_STATUS)}</Text>
+              </View>
+              <View style={[styles.cell, fixedColumnStyle(200)]}>
+                <Text numberOfLines={2} style={styles.cellText} testID={`activity-attendees-${t.id}`}>{formatPeopleList(t.travelerIds)}</Text>
               </View>
               <View style={[styles.cell, styles.lastCell, fixedColumnStyle(120)]}>
                 <ItemRating status={t.status} averageRating={t.averageRating} ratingCount={t.ratingCount} userStars={t.userStars} readOnly={readOnly} onRate={(stars) => rateTour(t.id, stars)} name={t.name || 'this activity'} testID={`activity-table-rating-${t.id}`} theme={theme} />
@@ -1253,7 +1277,12 @@ export const ActivityTab: React.FC<TourTabProps> = ({
                 {renderDetailRow('Date', selectedTour.date ? formatDateLong(selectedTour.date) : 'Optional')}
                 {renderDetailRow('Type', selectedTour.activityType || 'Tour')}
                 {renderDetailRow('Activity', selectedTour.name || '-')}
-                {renderDetailRow('Start Location', selectedTour.startLocation || '-')}
+                {renderDetailRow('Start Location', selectedTour.startLocation?.trim() && onOpenMap ? (
+                  <TouchableOpacity accessibilityRole="link" accessibilityLabel={`Open ${selectedTour.startLocation.trim()} in maps`} testID={`activity-location-${selectedTour.id}`}
+                    onPress={() => onOpenMap(selectedTour.startLocation.trim())}>
+                    <Text style={[styles.cellText, styles.linkText, themeStyle('tabs_activities_3', {  }, (theme ?? _styleTheme))]}>{selectedTour.startLocation.trim()}</Text>
+                  </TouchableOpacity>
+                ) : selectedTour.startLocation || '-')}
                 {renderDetailRow('Start Time', selectedTour.startTime || '-')}
                 {renderDetailRow('Duration', selectedTour.duration || '-')}
                 <ActivityPhoto image={selectedTour.image} name={selectedTour.name} testID="activity-detail-photo" />
@@ -1321,8 +1350,8 @@ export const ActivityTab: React.FC<TourTabProps> = ({
           rows={[
             { label: 'Date', value: selectedTour.date ? formatDateLong(selectedTour.date) : 'Optional' },
             { label: 'Type', value: selectedTour.activityType || 'Tour' },
-            { label: 'Start Location', value: selectedTour.startLocation || '-' },
-            { label: 'Start Time', value: selectedTour.startTime || '-' },
+            { label: 'Start Location', value: selectedTour.startLocation || '-', onPress: selectedTour.startLocation?.trim() && onOpenMap ? () => onOpenMap(selectedTour.startLocation.trim()) : undefined },
+            { label: 'Start Time', value: formatClockTime(selectedTour.startTime) || '-' },
             { label: 'Duration', value: selectedTour.duration || '-' },
             { label: 'Cost', value: selectedTour.cost ? `$${selectedTour.cost}` : '-' },
             { label: 'Platform Booked On', value: selectedTour.bookedOn || '-' },
