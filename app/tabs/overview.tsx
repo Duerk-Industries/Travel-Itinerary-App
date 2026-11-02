@@ -259,6 +259,7 @@ type OverviewTabProps = {
   /** Present only when AI itinerary generation is available; starts generation for the open trip. */
   onGenerateAiItinerary?: (tripId: string) => void;
   onDismissAiItineraryError?: (tripId: string) => void;
+  onCancelAiItinerary?: (tripId: string) => void;
   // Reflects the `ai_itinerary_generation` feature flag (+ tier entitlement)
   // for the current user. When false, the Retry button is hidden since a
   // retry would just 402 again.
@@ -510,6 +511,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   onRetryAiItinerary,
   onGenerateAiItinerary,
   onDismissAiItineraryError,
+  onCancelAiItinerary,
   aiItineraryGenerationAllowed = true,
   editSignal,
   goToDay1Signal,
@@ -4012,6 +4014,17 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           <Text style={styles.helperText}>
             {aiItineraryStageDetail || 'Your AI trip plan is being generated and will appear here automatically.'}
           </Text>
+          {onCancelAiItinerary ? (
+            <TouchableOpacity
+              style={[styles.button, styles.smallButton, styles.dangerButton]}
+              onPress={() => onCancelAiItinerary(trip.id)}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel itinerary generation"
+              testID="ai-itinerary-cancel-button"
+            >
+              <Text style={styles.dangerButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          ) : null}
         </View>
       ) : null}
       {trip && !aiItineraryPending && aiItineraryFailedMessage ? (

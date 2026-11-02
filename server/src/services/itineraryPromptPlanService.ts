@@ -2438,6 +2438,18 @@ export const enforceBudgetTierCoherence = (
   return output;
 };
 
+const NO_ACTIVITIES_NOTE = /travel day:\s*no activities scheduled\.?/i;
+
+/** Drops the "Travel day: no activities scheduled" wording from any day that ended up with stops. Exported for tests. */
+export const reconcileTravelDayNotes = (itinerary: PromptItinerary): void => {
+  for (const day of itinerary.dy) {
+    if (!day.it?.length || !Array.isArray(day.ln)) continue;
+    day.ln = day.ln
+      .map((note) => note.replace(NO_ACTIVITIES_NOTE, '').replace(/;\s*;/g, ';').replace(/\s{2,}/g, ' ').replace(/^[;:,\s]+|[;:,\s]+$/g, '').trim())
+      .filter((note) => note && !/^travel day:?$/i.test(note));
+  }
+};
+
 const enforceMustSeeAttractions = (
   itinerary: PromptItinerary,
   mustSeeAttractions: NormalizedMustSeeAttraction[],
@@ -3968,6 +3980,10 @@ const runGenerateItineraryViaPromptPlan = async (
     );
     day.ln = Array.from(new Set([...(day.ln ?? []), ...logistics])).slice(0, 2);
   }
+
+  // A day the plan scheduled stops on is not a day with "no activities scheduled", whatever the arrival/departure rule
+  // said before the stops were placed. Say so only for days that really are empty.
+  reconcileTravelDayNotes(finalItinerary);
 
   const whyFitsByName = new Map<string, string>();
   for (const entries of Object.values(shortlistByDestination)) {

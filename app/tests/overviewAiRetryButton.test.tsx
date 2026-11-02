@@ -80,4 +80,29 @@ describe('Overview failed AI itinerary banner', () => {
     });
     expect(findRetryButton(tree!.root).length).toBe(0);
   });
+
+  describe('while generating', () => {
+    const findCancel = (root: any) =>
+      root.findAllByProps({ testID: 'ai-itinerary-cancel-button' }).filter((node: any) => typeof node.props?.onPress === 'function');
+
+    test('offers Cancel on the progress banner and reports the trip when pressed', async () => {
+      const onCancelAiItinerary = jest.fn();
+      let tree: any;
+      await act(async () => {
+        tree = renderer.create(<OverviewTab {...(baseProps as any)} aiItineraryFailedMessage={null} aiItineraryPending onCancelAiItinerary={onCancelAiItinerary} aiItineraryGenerationAllowed />);
+      });
+      const [cancel] = findCancel(tree!.root);
+      expect(cancel).toBeTruthy();
+      await act(async () => { cancel.props.onPress(); });
+      expect(onCancelAiItinerary).toHaveBeenCalledWith('trip-1');
+    });
+
+    test('has no Cancel when nothing is wired to it', async () => {
+      let tree: any;
+      await act(async () => {
+        tree = renderer.create(<OverviewTab {...(baseProps as any)} aiItineraryFailedMessage={null} aiItineraryPending aiItineraryGenerationAllowed />);
+      });
+      expect(findCancel(tree!.root).length).toBe(0);
+    });
+  });
 });

@@ -2948,6 +2948,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         jobId,
         status: 'pending',
         request: request ?? prev[tripId]?.request ?? null,
+        startedAt: Date.now(),
       },
     }));
   }, []);
@@ -2985,6 +2986,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
             jobId: String(data.jobId),
             status: 'pending',
             error: undefined,
+            startedAt: Date.now(),
             stage: null,
             stageLabel: null,
             stageDetail: null,
@@ -3048,6 +3050,23 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     },
     [trips, traits, backendUrl, headers, onAiItineraryQueued]
   );
+
+  // Stops a generation in progress. The server drops whatever it had made and saves nothing, then the banner goes away.
+  const cancelAiItinerary = useCallback(async (tripId: string) => {
+    const tracker = asyncItineraryByTrip[tripId];
+    if (!tracker || tracker.status !== 'pending') return;
+    try {
+      await fetch(`${backendUrl}/api/itinerary/async/${encodeURIComponent(tracker.jobId)}/cancel`, { method: 'POST', headers });
+    } catch {
+      // Offline: still stop waiting on it; the server job is dropped when it next reports.
+    }
+    setAsyncItineraryByTrip((prev) => {
+      if (!(tripId in prev)) return prev;
+      const next = { ...prev };
+      delete next[tripId];
+      return next;
+    });
+  }, [asyncItineraryByTrip, backendUrl, headers]);
 
   const dismissAiItineraryError = useCallback((tripId: string) => {
     setAsyncItineraryByTrip((prev) => {
@@ -4240,6 +4259,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   onRetryAiItinerary={retryAiItinerary}
                   onGenerateAiItinerary={featureAiItineraryGeneration ? generateAiItinerary : undefined}
                   onDismissAiItineraryError={dismissAiItineraryError}
+                  onCancelAiItinerary={cancelAiItinerary}
                   aiItineraryGenerationAllowed={aiItineraryGenerationAllowed}
                   editSignal={overviewEditSignal}
                   goToDay1Signal={goToDay1Signal}

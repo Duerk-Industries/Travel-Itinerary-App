@@ -8,7 +8,7 @@ import { getEnvValue } from '../env';
 import { getItineraryImage } from '../image-service';
 import { generateItineraryViaPromptPlan, type MustSeeAttractionInput } from '../services/itineraryPromptPlanService';
 import { scheduleGetYourGuideDescriptorEnrichment } from '../services/getYourGuideItineraryEnrichmentService';
-import { enqueueAsyncItineraryJob, getAsyncItineraryJob } from '../services/itineraryAsyncService';
+import { cancelAsyncItineraryJob, enqueueAsyncItineraryJob, getAsyncItineraryJob } from '../services/itineraryAsyncService';
 import { ApiLimitExceededError } from '../apis/usageLimiter';
 import { fetchOverviewWeather } from '../apis/openMeteoWeatherApi';
 import {
@@ -703,6 +703,16 @@ router.post('/async', async (req, res) => {
     itineraryId: typeof itineraryId === 'string' ? itineraryId : null,
     status: job.status,
   });
+});
+
+router.post('/async/:jobId/cancel', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const job = cancelAsyncItineraryJob(req.params.jobId, userId);
+  if (!job) {
+    res.status(404).json({ error: 'Async itinerary job not found' });
+    return;
+  }
+  res.json({ jobId: job.id, status: job.status });
 });
 
 router.get('/async/:jobId', async (req, res) => {
