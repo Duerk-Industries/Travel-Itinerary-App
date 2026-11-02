@@ -91,6 +91,7 @@ import { buildRentalDraftFromRow, buildTourDraftFromRow, getOverviewSaveFlags } 
 import {
   buildDayEventsMap,
   flightMatchesDay,
+  buildDayPlanLines,
   lodgingCoversDay,
   rentalMatchesDay,
   tourMatchesDay,
@@ -2630,18 +2631,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           </View>
   );
 
-  // One line per thing happening on a day, for the whole-trip list.
-  const buildWholeTripLines = (info?: { flights: Flight[]; lodgings: Lodging[]; tours: Tour[]; rentals: CarRental[]; details: ItineraryDetail[] }): string[] => {
-    if (!info) return [];
-    const withTime = (time: string | null | undefined, text: string) => (time ? `${formatClockTime(time)} · ${text}` : text);
-    return [
-      ...info.flights.map((f) => withTime(f.departure_time, `${f.departure_location || f.departure_airport_code || 'Departure'} → ${(f as any).arrival_location || f.arrival_airport_code || 'Arrival'}`)),
-      ...info.tours.map((t) => withTime(t.startTime, t.name)),
-      ...info.details.filter((d) => !d.kind || d.kind === 'activity').map((d) => withTime(d.time, d.activity)),
-      ...info.lodgings.map((l) => `Stay: ${l.name}`),
-      ...info.rentals.map((r) => `Rental car: ${r.vendor || r.pickupLocation}`),
-    ].filter(Boolean);
-  };
+  // One line per thing happening on a day, for the whole-trip list, earliest first.
+  const buildWholeTripLines = (date: string, info?: { flights: Flight[]; lodgings: Lodging[]; tours: Tour[]; rentals: CarRental[]; details: ItineraryDetail[] }): string[] =>
+    info ? buildDayPlanLines(date, { ...info, flights: info.flights as any }, (time) => formatClockTime(time)) : [];
 
   const OverviewTransferEditor = editingFlightDraft && !isFlightTransfer(editingFlightDraft) ? GroundTransferEditingForm : FlightEditingForm;
   const renderOverviewFlightEditor = () => (
@@ -3456,7 +3448,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             <View testID="overview-whole-trip" style={themeStyle('tabs_overview_54', {  }, (theme ?? _styleTheme))}>
               {dayCards.map((card, idx) => {
                 const info = dayDataByDate.get(card.date);
-                const lines = buildWholeTripLines(info);
+                const lines = buildWholeTripLines(card.date, info);
                 const mapPoints = info ? selectPlanningDayPoints({
                   date: card.date,
                   flights: info.flights.map((f) => ({ ...f, departureDate: f.departure_date, arrivalDate: f.arrival_date, departureLocation: f.departure_location, arrivalLocation: f.arrival_location, departureAirportCode: f.departure_airport_code, arrivalAirportCode: f.arrival_airport_code })),
