@@ -24,6 +24,7 @@ import DialogShell from './DialogShell';
 import type { Tour } from '../tabs/activities';
 import { rankActivitiesByNameSimilarity } from '../utils/assistantTools';
 import type { PendingAction } from '../hooks/useAssistantChat';
+import { formatClockTime } from '../utils/timeFormat';
 
 type Props = {
   visible: boolean;
@@ -47,7 +48,7 @@ const describeAddActivity = (args: Record<string, unknown>): string => {
   const name = typeof args.name === 'string' && args.name ? args.name : 'this activity';
   const date = typeof args.date === 'string' && args.date ? ` on ${args.date}` : '';
   const startLocation = typeof args.startLocation === 'string' && args.startLocation ? ` at ${args.startLocation}` : '';
-  const startTime = typeof args.startTime === 'string' && args.startTime ? ` (${args.startTime})` : '';
+  const startTime = typeof args.startTime === 'string' && args.startTime ? ` (${formatClockTime(args.startTime)})` : '';
   return `Add "${name}"${date}${startLocation}${startTime} to this trip?`;
 };
 

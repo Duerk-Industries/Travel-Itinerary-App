@@ -28,6 +28,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Socket } from 'socket.io-client';
 import { CLIENT_EVENTS, SERVER_EVENTS } from '../../packages/messaging/src/events';
 import type { ChatMessage } from '../../packages/messaging/src/types';
+import { formatTimeOfDay } from '../utils/timeFormat';
 
 
 interface Props {
@@ -292,7 +293,7 @@ const ChatPanel: React.FC<Props> = ({
             )}
             <Text style={isOwn ? themedStyles.ownText : themedStyles.otherText}>{item.body}</Text>
             <Text style={themedStyles.timestamp}>
-              {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              {formatTimeOfDay(new Date(item.createdAt))}
             </Text>
           </View>
         </View>

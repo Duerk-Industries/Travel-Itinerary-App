@@ -135,6 +135,7 @@ import { formatTemperatureFromCelsius, normalizeTemperatureUnit, type Temperatur
 import { printItinerary as openPrintableItinerary } from '../utils/printableItinerary';
 import CsvTransferControls from '../components/CsvTransferControls';
 import { startItemSaveTask } from '../utils/analytics/track';
+import { formatClockTime } from '../utils/timeFormat';
 
 type Trip = {
   id: string;
@@ -1398,12 +1399,12 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         const items: string[] = [];
         const flightsForDay = flights.filter((f) => flightMatchesDay(f, date));
         flightsForDay.forEach((f) =>
-          items.push(`Transfer ${f.departure_location || f.departure_airport_code || 'DEP'} -> ${f.arrival_location || f.arrival_airport_code || 'ARR'} dep ${f.departure_time || '?'} arr ${f.arrival_time || '?'}`)
+          items.push(`Transfer ${f.departure_location || f.departure_airport_code || 'DEP'} -> ${f.arrival_location || f.arrival_airport_code || 'ARR'} dep ${formatClockTime(f.departure_time) || '?'} arr ${formatClockTime(f.arrival_time) || '?'}`)
         );
         const lodgingsForDay = lodgings.filter((l) => lodgingCoversDay(l, date));
         lodgingsForDay.forEach((l) => items.push(`Lodging at ${l.name} (${l.checkInDate} - ${l.checkOutDate})`));
         const toursForDay = tours.filter((t) => tourMatchesDay(t, date));
-        toursForDay.forEach((t) => items.push(`Activity: ${t.name} at ${t.startTime || 'time TBD'}`));
+        toursForDay.forEach((t) => items.push(`Activity: ${t.name} at ${formatClockTime(t.startTime) || 'time TBD'}`));
         const rentalsForDay = carRentals.filter((r) => rentalMatchesDay(r, date));
         rentalsForDay.forEach((r) => items.push(`Rental car (${r.vendor || 'vendor'}) ${r.pickupDate} -> ${r.dropoffDate}`));
         const label = `Day ${idx + 1}`;
@@ -2405,7 +2406,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           calendarEvent={activityCalendarEvent(selectedTour)}
           title={selectedTour.name}
           status={String(selectedTour.status || '') || undefined}
-          rows={formatTourDetails(selectedTour).map((item) => ({
+          rows={formatTourDetails(selectedTour, onOpenAddress).map((item) => ({
             label: item.label,
             value: item.value,
             onPress: item.onPress ?? (item.linkUrl ? () => openDetailLink(item.linkUrl) : undefined),
@@ -2569,7 +2570,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     if (!info) return [itineraryLoading ? 'Loading itinerary...' : 'No itinerary details yet.'];
     const activityDetails = info.details.filter((d) => !d.kind || d.kind === 'activity');
     if (activityDetails.length) {
-      return activityDetails.map((d) => (d.time ? `${d.time} · ${d.activity}` : d.activity));
+      return activityDetails.map((d) => (d.time ? `${formatClockTime(d.time)} · ${d.activity}` : d.activity));
     }
     if (info.lodgings.length) {
       const day = normalizeDateString(date ?? '');
@@ -2632,7 +2633,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   // One line per thing happening on a day, for the whole-trip list.
   const buildWholeTripLines = (info?: { flights: Flight[]; lodgings: Lodging[]; tours: Tour[]; rentals: CarRental[]; details: ItineraryDetail[] }): string[] => {
     if (!info) return [];
-    const withTime = (time: string | null | undefined, text: string) => (time ? `${time} · ${text}` : text);
+    const withTime = (time: string | null | undefined, text: string) => (time ? `${formatClockTime(time)} · ${text}` : text);
     return [
       ...info.flights.map((f) => withTime(f.departure_time, `${f.departure_location || f.departure_airport_code || 'Departure'} → ${(f as any).arrival_location || f.arrival_airport_code || 'Arrival'}`)),
       ...info.tours.map((t) => withTime(t.startTime, t.name)),
@@ -3221,6 +3222,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                     return (
                       <ActivitySummaryCard key={tour.id} activity={tour} styles={styles} theme={theme}
                         testID={`day-details-activity-${tour.id}`}
+                        onOpenLocation={onOpenAddress}
                         photoTestID={`day-details-activity-photo-${tour.id}`}
                         bookingTestID={`day-details-getyourguide-${tour.id}`}
                         travelers={showTourNames ? participants : undefined}
@@ -3234,7 +3236,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                                   sections: [
                                     {
                                       subtitle: showTourNames && participants ? `Travelers: ${participants}` : undefined,
-                                      items: formatTourDetails(tour),
+                                      items: formatTourDetails(tour, onOpenAddress),
                                       calendarEvent: activityCalendarEvent(tour),
                                     },
                                   ],
@@ -3245,7 +3247,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                                   sections: [
                                     {
                                       subtitle: showTourNames && participants ? `Travelers: ${participants}` : undefined,
-                                      items: formatTourDetails(tour),
+                                      items: formatTourDetails(tour, onOpenAddress),
                                       calendarEvent: activityCalendarEvent(tour),
                                     },
                                   ],

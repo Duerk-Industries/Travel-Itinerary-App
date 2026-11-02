@@ -7,10 +7,9 @@ import React, { useMemo, useRef, useState } from 'react';
 import SelectField from './SelectField';
 import { localTodayDateOnly } from '../utils/dateOnly';
 import type { Lodging } from '../../server/src/types';
-import { Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Modal from './KeyboardAwareModal';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
-import { toWebStyle } from '../utils/webStyle';
 import { formatMemberDisplayName } from '../utils/memberDisplay';
 
 import { DEFAULT_NEW_ITINERARY_STATUS, ITINERARY_STATUSES, normalizeItineraryStatus } from '../utils/itineraryStatus';
@@ -72,6 +71,9 @@ const ActivityEditForm: React.FC<ActivityEditFormProps> = ({
   const toggleSelectedStyle = styles.toggleOptionSelected ?? themeStyle('components_ActivityEditForm_2', { theme: theme }, (theme ?? _styleTheme));
   const toggleTextStyle = styles.toggleOptionText ?? themeStyle('components_ActivityEditForm_3', { theme: theme }, (theme ?? _styleTheme));
   const toggleTextSelectedStyle = styles.toggleOptionTextSelected ?? themeStyle('components_ActivityEditForm_4', { theme: theme }, (theme ?? _styleTheme));
+  const labelStyle = [styles.modalLabel, themeStyle('components_ActivityEditForm_label', {  }, (theme ?? _styleTheme))];
+  // Example text in an empty field reads as a hint, not as something already filled in.
+  const placeholderColor = (theme ?? _styleTheme).colors.textMuted;
 
 
   const status = normalizeItineraryStatus(draft.status, DEFAULT_NEW_ITINERARY_STATUS);
@@ -103,13 +105,13 @@ const ActivityEditForm: React.FC<ActivityEditFormProps> = ({
           <ScrollView style={themeStyle('components_ActivityEditForm_6', {  }, (theme ?? _styleTheme))} contentContainerStyle={themeStyle('components_ActivityEditForm_7', {  }, (theme ?? _styleTheme))} keyboardShouldPersistTaps="handled" nestedScrollEnabled>
             <View style={themeStyle('components_ActivityEditForm_layout1', {  }, (theme ?? _styleTheme))} testID="activity-scheduling-row">
               <View style={themeStyle('components_ActivityEditForm_layout2', {  }, (theme ?? _styleTheme))}>
-                <Text style={styles.modalLabel}>Scheduling</Text>
+                <Text style={labelStyle}>Scheduling</Text>
                 <SelectField title="Activity scheduling" testID="activity-scheduling" value={schedulingMode === 'optional' ? 'optional' : ''}
                   options={[{ value: '', label: 'Scheduled' }, { value: 'optional', label: 'Optional' }]}
                   onChange={changeSchedulingMode} styles={styles} style={themeStyle('components_ActivityEditForm_layout3', {  }, (theme ?? _styleTheme))} webStyle={themeStyle('components_ActivityEditForm_layout3', {  }, (theme ?? _styleTheme))} />
               </View>
               <View style={themeStyle('components_ActivityEditForm_layout4', {  }, (theme ?? _styleTheme))}>
-                <Text style={styles.modalLabel}>{schedulingMode === 'optional' ? 'Near hotel' : 'Date'}</Text>
+                <Text style={labelStyle}>{schedulingMode === 'optional' ? 'Near hotel' : 'Date'}</Text>
                 {schedulingMode === 'optional' ? <SelectField title="Near hotel" testID="activity-near-hotel"
                   value={draft.nearLodgingId ?? ''} options={hotelOptions} styles={styles}
                   style={themeStyle('components_ActivityEditForm_layout3', {  }, (theme ?? _styleTheme))} webStyle={themeStyle('components_ActivityEditForm_layout3', {  }, (theme ?? _styleTheme))}
@@ -119,84 +121,31 @@ const ActivityEditForm: React.FC<ActivityEditFormProps> = ({
                 />}
               </View>
             </View>
-            <Text style={styles.modalLabel}>Status</Text>
-            {Platform.OS === 'web' ? (
-              <select
-                value={status}
-                onChange={(e) => onChange((prev) => ({ ...prev, status: normalizeItineraryStatus(e.target.value, DEFAULT_NEW_ITINERARY_STATUS) }))}
-                style={toWebStyle(styles.input, themeStyle('components_ActivityEditForm_8', {  }, (theme ?? _styleTheme)))}
-              >
-                {ITINERARY_STATUSES.map((opt) => (
-                  <option key={opt} value={opt}>
-                    {opt}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <View style={styles.payerChips}>
-                {ITINERARY_STATUSES.map((opt) => {
-                  const selected = status === opt;
-                  return (
-                    <TouchableOpacity
-                      key={`tour-status-${opt}`}
-                      style={[toggleBaseStyle, selected && toggleSelectedStyle]}
-                      onPress={() => onChange((prev) => ({ ...prev, status: opt }))}
-                    >
-                      <Text style={[toggleTextStyle, selected && toggleTextSelectedStyle]}>{opt}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            )}
-            <Text style={styles.modalLabel}>Activity Type</Text>
-            {Platform.OS === 'web' ? (
-              <select
-                value={activityType}
-                onChange={(e) =>
-                  onChange((prev) => ({
-                    ...prev,
-                    activityType: ACTIVITY_TYPES.includes(e.target.value as ActivityType) ? (e.target.value as ActivityType) : 'Tour',
-                  }))
-                }
-                style={toWebStyle(styles.input, themeStyle('components_ActivityEditForm_9', {  }, (theme ?? _styleTheme)))}
-              >
-                {ACTIVITY_TYPES.map((opt) => (
-                  <option key={opt} value={opt}>
-                    {opt}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <View style={styles.payerChips}>
-                {ACTIVITY_TYPES.map((opt) => {
-                  const selected = activityType === opt;
-                  return (
-                    <TouchableOpacity
-                      key={`activity-type-${opt}`}
-                      style={[toggleBaseStyle, selected && toggleSelectedStyle]}
-                      onPress={() => onChange((prev) => ({ ...prev, activityType: opt }))}
-                    >
-                      <Text style={[toggleTextStyle, selected && toggleTextSelectedStyle]}>{opt}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            )}
-            <Text style={styles.modalLabel}>Activity</Text>
+            <Text style={labelStyle}>Status</Text>
+            <SelectField title="Status" testID="activity-status" sheet value={status} styles={styles}
+              options={ITINERARY_STATUSES.map((opt) => ({ value: opt, label: opt }))}
+              onChange={(value) => onChange((prev) => ({ ...prev, status: normalizeItineraryStatus(value, DEFAULT_NEW_ITINERARY_STATUS) }))} />
+            <Text style={labelStyle}>Activity Type</Text>
+            <SelectField title="Activity type" testID="activity-type" sheet value={activityType} styles={styles}
+              options={ACTIVITY_TYPES.map((opt) => ({ value: opt, label: opt }))}
+              onChange={(value) => onChange((prev) => ({ ...prev, activityType: ACTIVITY_TYPES.includes(value as ActivityType) ? (value as ActivityType) : 'Tour' }))} />
+            <Text style={labelStyle}>Activity</Text>
             <TextInput
               style={styles.input}
               placeholder="Activity name"
+              placeholderTextColor={placeholderColor}
               value={draft.name}
               onChangeText={(text: string) => onChange((prev) => ({ ...prev, name: text }))}
             />
-            <Text style={styles.modalLabel}>Start location</Text>
+            <Text style={labelStyle}>Start location</Text>
             <TextInput
               style={styles.input}
               placeholder="Start location"
+              placeholderTextColor={placeholderColor}
               value={draft.startLocation}
               onChangeText={(text: string) => onChange((prev) => ({ ...prev, startLocation: text }))}
             />
-            <Text style={styles.modalLabel}>Start time</Text>
+            <Text style={labelStyle}>Start time</Text>
             <DateField
               mode="time"
               value={draft.startTime}
@@ -207,54 +156,64 @@ const ActivityEditForm: React.FC<ActivityEditFormProps> = ({
               testID="activity-start-time"
               accessibilityLabel="Start time"
             />
-            <Text style={styles.modalLabel}>Duration</Text>
+            <Text style={labelStyle}>Duration</Text>
             <TextInput
               style={styles.input}
               placeholder="Duration"
+              placeholderTextColor={placeholderColor}
               value={draft.duration}
               onChangeText={(text: string) => onChange((prev) => ({ ...prev, duration: text }))}
             />
-            <Text style={styles.modalLabel}>Cost</Text>
+            <Text style={labelStyle}>Cost</Text>
             <TextInput
               style={styles.input}
               placeholder="Cost"
+              placeholderTextColor={placeholderColor}
               keyboardType="numeric"
               value={draft.cost}
               onChangeText={(text: string) => onChange((prev) => ({ ...prev, cost: sanitizeCostInput(text) }))}
             />
-            <View style={styles.modalRow}>
-              <Text style={styles.modalLabel}>Free cancellation by</Text>
-              <TouchableOpacity onPress={() => onChange((prev) => ({ ...prev, freeCancelBy: '' }))}>
-                <Text style={styles.linkText}>Clear</Text>
-              </TouchableOpacity>
+            <Text style={labelStyle}>Free cancellation by</Text>
+            <View style={themeStyle('components_ActivityEditForm_clearRow', {  }, (theme ?? _styleTheme))}>
+              <View style={themeStyle('components_ActivityEditForm_layout4', {  }, (theme ?? _styleTheme))}>
+                <DateField
+                  value={draft.freeCancelBy}
+                  onChange={(freeCancelBy) => onChange((prev) => ({ ...prev, freeCancelBy }))}
+                  styles={styles}
+                  theme={theme}
+                  testID="activity-free-cancellation-date"
+                  accessibilityLabel="Free cancellation by date"
+                />
+              </View>
+              {draft.freeCancelBy ? (
+                <TouchableOpacity accessibilityRole="button" accessibilityLabel="Clear free cancellation date" testID="activity-free-cancellation-clear"
+                  hitSlop={8} style={themeStyle('components_ActivityEditForm_clearButton', {  }, (theme ?? _styleTheme))} onPress={() => onChange((prev) => ({ ...prev, freeCancelBy: '' }))}>
+                  <Text style={styles.linkText}>Clear</Text>
+                </TouchableOpacity>
+              ) : null}
             </View>
-            <DateField
-              value={draft.freeCancelBy}
-              onChange={(freeCancelBy) => onChange((prev) => ({ ...prev, freeCancelBy }))}
-              styles={styles}
-              theme={theme}
-              testID="activity-free-cancellation-date"
-              accessibilityLabel="Free cancellation by date"
-            />
-            <Text style={styles.modalLabel}>Platform Booked On</Text>
+            <Text style={labelStyle}>Platform Booked On</Text>
             <View style={themeStyle('components_ActivityEditForm_10', {  }, (theme ?? _styleTheme))}>
               <TextInput
                 style={[styles.input, themeStyle('components_ActivityEditForm_11', {  }, (theme ?? _styleTheme))]}
-                placeholder="Viator, Get Your Guide, Klook, etc."
+                placeholder="Viator, GetYourGuide, Klook, etc."
+                placeholderTextColor={placeholderColor}
                 value={draft.bookedOn}
                 onChangeText={(text: string) => onChange((prev) => ({ ...prev, bookedOn: text }))}
               />
               <TextInput
                 style={[styles.input, themeStyle('components_ActivityEditForm_12', {  }, (theme ?? _styleTheme))]}
                 placeholder="Reference"
+                placeholderTextColor={placeholderColor}
                 value={draft.reference}
                 onChangeText={(text: string) => onChange((prev) => ({ ...prev, reference: text }))}
               />
             </View>
-            <Text style={styles.modalLabel}>Description</Text>
+            <Text style={labelStyle}>Description</Text>
             <TextInput
               style={[styles.input, themeStyle('components_ActivityEditForm_13', {  }, (theme ?? _styleTheme))]}
               placeholder="Description"
+              placeholderTextColor={placeholderColor}
               value={draft.notes}
               onChangeText={(text: string) => onChange((prev) => ({ ...prev, notes: text }))}
               multiline
@@ -263,7 +222,7 @@ const ActivityEditForm: React.FC<ActivityEditFormProps> = ({
               key={JSON.stringify([draft.name, draft.startLocation, draft.date])}
               input={{ name: draft.name, location: draft.startLocation, notes: draft.notes }}
               styles={styles} onApply={notes => onChange(previous => ({ ...previous, notes: previous.notes.trim() ? `${previous.notes.trimEnd()}\n\n${notes}` : notes }))} />
-            <Text style={styles.modalLabel}>Participants</Text>
+            <Text style={labelStyle}>Participants</Text>
             <View style={styles.payerChips}>
               {activeMembers.map((m) => {
                 const selected = (draft.travelerIds ?? []).includes(m.id);
@@ -285,7 +244,7 @@ const ActivityEditForm: React.FC<ActivityEditFormProps> = ({
                 );
               })}
             </View>
-            <Text style={styles.modalLabel}>Paid by</Text>
+            <Text style={labelStyle}>Paid by</Text>
             <PayerSelect members={activeMembers} value={draft.paidBy} formatName={formatMemberDisplayName} onChange={ids => onChange((prev) => ({ ...prev, paidBy: ids }))} styles={styles} testID="activity-payer" />
             {footer}
           </ScrollView>

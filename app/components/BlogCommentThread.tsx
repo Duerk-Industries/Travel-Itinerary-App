@@ -14,6 +14,7 @@ import BlogCommentComposer from './BlogCommentComposer';
 import { initialsForName } from '../../packages/messaging/src/colors';
 
 import type { BlogComment, BlogCommentTargetKind } from '../utils/useBlogComments';
+import { clockOptions } from '../utils/timeFormat';
 
 const REPORT_REASONS: Array<{ value: 'spam' | 'harassment' | 'private_info' | 'other'; label: string }> = [
   { value: 'spam', label: 'Spam' },
@@ -27,7 +28,7 @@ const EDIT_WINDOW_MS = 15 * 60 * 1000; // FR-B2.3 — server is the real enforce
 const formatWhen = (iso: string): string => {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  return date.toLocaleString(undefined, { month: 'short', day: 'numeric', ...clockOptions() });
 };
 
 type CommonProps = {

@@ -6,6 +6,7 @@ import { resolveComponentTheme, themeStyle, type AppTheme } from '../theme/theme
 import { formatTravelerListDisplay, type DisplayableMember } from '../utils/memberDisplay';
 import { describeTransferRoute } from '../utils/transferRoute';
 import Icon from './Icon';
+import { formatClockTime } from '../utils/timeFormat';
 
 type Props = {
   flight: Flight;
@@ -36,7 +37,7 @@ export default function TransferSummaryCard({ flight, members, showTravelers = f
           </Text>
         </View>
         {showFullNames ? <Text style={styles.detail}>{`${route.fullFrom || route.from} → ${route.fullTo || route.to}`}</Text> : null}
-        <Text style={styles.detail}>{`${flight.departure_time || '--:--'} → ${flight.arrival_time || '--:--'}${carrierLine ? ` · ${carrierLine}` : ''}`}</Text>
+        <Text style={styles.detail}>{`${formatClockTime(flight.departure_time) || '--:--'} → ${formatClockTime(flight.arrival_time) || '--:--'}${carrierLine ? ` · ${carrierLine}` : ''}`}</Text>
         {showTravelers && passengers ? <Text style={styles.detail}>Travelers: {passengers}</Text> : null}
       </TouchableOpacity>
     </View>

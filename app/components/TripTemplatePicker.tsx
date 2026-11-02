@@ -3,6 +3,7 @@ import { ActivityIndicator, Image, ScrollView, Text, TouchableOpacity, View } fr
 import Modal from './KeyboardAwareModal';
 import { themeStyle } from '../theme/theme';
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
+import { formatClockTime } from '../utils/timeFormat';
 
 type PickerLocation = { id: string; name: string; sourceType?: string; countryName?: string; stateName?: string };
 
@@ -253,7 +254,7 @@ const TripTemplatePicker: React.FC<Props> = ({ backendUrl, headers, selectedLoca
                 ))}
                 {day.items.map((item, index) => (
                   <View key={`${day.day}-${index}`} style={themeStyle('components_TripTemplatePicker_9', {}, theme)}>
-                    <Text style={[styles.helperText, themeStyle('components_TripTemplatePicker_10', {}, theme)]}>{item.time}</Text>
+                    <Text style={[styles.helperText, themeStyle('components_TripTemplatePicker_10', {}, theme)]}>{formatClockTime(item.time)}</Text>
                     {item.image ? <Image source={{ uri: item.image.url }} accessibilityIgnoresInvertColors accessibilityLabel={item.title} style={themeStyle('components_TripTemplatePicker_16', {}, theme)} /> : null}
                     <View style={themeStyle('components_TripTemplatePicker_11', {}, theme)}>
                       <Text style={styles.bodyText}>{item.title}</Text>

@@ -19,6 +19,7 @@ import { toWebStyle } from '../utils/webStyle';
 import { DEFAULT_NEW_ITINERARY_STATUS, ITINERARY_STATUSES, normalizeItineraryStatus } from '../utils/itineraryStatus';
 
 import DateField from './DateField';
+import { formatClockTime } from '../utils/timeFormat';
 
 type AirportTarget = 'dep' | 'arr' | 'modal-dep' | 'modal-arr' | 'modal-layover' | null;
 const TRANSFER_TYPES: TransferType[] = [...CANONICAL_TRANSFER_TYPES];
@@ -130,7 +131,7 @@ const TransferEditingForm: React.FC<FlightEditingFormProps> = ({
         <View style={[styles.modalCard, baseCardStyle, cardStyle]}>
         <Text style={styles.sectionTitle}>{ground ? 'Ground Transfer Details' : 'Flight Details'}</Text>
         <Text style={styles.helperText}>
-          Current Departure: {formatDateLong(flight.departureDate)} at {flight.departureTime || '?'}
+          Current Departure: {formatDateLong(flight.departureDate)} at {formatClockTime(flight.departureTime) || '?'}
         </Text>
         <KeyboardViewport
           style={themeStyle('components_TransferEditingForm_12', {  }, (theme ?? _styleTheme))}
