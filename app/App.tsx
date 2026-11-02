@@ -738,6 +738,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [featureDayPlanCsvExport, setFeatureDayPlanCsvExport] = useState(false);
   const [featureAiItineraryGeneration, setFeatureAiItineraryGeneration] = useState(false);
   const [featureActivityRecap, setFeatureActivityRecap] = useState(false);
+  // Master Premium switch. Defaults on so a slow first fetch does not hide Premium UI; the server enforces regardless.
+  const [featurePremium, setFeaturePremium] = useState(true);
   useEffect(() => {
     let cancelled = false;
     const refreshFeatures = () => fetch(`${backendUrl}/api/auth/features`, { cache: 'no-store' })
@@ -765,6 +767,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           setFeatureDayPlanCsvExport(Boolean(data.featureDayPlanCsvExport));
           setFeatureActivityRecap(Boolean(data.featureActivityRecap));
           setFeatureAiItineraryGeneration(Boolean(data.featureAiItineraryGeneration));
+          setFeaturePremium(data.featurePremium !== false);
         }
       })
       .catch(() => undefined);
@@ -786,6 +789,11 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     updateAppearancePreference,
     clearAccountProfile,
   } = useAccountProfile();
+  // Premium parsing (paste, document import, upload, forwarding, Gmail): the server says which of these this account can
+  // use. Nothing shows until the profile has answered, and nothing shows at all while the master Premium flag is off.
+  const premiumOn = featurePremium && accountProfile.premiumEnabled !== false;
+  const parsingAccess = premiumOn ? accountProfile.parsingAccess : undefined;
+  const canImportTravel = Boolean(parsingAccess?.fileUpload || parsingAccess?.emailForwarding || parsingAccess?.gmailImport);
   const costTrackingAllowed = accountProfile.entitlements?.costTracking === true;
   const receiptScanningAllowed = accountProfile.entitlements?.receiptScanning === true;
   const aiItineraryGenerationAllowed = featureAiItineraryGeneration && accountProfile.entitlements?.aiItineraryGeneration === true;
@@ -818,6 +826,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       profileSettled: accountProfileSettled,
       tierKey: accountProfile.tierKey,
       userRole,
+      premiumEnabled: featurePremium && accountProfile.premiumEnabled !== false,
     }) === 'premium';
 
   const {
@@ -3317,10 +3326,12 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     ];
     return new Set(pages.filter((page) => shouldDisableTab(activePage, page, { isFollowedTrip: isFollowingMode })));
   }, [activePage, isFollowingMode]);
-  const hiddenPages = useMemo(
-    () => new Set<string>(isFollowingMode ? FOLLOWED_TRIP_HIDDEN_PAGES : []),
-    [isFollowingMode]
-  );
+  const hiddenPages = useMemo(() => {
+    const hidden = new Set<string>(isFollowingMode ? FOLLOWED_TRIP_HIDDEN_PAGES : []);
+    // Importing travel confirmations is Premium parsing: hidden unless the server says some import source is open to this account.
+    if (!canImportTravel) hidden.add('ingest');
+    return hidden;
+  }, [isFollowingMode, canImportTravel]);
   const activeTripName = useMemo(
     () => activeTrip?.name?.replace(/\s/g, '_') ?? 'export',
     [activeTrip?.name]
@@ -3597,6 +3608,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   followedTrips={followedTrips}
                   userRole={userRole}
                   userTier={accountProfile.tierKey}
+                  canImport={canImportTravel}
                   activeTripOverride={activeTripForHome}
                   styles={styles}
                   onSelectTrip={handleSelectOwnedTrip}
@@ -3883,6 +3895,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   backendUrl={backendUrl}
                   onLogout={showBottomTabs ? requestLogout : undefined}
                   onOpenAdmin={showBottomTabs && userRole === 'admin' ? () => openAdminSection('overview') : undefined}
+                  premiumEnabled={premiumOn}
                   privacy={privacy}
                   userToken={userToken}
                   activePage={activePage}
@@ -4045,6 +4058,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       {(activePage === 'flights' || activePage === 'ground-transfers')
         ? renderSharedPageScroll(
             <FlightsTab
+              pasteParsingAllowed={parsingAccess?.pasteParsing === true}
           activities={tours}
               key={activePage}
               lodgings={lodgings}
@@ -4083,6 +4097,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         : null}
       {activePage !== 'flights' && activePage !== 'ground-transfers' && externalFlightEditId ? (
         <FlightsTab
+          pasteParsingAllowed={parsingAccess?.pasteParsing === true}
           activities={tours}
           mapApp={mapApp}
           lodgings={lodgings}
@@ -4288,6 +4303,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   openLodgingDetails={(lodging) => openLodgingDetails(lodging as Lodging)}
                   theme={theme}
                   userTier={accountProfile.tierKey}
+                  documentImportAllowed={parsingAccess?.documentImport === true}
                   readOnly={isFollowingMode || offlineReadOnly}
                   featureStandardizedItemDialogs={featureStandardizedItemDialogs}
                   featureCoverPhotoFallbackV2={featureCoverPhotoFallbackV2}
@@ -4481,7 +4497,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         onDismiss={dismissPremiumTrialWelcome}
       />
       <PremiumPlanComparisonDialog
-        visible={Boolean(userToken && premiumPlanComparisonVisible && arePremiumTrialsEnabled())}
+        visible={Boolean(userToken && premiumPlanComparisonVisible && premiumOn && arePremiumTrialsEnabled())}
         backendUrl={backendUrl}
         token={userToken}
         styles={styles}

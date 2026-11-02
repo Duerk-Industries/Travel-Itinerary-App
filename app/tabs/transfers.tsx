@@ -539,6 +539,8 @@ type FlightsTabProps = {
   // Ground-transfer CSV import/export (the Ground Transfers page only; flights are never imported from CSV).
   featureGroundTransferCsvImport?: boolean;
   featureGroundTransferCsvExport?: boolean;
+  /** Server-decided: paste-a-confirmation parsing is a Premium option. Defaults on so isolated renders keep the button; the server enforces. */
+  pasteParsingAllowed?: boolean;
 };
 
 type Airport = {
@@ -622,6 +624,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   featureTapToEditTables = true,
   featureGroundTransferCsvImport = false,
   featureGroundTransferCsvExport = false,
+  pasteParsingAllowed = true,
 }) => {
   const _styleTheme = useStyleTheme();
   const theme = resolveStyleTheme(_providedTheme, _styleTheme);
@@ -1603,7 +1606,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
               <TouchableOpacity style={[styles.button, themeStyle('tabs_transfers_11', {  }, (theme ?? _styleTheme))]} onPress={undoGridChange} disabled={gridSaving || !gridHistory.length} testID="transfer-table-undo"><IconText style={styles.buttonText}>↶</IconText></TouchableOpacity>
               <TouchableOpacity style={[styles.button, themeStyle('tabs_transfers_12', {  }, (theme ?? _styleTheme))]} onPress={redoGridChange} disabled={gridSaving || !gridRedo.length} testID="transfer-table-redo"><IconText style={styles.buttonText}>↷</IconText></TouchableOpacity>
             </> : null}
-            {!isPhoneLayout ? <TouchableOpacity style={[styles.button, styles.outlineButton, themeStyle('tabs_transfers_13', {  }, (theme ?? _styleTheme))]} onPress={() => setShowPasteModal(true)} testID="transfer-paste">
+            {!isPhoneLayout && pasteParsingAllowed ? <TouchableOpacity style={[styles.button, styles.outlineButton, themeStyle('tabs_transfers_13', {  }, (theme ?? _styleTheme))]} onPress={() => setShowPasteModal(true)} testID="transfer-paste">
               <Text style={styles.buttonText}>Paste Info</Text>
             </TouchableOpacity> : null}
             {!isPhoneLayout || isWizard ? <TouchableOpacity style={[styles.button, styles.roundButton]} onPress={handleAddPress} testID="transfer-add">

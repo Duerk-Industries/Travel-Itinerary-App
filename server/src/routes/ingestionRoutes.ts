@@ -38,7 +38,8 @@ import {
   markDataDeletionJobFailed,
   listDataDeletionJobsForUser,
 } from '../ingestion/shared/repository';
-import { assertAndConsumeMonthlyQuota, getTierIngestionRules } from '../ingestion/shared/quota';
+import { assertAndConsumeMonthlyQuota, getTierIngestionRules, rulesForAccess } from '../ingestion/shared/quota';
+import { canUseAnyImportSource, canUseParsingOption, getParsingAccess, isPremiumEnabled, type PremiumParsingOption } from '../services/premiumOptionsService';
 import { IngestionError } from '../ingestion/shared/userFailures';
 import { getBackendUrl, getEnvValue } from '../env';
 import { getMailAlias, listMailReceipts, updateMailReceipt, releaseHeldMail } from '../ingestion/shared/mailAdmission';
@@ -66,17 +67,21 @@ const mailSettingsHandler = (handler: (req: Request, res: Response) => Promise<v
 
 type TierRules = (typeof INGESTION_TIER_RULES)[keyof typeof INGESTION_TIER_RULES];
 
-const requireTierAccess = async (userId: string, res: any): Promise<{ tierKey: string; rules: TierRules } | null> => {
+// Premium parsing is switched on and off, and kept behind Premium or opened to everyone, per option in Admin > Billing
+// (premiumOptionsService). Routes shared by every import source (the review queue) pass no option: any open source will do.
+const requireTierAccess = async (userId: string, res: any, option?: PremiumParsingOption): Promise<{ tierKey: string; rules: TierRules } | null> => {
   const { tierKey, rules } = await getTierIngestionRules(userId);
-  if (tierKey === 'free') {
-    res.status(403).json({ error: 'This feature is available for Premium and Pro users only.' });
+  const allowed = option ? await canUseParsingOption(userId, option) : await canUseAnyImportSource(userId);
+  if (!allowed) {
+    const premiumOn = await isPremiumEnabled();
+    res.status(403).json({ error: premiumOn ? 'This feature is available for Premium and Pro users only.' : 'This feature is currently unavailable.' });
     return null;
   }
-  return { tierKey: String(tierKey), rules };
+  return { tierKey: String(tierKey), rules: rulesForAccess(String(tierKey), rules) };
 };
 
 const ensureGmailFeatureAndTier = async (userId: string, res: any): Promise<{ tierKey: string; rules: TierRules } | null> => {
-  const tierAccess = await requireTierAccess(userId, res);
+  const tierAccess = await requireTierAccess(userId, res, 'gmailImport');
   if (!tierAccess) return null;
   if (!(await isFeatureEnabled(INGESTION_FEATURE_FLAGS.gmailImport))) {
     res.status(403).json({ error: 'Gmail import is currently disabled.' });
@@ -147,24 +152,25 @@ router.get('/config', mailSettingsHandler(async (req, res) => {
   const userId = (req as any).user.userId as string;
   const { tierKey, rules } = await getTierIngestionRules(userId);
   const gmailConnection = await getProviderConnection(userId, 'gmail');
-  const [manualFlag, mailboxFlag, gmailFlag, autoAssignFlag] = await Promise.all([
+  const [manualFlag, mailboxFlag, gmailFlag, autoAssignFlag, access] = await Promise.all([
     getFeatureFlag(INGESTION_FEATURE_FLAGS.manualUpload).then(flag => flag?.enabled ?? true),
     getFeatureFlag(INGESTION_FEATURE_FLAGS.forwardedMailbox).then(flag => flag?.enabled ?? true),
     getFeatureFlag(INGESTION_FEATURE_FLAGS.gmailImport).then(flag => flag?.enabled ?? true),
     isFeatureEnabled(AUTO_ASSIGN_FLAG, userId),
+    getParsingAccess(userId, (req as any).user.role),
   ]);
   res.json({
     tierKey,
     features: {
-      autoAssign: autoAssignFlag && tierKey !== 'free',
-      manualUpload: manualFlag && tierKey !== 'free',
-      forwardedMailbox: mailboxFlag && tierKey !== 'free',
-      gmailImport: gmailFlag && tierKey !== 'free',
+      autoAssign: autoAssignFlag && access.autoAssign,
+      manualUpload: manualFlag && access.fileUpload,
+      forwardedMailbox: mailboxFlag && access.emailForwarding,
+      gmailImport: gmailFlag && access.gmailImport,
     },
-    quotas: rules,
+    quotas: rulesForAccess(String(tierKey), rules),
     forwarding: {
       provider: INGESTION_DEFAULT_FORWARDING_PROVIDER,
-      currentAddress: mailboxFlag && tierKey !== 'free' ? await getMailAlias(userId) : '',
+      currentAddress: mailboxFlag && access.emailForwarding ? await getMailAlias(userId) : '',
       instructions: INGESTION_FORWARDING_SETTINGS_COPY,
       adminManagedNote: 'Keep your address private. Creating a new address stops mail to the old one immediately.',
       receipts: (await listMailReceipts(userId)).filter(r => r.expiresAt > Date.now() && r.state !== 'CONFIRMATION').map(r => ({ id: r.id, state: r.state, expiresAt: r.expiresAt, holdReason: r.holdReason })),
@@ -226,7 +232,7 @@ router.get('/review-items', async (req, res) => {
 // What the person has chosen about automatic adding, and what is actually in effect for them.
 router.get('/settings', async (req, res) => {
   const userId = (req as any).user.userId as string;
-  if (!(await requireTierAccess(userId, res))) return;
+  if (!(await requireTierAccess(userId, res, 'autoAssign'))) return;
   const [available, choice] = await Promise.all([isFeatureEnabled(AUTO_ASSIGN_FLAG, userId), getAutoAssignPreference(userId)]);
   res.setHeader('Cache-Control', 'private, no-store');
   res.json({ autoAssign: { available, choice, enabled: available && (choice ?? true) } });
@@ -234,7 +240,7 @@ router.get('/settings', async (req, res) => {
 
 router.put('/settings', async (req, res) => {
   const userId = (req as any).user.userId as string;
-  if (!(await requireTierAccess(userId, res))) return;
+  if (!(await requireTierAccess(userId, res, 'autoAssign'))) return;
   const value = req.body?.autoAssign;
   if (value !== true && value !== false && value !== null) {
     res.status(400).json({ error: 'Choose on, off, or the default.', code: 'INVALID_SETTING' });
@@ -247,7 +253,7 @@ router.put('/settings', async (req, res) => {
 // Bookings that were added to a trip automatically and can still be taken back.
 router.get('/auto-added', async (req, res) => {
   const userId = (req as any).user.userId as string;
-  if (!(await requireTierAccess(userId, res))) return;
+  if (!(await requireTierAccess(userId, res, 'autoAssign'))) return;
   const recent = await listRecentAutoAssignments(userId);
   res.setHeader('Cache-Control', 'private, no-store');
   res.json({ items: recent });
@@ -255,7 +261,7 @@ router.get('/auto-added', async (req, res) => {
 
 router.post('/review-items/:id/undo', async (req, res) => {
   const userId = (req as any).user.userId as string;
-  if (!(await requireTierAccess(userId, res))) return;
+  if (!(await requireTierAccess(userId, res, 'autoAssign'))) return;
   try {
     await reserveHttpRateLimitOrThrow({ name: 'ingestion_undo', identity: userId, limit: 30, windowMs: 60_000 });
   } catch (error) {
@@ -378,7 +384,7 @@ router.post('/upload', (req, res, next) => {
     res.status(403).json({ error: 'Ingestion is currently disabled.' });
     return;
   }
-  const tierAccess = await requireTierAccess(user.userId, res);
+  const tierAccess = await requireTierAccess(user.userId, res, 'fileUpload');
   if (!tierAccess) return;
   try {
     await assertAndConsumeMonthlyQuota({
@@ -485,7 +491,7 @@ router.get('/assignment/trips', async (req, res) => {
 
 router.get('/forwarding', mailSettingsHandler(async (req, res) => {
   const userId = (req as any).user.userId as string;
-  if (!(await requireTierAccess(userId, res))) return;
+  if (!(await requireTierAccess(userId, res, 'emailForwarding'))) return;
   const enabled = await isFeatureEnabled(INGESTION_FEATURE_FLAGS.forwardedMailbox);
   res.status(enabled ? 200 : 403).json({
     enabled,
@@ -497,7 +503,7 @@ router.get('/forwarding', mailSettingsHandler(async (req, res) => {
 
 router.post('/forwarding/test', mailSettingsHandler(async (req, res) => {
   const userId = (req as any).user.userId as string;
-  if (!(await requireTierAccess(userId, res))) return;
+  if (!(await requireTierAccess(userId, res, 'emailForwarding'))) return;
   if (!(await isFeatureEnabled(INGESTION_FEATURE_FLAGS.forwardedMailbox))) { res.status(403).json({ error: 'Forwarding is paused' }); return; }
   try { await reserveHttpRateLimitOrThrow({ name: 'import_setup_test', identity: userId, limit: 3, windowMs: 60_000 }); }
   catch (error) { if (error instanceof HttpRateLimitExceededError) { res.status(429).json({ error: error.message }); return; } throw error; }
@@ -511,7 +517,7 @@ router.post('/forwarding/test', mailSettingsHandler(async (req, res) => {
 
 router.post('/forwarding/rotate', mailSettingsHandler(async (req, res) => {
   const userId = (req as any).user.userId as string;
-  if (!(await requireTierAccess(userId, res))) return;
+  if (!(await requireTierAccess(userId, res, 'emailForwarding'))) return;
   res.json({ currentAddress: await getMailAlias(userId, true) });
 }));
 // Additional forwarding addresses: the user proves they can read mail at the address.
@@ -523,12 +529,12 @@ const senderErrorResponse = (error: unknown, res: Response): boolean => {
 };
 router.get('/forwarding/addresses', mailSettingsHandler(async (req, res) => {
   const userId = (req as any).user.userId as string;
-  if (!(await requireTierAccess(userId, res))) return;
+  if (!(await requireTierAccess(userId, res, 'emailForwarding'))) return;
   res.json({ addresses: await listSenders(userId) });
 }));
 router.post('/forwarding/addresses', mailSettingsHandler(async (req, res) => {
   const userId = (req as any).user.userId as string;
-  if (!(await requireTierAccess(userId, res))) return;
+  if (!(await requireTierAccess(userId, res, 'emailForwarding'))) return;
   if (!(await isFeatureEnabled(INGESTION_FEATURE_FLAGS.forwardedMailbox))) { res.status(403).json({ error: 'Forwarding is paused' }); return; }
   try {
     await reserveHttpRateLimitOrThrow({ name: 'import_sender_verify_start', identity: userId, limit: 10, windowMs: 60 * 60_000 });
@@ -543,7 +549,7 @@ router.post('/forwarding/addresses', mailSettingsHandler(async (req, res) => {
 }));
 router.post('/forwarding/addresses/confirm', mailSettingsHandler(async (req, res) => {
   const userId = (req as any).user.userId as string;
-  if (!(await requireTierAccess(userId, res))) return;
+  if (!(await requireTierAccess(userId, res, 'emailForwarding'))) return;
   try {
     await reserveHttpRateLimitOrThrow({ name: 'import_sender_verify_confirm', identity: userId, limit: 20, windowMs: 60 * 60_000 });
     const address = await confirmSenderVerification(userId, req.body?.email, req.body?.code);
@@ -558,7 +564,7 @@ router.delete('/forwarding/addresses/:id', mailSettingsHandler(async (req, res) 
 router.get('/forwarding/confirmations', mailSettingsHandler(async (req, res) => {
   const userId = (req as unknown as { user: { userId: string } }).user.userId;
   res.setHeader('Cache-Control', 'private, no-store');
-  if (!(await requireTierAccess(userId, res))) return;
+  if (!(await requireTierAccess(userId, res, 'emailForwarding'))) return;
   if (!(await isFeatureEnabled(INGESTION_FEATURE_FLAGS.forwardedMailbox)) || !await receiverAuthenticationEnabled()) { res.json({ confirmations: [] }); return; }
   const current = await resolveMailAlias(await getMailAlias(userId));
   const confirmations = [];
@@ -572,7 +578,7 @@ router.get('/forwarding/confirmations', mailSettingsHandler(async (req, res) => 
 
 router.get('/forwarding/receipts', mailSettingsHandler(async (req, res) => {
   const userId = (req as any).user.userId as string;
-  if (!(await requireTierAccess(userId, res))) return;
+  if (!(await requireTierAccess(userId, res, 'emailForwarding'))) return;
   const receipts = await listMailReceipts(userId);
   res.json({ receipts: receipts.filter(r => r.expiresAt > Date.now() && r.state !== 'CONFIRMATION').map(r => ({
     id: r.id, state: r.state, expiresAt: r.expiresAt, holdReason: r.holdReason,
@@ -580,7 +586,7 @@ router.get('/forwarding/receipts', mailSettingsHandler(async (req, res) => {
 }));
 router.post('/forwarding/receipts/:id/release', mailSettingsHandler(async (req, res) => {
   const userId = (req as any).user.userId as string;
-  const access = await requireTierAccess(userId, res);
+  const access = await requireTierAccess(userId, res, 'emailForwarding');
   if (!access) return;
   if (!(await isFeatureEnabled(INGESTION_FEATURE_FLAGS.forwardedMailbox))) {
     res.status(403).json({ error: 'Forwarded mail is currently disabled.' }); return;

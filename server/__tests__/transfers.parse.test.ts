@@ -64,14 +64,14 @@ describe('POST /api/transfers/parse', () => {
     expect(res.status).toBe(401);
   });
 
-  it('rejects users without the flight_parser entitlement (free tier)', async () => {
+  it('rejects free users while paste parsing is a Premium-only option', async () => {
     const res = await request(app)
       .post('/api/transfers/parse')
       .set('Authorization', `Bearer ${userToken}`)
       .send({ text: 'Flight to JFK on May 15' });
 
     expect(res.status).toBe(402);
-    expect(res.body.error).toContain("does not include access to 'flight_parser'");
+    expect(res.body.error).toContain('Premium and Pro users only');
   });
 
   it('allows admins to parse text', async () => {

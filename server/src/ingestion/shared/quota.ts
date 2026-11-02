@@ -17,6 +17,10 @@ export const getTierIngestionRules = async (userId: string) => {
   return { tierKey, rules };
 };
 
+/** A free account that an admin has let into a parsing option runs on the Premium allowances. */
+export const rulesForAccess = (tierKey: string, rules: (typeof INGESTION_TIER_RULES)[keyof typeof INGESTION_TIER_RULES]) =>
+  tierKey === 'free' ? INGESTION_TIER_RULES.premium : rules;
+
 export const assertAndConsumeMonthlyQuota = async (params: {
   userId: string;
   usageKey: string;

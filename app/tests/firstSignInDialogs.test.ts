@@ -31,6 +31,13 @@ describe('first sign-in dialog order (R9)', () => {
     expect(nextFirstSignInDialog({ ...base, profileSettled: true, tierKey: undefined })).toBe('premium');
   });
 
+  it('makes no Premium offer to anyone while the master Premium flag is off', () => {
+    expect(nextFirstSignInDialog({ ...base, premiumEnabled: false })).toBeNull();
+    expect(nextFirstSignInDialog({ ...base, premiumEnabled: true })).toBe('premium');
+    // The age and invite dialogs are not Premium surfaces and still show.
+    expect(nextFirstSignInDialog({ ...base, premiumEnabled: false, hasPendingInvites: true })).toBe('invites');
+  });
+
   it('does not offer it to Premium, Pro or admin accounts', () => {
     expect(canOfferPremiumTrial('Premium')).toBe(false);
     expect(canOfferPremiumTrial('pro')).toBe(false);

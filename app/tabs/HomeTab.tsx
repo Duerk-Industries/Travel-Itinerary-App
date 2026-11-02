@@ -36,6 +36,8 @@ type HomeTabProps = {
   // Drives the Ingest tile's visibility below — Free users don't get it, Premium/Pro do.
   // Purely a UX gate; every ingestion endpoint re-checks tier server-side independently.
   userTier?: string;
+  // When given, the server's answer (Premium parsing options) replaces the tier guess above.
+  canImport?: boolean;
   activeTripOverride?: Trip | null;
   styles: Record<string, any>;
   onSelectTrip: (tripId: string) => void;
@@ -69,6 +71,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
   followedTrips,
   userRole = 'user',
   userTier = 'free',
+  canImport,
   activeTripOverride,
   styles,
   onSelectTrip,
@@ -181,7 +184,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
   // don't get the tile. Gmail import specifically stays hidden for everyone regardless of
   // tier via feature_ingest_gmail_import (see ingestion.tsx's config.features.gmailImport)
   // since it's untested; remove that flag check once Gmail import is ready to ship.
-  const canAccessIngest = userRole === 'admin' || userTier === 'premium' || userTier === 'pro';
+  const canAccessIngest = canImport ?? (userRole === 'admin' || userTier === 'premium' || userTier === 'pro');
   const hasTripsToSelect = sortedTrips.length > 0 || followedTrips.length > 0;
 
   const navItemDefs: Array<{ key: string; label: string; icon: IconName }> = [

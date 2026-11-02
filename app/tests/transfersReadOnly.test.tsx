@@ -154,6 +154,20 @@ describe('FlightsTab read-only mode', () => {
     } finally { dimensions.mockRestore(); }
   });
 
+  test.each([true, false])('desktop paste button follows the Premium paste-parsing option (allowed=%s)', (allowed) => {
+    const shown = allowed;
+    const dimensions = jest.spyOn(ReactNative, 'useWindowDimensions').mockReturnValue({ width: 1400, height: 900, scale: 1, fontScale: 1 });
+    try {
+      const { queryByTestId } = render(
+        <FlightsTab backendUrl="http://localhost" userToken="token" activeTripId="trip-1"
+          pasteParsingAllowed={allowed} flights={[]} setFlights={jest.fn()} groupMembers={[member]}
+          defaultPayerId={member.id} formatMemberName={(m) => m.id} payerName={() => 'Member'} headers={{}} jsonHeaders={{}}
+          findActiveTrip={() => trip} fetchGroupMembersForActiveTrip={async () => {}} styles={styles} airportOptions={[]} onSearchAirports={() => {}} />
+      );
+      expect(Boolean(queryByTestId('transfer-paste'))).toBe(shown);
+    } finally { dimensions.mockRestore(); }
+  });
+
   beforeEach(() => {
     // FlightsTab refreshes its list on mount. Keep this suite self-contained so
     // that the background refresh cannot attempt localhost after Jest teardown.

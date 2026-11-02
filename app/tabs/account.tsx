@@ -37,6 +37,10 @@ export interface AccountProfile {
     receiptScanning?: boolean;
   };
   tierKey?: string;
+  /** The master `premium` feature flag; false hides every Premium surface. */
+  premiumEnabled?: boolean;
+  /** Which Premium parsing features this account can use now (server-decided). */
+  parsingAccess?: Partial<Record<'pasteParsing' | 'documentImport' | 'fileUpload' | 'emailForwarding' | 'gmailImport' | 'autoAssign', boolean>>;
 }
 
 export interface FellowTraveler {
@@ -114,6 +118,8 @@ export const fetchAccountProfile = async ({
       temperatureUnit,
       entitlements: data.entitlements ?? prev.entitlements,
       tierKey: data.tierKey ?? prev.tierKey,
+      premiumEnabled: typeof data.premiumEnabled === 'boolean' ? data.premiumEnabled : prev.premiumEnabled,
+      parsingAccess: data.parsingAccess ?? prev.parsingAccess,
     }));
     setUserName(fullName);
     setUserEmail(data.email ?? null);
@@ -172,6 +178,8 @@ interface AccountTabProps {
   accountProfile: AccountProfile;
   plaidEnabled?: boolean;
   aiItineraryGenerationEnabled?: boolean;
+  /** Master Premium switch; when false the subscription panel is not shown. */
+  premiumEnabled?: boolean;
   setAccountProfile: Setter<AccountProfile>;
   familyRelationships: any[];
   setFamilyRelationships: Setter<any[]>;
@@ -220,6 +228,7 @@ const AccountTab: React.FC<AccountTabProps> = ({
   accountProfile,
   plaidEnabled = false,
   aiItineraryGenerationEnabled = true,
+  premiumEnabled = true,
   setAccountProfile,
   familyRelationships,
   setFamilyRelationships,
@@ -390,7 +399,7 @@ const AccountTab: React.FC<AccountTabProps> = ({
       /> : null}
       {page === 'account-privacy' ? <View style={styles.card}><BlogPublicDefaultToggle backendUrl={backendUrl} headers={headers} styles={styles} theme={theme} /></View> : null}
       {page === 'account-privacy' && privacy ? <AccountPrivacySettings privacy={privacy} backendUrl={backendUrl} token={userToken} theme={theme} /> : null}
-      {!isSubPage ? <PremiumSubscriptionPanel
+      {!isSubPage && premiumEnabled ? <PremiumSubscriptionPanel
         backendUrl={backendUrl}
         token={userToken}
         billingStatus={billingStatus}

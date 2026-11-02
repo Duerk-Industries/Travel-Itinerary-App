@@ -2,7 +2,7 @@ import { Router } from 'express';
 import Stripe from 'stripe';
 import { getStripeClient } from '../billing/stripeClient';
 import { getStripeWebhookSecret, isStripeBillingEnabled } from '../config/stripeBilling';
-import { PREMIUM_TRIALS_FEATURE_FLAG } from '../config/premiumTrials';
+import { arePremiumTrialsActive } from '../services/premiumOptionsService';
 import {
   claimStripeWebhookEvent,
   markStripeWebhookEventFailed,
@@ -25,7 +25,6 @@ import { reconcileUserTierFromBillingById } from '../billing/subscriptionEntitle
 import { blogMediaRepository } from '../blog/repository';
 import { logInfo, logError } from '../logger';
 import { incrementMetric } from '../metrics';
-import { isFeatureEnabled } from '../services/entitlementService';
 import { BillingPlanKey } from '../types';
 import { getStorageAddonBytesMapping } from '../config/stripeBilling';
 import { scheduleNextBillingGraceExpiry } from '../billing/subscriptionReconciliationService';
@@ -85,7 +84,7 @@ const handleSubscriptionSnapshot = async (
   const planKey = await resolvePlanKeyForPriceId(priceId, planKeyFromMetadata(sub.metadata));
   const upsertParams = mapStripeSubscriptionToUpsert(sub, userId, planKey, eventCreated);
   await upsertBillingSubscription(upsertParams);
-  if (sub.trial_end && await isFeatureEnabled(PREMIUM_TRIALS_FEATURE_FLAG)) {
+  if (sub.trial_end && await arePremiumTrialsActive()) {
     const customerId = typeof sub.customer === 'string' ? sub.customer : sub.customer.id;
     const billingCustomer = await getBillingCustomerByStripeId(customerId);
     if (billingCustomer?.emailSnapshot) {
@@ -206,7 +205,7 @@ const handleTrialWillEndNotification = async (
   await handleSubscriptionSnapshot(stripe, subFromEvent.id, event.created, event.id);
   incrementMetric('billing.webhook.trial_will_end');
 
-  if (!(await isFeatureEnabled(PREMIUM_TRIALS_FEATURE_FLAG))) return;
+  if (!(await arePremiumTrialsActive())) return;
 
   const sub = await stripe.subscriptions.retrieve(subFromEvent.id);
   if (!sub.trial_end) return;

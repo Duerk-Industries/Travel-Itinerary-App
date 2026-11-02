@@ -7,7 +7,8 @@ import { logError, logInfo } from '../logger';
 import { isFeatureEnabled } from '../services/entitlementService';
 import { INGESTION_FEATURE_FLAGS } from '../ingestion/config';
 import { mailgunWebhookMiddleware, validateMailgunWebhookSignature } from '../ingestion/intake/mailgun';
-import { getTierIngestionRules } from '../ingestion/shared/quota';
+import { getTierIngestionRules, rulesForAccess } from '../ingestion/shared/quota';
+import { canUseParsingOption } from '../services/premiumOptionsService';
 import { IngestionError } from '../ingestion/shared/userFailures';
 import { admitMail, MAIL_MAX_BYTES, mailReceiptId, resolveMailAlias, type RawMail } from '../ingestion/shared/mailAdmission';
 import { assertMailAdmissionReady } from '../ingestion/worker/mailReceiptWorker';
@@ -45,8 +46,9 @@ router.post('/mailgun', mailgunWebhookMiddleware, async (req, res) => {
     const alias = await resolveMailAlias(body.recipient);
     // Includes the legacy shared address. From cannot attribute even a hold.
     if (!alias) { res.status(200).json({ accepted: true }); return; }
-    const { tierKey, rules } = await getTierIngestionRules(alias.userId);
-    if (tierKey === 'free') { res.status(200).json({ accepted: true }); return; }
+    const { tierKey, rules: tierRules } = await getTierIngestionRules(alias.userId);
+    if (!(await canUseParsingOption(alias.userId, 'emailForwarding'))) { res.status(200).json({ accepted: true }); return; }
+    const rules = rulesForAccess(tierKey, tierRules);
     const files = Array.isArray(req.files) ? req.files as Express.Multer.File[] : [];
     const safeBody: Record<string, string> = {};
     for (const name of MAIL_CONTENT_FIELDS) {

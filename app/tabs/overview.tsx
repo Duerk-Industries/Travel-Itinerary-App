@@ -306,6 +306,7 @@ type OverviewTabProps = {
   featureDayPlanCsvImport?: boolean;
   featureDayPlanCsvExport?: boolean;
   userTier?: string | null;
+  documentImportAllowed?: boolean;
   /** Defined in offline mode (including null when this trip has no itinerary). */
   cachedItinerary?: {
     id: string | null;
@@ -542,6 +543,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   featureDayPlanCsvImport = false,
   featureDayPlanCsvExport = false,
   userTier,
+  documentImportAllowed,
   cachedItinerary,
   onItineraryCacheChange,
 }) => {
@@ -2781,6 +2783,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       tripId={trip.id}
       userTier={userTier}
       featureEnabled={featureItineraryDocumentImport}
+      accessGranted={documentImportAllowed}
       styles={styles}
       theme={theme}
       readOnly={readOnly}
@@ -2801,6 +2804,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
   const showDocumentImport = canShowItineraryDocumentImport({
     featureEnabled: featureItineraryDocumentImport,
+    accessGranted: documentImportAllowed,
     userTier,
     platform: Platform.OS,
     readOnly,

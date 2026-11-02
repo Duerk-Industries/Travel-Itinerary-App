@@ -215,6 +215,15 @@ describe('HomeTab', () => {
     expect(admin.getByTestId('home-nav-ingest')).toBeTruthy();
   });
 
+  test('shows the Import tile from the server answer when one is given, whatever the tier', () => {
+    const props = { backendUrl: 'http://localhost', headers: {}, activeTripId: 't2', trips, followedTrips, styles, onSelectTrip: jest.fn(), onSelectFollowedTrip: jest.fn(), onNavigate: jest.fn() };
+    const opened = render(<HomeTab {...props} userRole="user" userTier="free" canImport />);
+    expect(opened.getByTestId('home-nav-ingest')).toBeTruthy();
+    opened.unmount();
+    const closed = render(<HomeTab {...props} userRole="admin" userTier="pro" canImport={false} />);
+    expect(closed.queryByTestId('home-nav-ingest')).toBeNull();
+  });
+
   test('keeps trip management actions off Home', () => {
     const { queryByTestId, getByTestId } = render(
       <HomeTab

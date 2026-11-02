@@ -8,6 +8,8 @@ type State = {
   profileSettled: boolean;
   tierKey?: string | null;
   userRole?: string | null;
+  /** The master Premium switch. Off means no Premium offer for anyone. Defaults to on. */
+  premiumEnabled?: boolean;
 };
 
 /** A paying (or administering) account is not offered a trial of what it already has. */
@@ -24,5 +26,6 @@ export const nextFirstSignInDialog = (state: State): FirstSignInDialog | null =>
   if (state.hasPendingInvites) return 'invites';
   // Wait for the profile, so a Pro account never sees the offer flash up before its tier arrives.
   if (!state.profileSettled) return null;
+  if (state.premiumEnabled === false) return null;
   return canOfferPremiumTrial(state.tierKey, state.userRole) ? 'premium' : null;
 };

@@ -47,6 +47,7 @@ import { sendShareEmailBestEffort, sendTripInviteEmailBestEffort, sendVerificati
 import { logError } from '../logger';
 import { getAuthFlag } from '../config/authFlags';
 import { assertUnderTravelerLimit, canUseFeature, getUserTierKey } from '../services/entitlementService';
+import { getParsingAccess, isPremiumEnabled } from '../services/premiumOptionsService';
 import { EntitlementError } from '../errors';
 import { TokenPayload } from '../auth';
 import { deleteUserIngestionData } from '../ingestion/shared/repository';
@@ -223,15 +224,19 @@ router.get('/', async (req, res) => {
   // tierKey drives client-side upsell/entry-point gating (e.g. showing the Home
   // page Ingest tile only to Premium/Pro) — it's not itself an authorization
   // check. Every ingestion endpoint re-checks tier server-side independently.
-  const [costTracking, receiptScanning, aiItineraryGeneration, aiAssistantGuide, aiAssistantActions, tierKey] = await Promise.all([
+  const [costTracking, receiptScanning, aiItineraryGeneration, aiAssistantGuide, aiAssistantActions, tierKey, premiumEnabled, parsingAccess] = await Promise.all([
     canUseFeature(userId, 'cost_tracking', role),
     canUseFeature(userId, 'receipt_scanning', role),
     canUseFeature(userId, 'ai_itinerary_generation', role),
     canUseFeature(userId, 'ai_assistant_guide', role),
     canUseFeature(userId, 'ai_assistant_actions', role),
     getUserTierKey(userId),
+    isPremiumEnabled(),
+    getParsingAccess(userId, role),
   ]);
-  res.json({ ...profile, entitlements: { costTracking, receiptScanning, aiItineraryGeneration, aiAssistantGuide, aiAssistantActions }, tierKey });
+  // premiumEnabled is the master Premium switch; parsingAccess says which paste/upload/forwarding/Gmail/document
+  // features this account can use right now, so the client shows only those.
+  res.json({ ...profile, entitlements: { costTracking, receiptScanning, aiItineraryGeneration, aiAssistantGuide, aiAssistantActions }, tierKey, premiumEnabled, parsingAccess });
 });
 
 router.get('/packing-list', async (req, res) => {
