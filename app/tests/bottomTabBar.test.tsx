@@ -61,4 +61,12 @@ describe('BottomTabBar', () => {
     expect(queryByTestId('add-sheet')).toBeNull();
     expect(onNavigate).not.toHaveBeenCalled();
   });
+
+  it('offers Share in the Add menu and reports it like any other option', () => {
+    const { getByTestId, onChooseAdd } = renderBar({ addOptions: [...addOptions, { key: 'share', label: 'Share', icon: 'share' }] });
+    fireEvent.press(getByTestId('bottom-tab-add'));
+    fireEvent.press(within(getByTestId('add-sheet')).getByTestId('add-option-share'));
+    expect(onChooseAdd).toHaveBeenCalledWith('share');
+  });
+
 });

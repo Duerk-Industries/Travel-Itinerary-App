@@ -42,6 +42,8 @@ type HomeTabProps = {
   onSelectFollowedTrip: (tripId: string) => void;
   onNavigate: (page: string) => void;
   onDeleteTrip?: (trip: { id: string; name: string }) => void;
+  /** Opens the Share Trip dialog for the active trip, so inviting someone does not mean digging through the itinerary. */
+  onShareTrip?: () => void;
   disabledPages?: Set<string>;
   hiddenPages?: Set<string>;
   // Kill switch for the designed gradient placeholder shown in place of a
@@ -73,6 +75,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
   onSelectFollowedTrip,
   onNavigate,
   onDeleteTrip,
+  onShareTrip,
   disabledPages,
   hiddenPages,
   featureCoverPhotoFallbackV2 = true,
@@ -280,6 +283,18 @@ const HomeTab: React.FC<HomeTabProps> = ({
               <Text style={styles.homeNavArrow}>{'>'}</Text>
             </Pressable>
           ))}
+          {onShareTrip && !readOnly ? (
+            <Pressable
+              accessibilityRole="button"
+              testID="home-share-trip"
+              style={({ pressed }: { pressed: boolean }) => [styles.homeNavButton, pressed && styles.homeNavButtonPressed]}
+              onPress={onShareTrip}
+            >
+              <View style={styles.homeNavIcon}><Icon name="share" color={navIconColor} size={22} /></View>
+              <Text style={styles.homeNavLabel}>Share</Text>
+              <Text style={styles.homeNavArrow}>{'>'}</Text>
+            </Pressable>
+          ) : null}
         </View>
       </ScrollView>
 

@@ -289,4 +289,17 @@ describe('HomeTab', () => {
     await waitFor(() => expect(onFollowTrip).toHaveBeenCalledWith('ABC123'));
     await waitFor(() => expect(queryByTestId('all-trips-follow-dialog')).toBeNull());
   });
+
+  test('offers Share on Home when the traveler can share the active trip', () => {
+    const onShareTrip = jest.fn();
+    const props = { backendUrl: 'http://localhost', headers: {}, activeTripId: 't2', trips, followedTrips, styles, onSelectTrip: jest.fn(), onSelectFollowedTrip: jest.fn(), onNavigate: jest.fn() };
+    const withShare = render(<HomeTab {...props} onShareTrip={onShareTrip} />);
+    fireEvent.press(withShare.getByTestId('home-share-trip'));
+    expect(onShareTrip).toHaveBeenCalledTimes(1);
+    expect(props.onNavigate).not.toHaveBeenCalled();
+    withShare.unmount();
+    expect(render(<HomeTab {...props} />).queryByTestId('home-share-trip')).toBeNull();
+    expect(render(<HomeTab {...props} onShareTrip={onShareTrip} readOnly />).queryByTestId('home-share-trip')).toBeNull();
+  });
+
 });

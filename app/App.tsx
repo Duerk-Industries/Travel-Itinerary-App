@@ -106,6 +106,7 @@ const ADD_OPTION_PAGE: Record<AddOptionKey, Page> = {
   person: 'overview',
   note: 'overview',
   checklist: 'overview',
+  share: 'overview',
 };
 import { FloatingInsetContext } from './contexts/FloatingInsetContext';
 import { FOLLOWED_TRIP_HIDDEN_PAGES, shouldAllowPageChange, shouldDisableTab } from './utils/wizardGuard';
@@ -625,7 +626,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [autoOpenAddPhotos, setAutoOpenAddPhotos] = useState(false);
   // One-shot requests from the phone Add menu, cleared by the tab once it opens the form.
   const [pendingExpenseAdd, setPendingExpenseAdd] = useState(false);
-  const [pendingItineraryAdd, setPendingItineraryAdd] = useState<Exclude<AddOptionKey, 'expense' | 'blog' | 'import'> | null>(null);
+  const [pendingItineraryAdd, setPendingItineraryAdd] = useState<Exclude<AddOptionKey, 'expense' | 'blog' | 'import' | 'share'> | null>(null);
   const [autoOpenActivityCapture, setAutoOpenActivityCapture] = useState<{ date: string; tags: string[] } | null>(null);
   const [activityRecapTarget, setActivityRecapTarget] = useState<ActivityRecapTarget | null>(null);
   const [pendingActivityRecap, setPendingActivityRecap] = useState<{ tripId: string; activityId: string } | null>(null);
@@ -3396,11 +3397,13 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
             ] : [])
           : [{ key: 'person', label: 'Person', icon: 'profile' }]),
         ...(canImportConfirmations ? [{ key: 'import', label: 'Import email', icon: 'import' }] : []),
+        { key: 'share', label: 'Share', icon: 'share' },
       ] as AddOption[]).filter((option) => !hiddenPages.has(ADD_OPTION_PAGE[option.key]))
     : [];
   // Each option opens its add form directly: flights, lodging and activities use the
   // itinerary's add forms (the same ones as a day's "+ Add" chips).
   const handleChooseAdd = (key: AddOptionKey) => {
+    if (key === 'share') { handleOpenShareTrip(); return; }
     if (key === 'expense') setPendingExpenseAdd(true);
     else if (key === 'blog') setAutoOpenAddPhotos(true);
     else if (key !== 'import') setPendingItineraryAdd(key);
@@ -3556,6 +3559,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   onSelectFollowedTrip={handleSelectFollowedTrip}
                   onNavigate={handleHomeNavigate}
                   onDeleteTrip={confirmDeleteTrip}
+                  onShareTrip={activeTrip?.id && !isFollowingMode && !offlineReadOnly ? handleOpenShareTrip : undefined}
                   disabledPages={disabledPages}
                   hiddenPages={hiddenPages}
                   featureCoverPhotoFallbackV2={featureCoverPhotoFallbackV2}
