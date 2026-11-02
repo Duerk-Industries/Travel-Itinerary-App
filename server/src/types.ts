@@ -1447,7 +1447,7 @@ export interface AnalyticsEventRecord {
   expiresAt: string;
 }
 
-export type NotificationCategory = 'blog_mention' | 'blog_comment_reply' | 'blog_nudge' | 'blog_reaction_digest' | 'blog_memory_lane' | 'blog_milestone' | 'blog_day_photo_reminder' | 'activity_recap' | 'import_result' | 'cancellation_deadline' | 'ai_finished' | 'trip_digest';
+export type NotificationCategory = 'blog_mention' | 'blog_comment_reply' | 'blog_nudge' | 'blog_reaction_digest' | 'blog_memory_lane' | 'blog_milestone' | 'blog_visibility' | 'blog_day_photo_reminder' | 'activity_recap' | 'import_result' | 'cancellation_deadline' | 'ai_finished' | 'trip_digest';
 
 export interface Notification {
   id: string;

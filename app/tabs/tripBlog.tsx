@@ -607,6 +607,8 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], t
     await persistItemOrder(ids);
   };
 
+  // R5: a traveler who joined after the blog went public gets the "now public" notice on their first visit (once per trip).
+  const noticedTripRef = useRef<string | null>(null);
   const loadPublicationStatus = async () => {
     if (!activeTripId) return;
     try {
@@ -616,7 +618,12 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], t
         return;
       }
       if (!response.ok) return;
-      setPublication(await response.json());
+      const status = await response.json();
+      setPublication(status);
+      if (!readOnly && status?.isPublic && noticedTripRef.current !== activeTripId) {
+        noticedTripRef.current = activeTripId;
+        void fetch(`${backendUrl}/api/trips/${activeTripId}/blog/publication/notice`, { method: 'POST', headers }).catch(() => undefined);
+      }
     } catch {
       // Publication controls are supplementary; keep the blog usable if status is unavailable.
     }

@@ -29,6 +29,8 @@ export const DEFAULT_PREFERENCES: Record<string, { inApp: boolean; push: boolean
   blog_reaction_digest: { inApp: true, push: false, email: false },
   blog_memory_lane: { inApp: true, push: false, email: false },
   blog_milestone: { inApp: true, push: false, email: false },
+  // R5: the blog is about to go public / now is public. Safety-relevant, so push is on by default.
+  blog_visibility: { inApp: true, push: true, email: false },
   // End-of-day nudge — unlike every other category above, this one defaults fully off on every
   // channel. It's opt-in by design, on top of the separate trip-level
   // trip_blogs.day_photo_reminders_enabled gate (blogBackgroundWorker.ts's

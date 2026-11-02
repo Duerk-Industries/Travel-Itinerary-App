@@ -1,5 +1,6 @@
 import { listTripsForBlogVisibility } from '../db';
 import { synchronizeBlogVisibility } from './blogVisibilityService';
+import { sendBlogVisibilityNotices } from './blogVisibilityNoticeService';
 import { queryBlog, withBlogTransaction } from '../db.postgres';
 import { getDb } from '../db.firebase';
 import { getCurrentDbProvider } from '../db';
@@ -39,7 +40,9 @@ export const runBlogVisibilityJob = async (now = new Date()): Promise<number> =>
   let published = 0;
   for (const tripId of await listTripsForBlogVisibility()) {
     try {
-      if (await synchronizeBlogVisibility(tripId, now)) published += 1;
+      const becamePublic = await synchronizeBlogVisibility(tripId, now);
+      if (becamePublic) published += 1;
+      await sendBlogVisibilityNotices(tripId, now, becamePublic);
     } catch (error) { logError('[blog] visibility check failed', error); }
   }
   return published;

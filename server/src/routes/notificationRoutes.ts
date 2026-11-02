@@ -74,6 +74,6 @@ router.get('/:id/open', safe(async (req, res) => {
     if (!activity || activity.tripId !== tripId) { res.status(404).json({ error: 'This activity is no longer available.' }); return; }
   }
   // Never return an arbitrary stored URL for the client to follow.
-  res.json({ tripId: tripId || null, page: row.category === 'import_result' ? 'ingest' : row.category === 'activity_recap' ? 'blog' : 'overview', activityId: activityId || null });
+  res.json({ tripId: tripId || null, page: row.category === 'import_result' ? 'ingest' : (row.category === 'activity_recap' || row.category === 'blog_visibility') ? 'blog' : 'overview', activityId: activityId || null });
 }));
 export default router;

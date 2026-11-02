@@ -4,6 +4,7 @@ import { ensureUserInTrip, loadBlogVisibilityContext } from '../db';
 import { isFeatureEnabled } from '../services/entitlementService';
 import { blogMediaRepository } from '../blog/repository';
 import { BlogVisibilityError, changeBlogPrivacy, evaluateBlogVisibility, releaseBlogEarly, synchronizeBlogVisibility } from '../services/blogVisibilityService';
+import { ensureBlogPublicNotice } from '../services/blogVisibilityNoticeService';
 import { loadPublicBlogDocument } from './publicBlogRoutes';
 import { ApiLimitExceededError, reserveApiUsageOrThrow } from '../apis/usageLimiter';
 
@@ -57,6 +58,12 @@ router.get('/:tripId/blog/publication/readiness', async (req: any, res) => {
 
 router.get('/:tripId/blog/publication/status', async (req: any, res) => {
   try { const result = await evaluateBlogVisibility(req.params.tripId); res.json({ ...result, epoch: null, state: result.isPublic ? 'public' : 'private', userDecision: null, pendingCount: 0 }); }
+  catch (error) { errorResponse(res, error); }
+});
+
+// Opening the blog calls this. A traveler who joined after the blog went public gets the "now public" notice once.
+router.post('/:tripId/blog/publication/notice', async (req: any, res) => {
+  try { res.json({ sent: await ensureBlogPublicNotice(req.params.tripId, String(req.user.userId)) }); }
   catch (error) { errorResponse(res, error); }
 });
 
