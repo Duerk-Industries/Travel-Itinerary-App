@@ -6,7 +6,7 @@ import { getEnvFlag, getEnvValue } from '../env';
 import { logError, logInfo } from '../logger';
 import { getTemplateDestination, getTemplatePlace, templateImageProblem, type TemplateImage } from './tripTemplateMedia';
 import { refreshImportedTemplates } from './tripTemplateService';
-import { syncTemplateImageMirror } from './templateImageMirrorService';
+import { drainTemplateImageMirror } from './templateImageMirrorService';
 
 // Finds a public-domain or CC0 Wikimedia Commons picture for the stops and cities of an imported template bundle that
 // have none. Candidates come from a Commons search; a vision model then looks at them and approves at most one, and
@@ -131,7 +131,7 @@ export const fillMissingTemplatePictures = async (targets: PictureTarget[], impo
   if (added > 0) {
     await refreshImportedTemplates(true);
     logInfo(`[template-pictures] added ${added} picture(s) to imported templates`);
-    if (process.env.NODE_ENV !== 'test') void syncTemplateImageMirror().catch((err) => logError('[template-pictures] copying pictures failed', err));
+    if (process.env.NODE_ENV !== 'test') void drainTemplateImageMirror().catch((err) => logError('[template-pictures] copying pictures failed', err));
   }
   return added;
 };

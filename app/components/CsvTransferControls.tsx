@@ -7,6 +7,7 @@ import Modal from './KeyboardAwareModal';
 import { mapColumns, HEADER_ALIASES, EXPORT_HEADERS, fieldsForCommit, matchExistingRecords, parseCsv, toCsv, toExportRows, toReviewRows, type ImportReviewRow, type TransferEntity } from '../utils/dataTransfer';
 import { pickCsvFile, shareCsvFile } from '../utils/dataTransferPlatform';
 import { taskFailure, track, type TaskFailure } from '../utils/analytics/track';
+import { useCsvControlsVisible } from '../hooks/useCsvControlsVisible';
 
 
 type Props = {
@@ -23,7 +24,7 @@ type Props = {
   enabledExport?: boolean;
   readOnly?: boolean;
   onImported?: () => void;
-  renderActions?: (actions: { importCsv: () => void; exportCsv: () => void }) => React.ReactNode;
+  renderActions?: (actions: { importCsv: () => void; exportCsv: () => void; canImportCsv: boolean; canExportCsv: boolean }) => React.ReactNode;
 };
 
 // What each entity is called in the UI, in analytics and in the API path.
@@ -50,6 +51,9 @@ const createImportId = (): string => {
 const CsvTransferControls: React.FC<Props> = ({ entity, backendUrl, headers, tripId, tripStart, tripEnd, rows, styles, theme: _providedTheme, enabledImport = false, enabledExport = false, readOnly = false, onImported, renderActions }) => {
   const _styleTheme = useStyleTheme();
   const theme = resolveStyleTheme(_providedTheme, _styleTheme);
+  const showCsvControls = useCsvControlsVisible();
+  const canImportCsv = showCsvControls && enabledImport && !readOnly;
+  const canExportCsv = showCsvControls && enabledExport;
   const colors = (theme ?? getAppTheme('light', 'light')).colors;
   const [reviewRows, setReviewRows] = useState<Array<ImportReviewRow<Record<string, unknown>>>>([]);
   const [excluded, setExcluded] = useState<Set<number>>(new Set());
@@ -74,13 +78,14 @@ const CsvTransferControls: React.FC<Props> = ({ entity, backendUrl, headers, tri
   };
 
   const importCsv = async () => {
+    if (!canImportCsv) return;
     if (!tripId) { Alert.alert('Select a trip first.'); return; }
     trackImport('task_started');
     try {
       const picked = await pickCsvFile();
       if (!picked) { trackImport('task_cancelled'); return; }
       const parsed = parseCsv(picked.text);
-      if (parsed.issues.some((issue) => issue.severity === 'error')) { trackImportFailed('validation'); Alert.alert('Unable to import CSV', parsed.issues.slice(0, 4).map((issue) => issue.message).join('\n')); return; }
+      if (parsed.issues.some((issue) => issue.severity === 'error')) { trackImportFailed('validation'); Alert.alert('Unable to import table', parsed.issues.slice(0, 4).map((issue) => issue.message).join('\n')); return; }
       const mapped = mapColumns(parsed.headers, definition);
       if (mapped.issues.length || mapped.unknown.length) {
         const detail = [...mapped.issues.map((issue) => issue.message), mapped.unknown.length ? `Ignored columns: ${mapped.unknown.join(', ')}` : ''].filter(Boolean).join('\n');
@@ -89,7 +94,7 @@ const CsvTransferControls: React.FC<Props> = ({ entity, backendUrl, headers, tri
         return;
       }
       openReview(parsed.rows, mapped.mapping);
-    } catch (error) { trackImportFailed('other'); Alert.alert('Unable to import CSV', (error as Error).message); }
+    } catch (error) { trackImportFailed('other'); Alert.alert('Unable to import table', (error as Error).message); }
   };
 
   const openReview = (rawRows: Array<Record<string, string>>, mapping: Record<string, string>) => {
@@ -128,19 +133,20 @@ const CsvTransferControls: React.FC<Props> = ({ entity, backendUrl, headers, tri
   };
 
   const exportCsv = async () => {
+    if (!canExportCsv) return;
     if (!rows.length) { Alert.alert('There is no data to export.'); return; }
     const exportRows = toExportRows(entity, rows, { tripStart: start0 });
     if (!exportRows.length) { Alert.alert('There is no data to export.'); return; }
     try { await shareCsvFile(`${ENTITY_FILE[entity]}-${new Date().toISOString().slice(0, 10)}.csv`, toCsv(EXPORT_HEADERS[entity], exportRows)); } catch (error) { Alert.alert('Export failed', (error as Error).message); }
   };
 
-  if (!renderActions && (!enabledImport || readOnly) && !enabledExport) return null;
+  if (!renderActions && !canImportCsv && !canExportCsv) return null;
   return <>
-    {renderActions ? renderActions({ importCsv, exportCsv }) : <View style={themeStyle('components_CsvTransferControls_1', {  }, (theme ?? _styleTheme))}>
-      {enabledImport && !readOnly ? <TouchableOpacity accessibilityRole="button" accessibilityLabel={`Import ${entity} CSV`} style={styles.button} onPress={importCsv} testID={`${entity}-import`}><Text style={styles.buttonText}>Import CSV</Text></TouchableOpacity> : null}
-      {enabledExport ? <TouchableOpacity accessibilityRole="button" accessibilityLabel={`Export ${entity} CSV`} style={styles.outlineButton ?? styles.button} onPress={exportCsv} testID={`${entity}-export`}><Text style={styles.buttonText}>Export CSV</Text></TouchableOpacity> : null}
+    {renderActions ? renderActions({ importCsv, exportCsv, canImportCsv, canExportCsv }) : <View style={themeStyle('components_CsvTransferControls_1', {  }, (theme ?? _styleTheme))}>
+      {canImportCsv ? <TouchableOpacity accessibilityRole="button" accessibilityLabel={`Import ${entity} table`} style={styles.button} onPress={importCsv} testID={`${entity}-import`}><Text style={styles.buttonText}>Import Table</Text></TouchableOpacity> : null}
+      {canExportCsv ? <TouchableOpacity accessibilityRole="button" accessibilityLabel={`Export ${entity} table`} style={styles.outlineButton ?? styles.button} onPress={exportCsv} testID={`${entity}-export`}><Text style={styles.buttonText}>Export Table</Text></TouchableOpacity> : null}
     </View>}
-    <Modal visible={modalVisible} animationType="slide" onRequestClose={cancelReview}>
+    <Modal visible={modalVisible && showCsvControls} animationType="slide" onRequestClose={cancelReview}>
       <View style={themeStyle('components_CsvTransferControls_2', { Platform: Platform, colors: colors }, (theme ?? _styleTheme))}>
         <Text style={themeStyle('components_CsvTransferControls_3', { colors: colors }, (theme ?? _styleTheme))}>Review {ENTITY_LABEL[entity]}</Text>
         <Text style={themeStyle('components_CsvTransferControls_4', { colors: colors }, (theme ?? _styleTheme))}>{visibleRows.length} rows selected; {reviewRows.length - visibleRows.length} skipped.{blockingRows.length ? ` ${blockingRows.length} rows need correction or skipping.` : ''}</Text>

@@ -3404,13 +3404,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             <Text style={styles.sectionTitle}>Overview</Text>
             <View style={themeStyle('tabs_overview_layout3', {  }, (theme ?? _styleTheme))}>
               <CsvTransferControls entity="day-plan" backendUrl={backendUrl} headers={jsonHeaders} tripId={trip?.id} tripStart={trip?.startDate} tripEnd={trip?.endDate} rows={itineraryDetails} styles={styles} theme={theme} enabledImport={featureDayPlanCsvImport} enabledExport={featureDayPlanCsvExport} readOnly={readOnly} onImported={() => setItineraryReload((count) => count + 1)}
-                renderActions={({ importCsv, exportCsv }) => <ActionDropdown testID="overview-actions-menu" styles={styles} actions={[
+                renderActions={({ importCsv, exportCsv, canImportCsv, canExportCsv }) => <ActionDropdown testID="overview-actions-menu" styles={styles} actions={[
                   ...(!readOnly ? [{ id: 'overview-add-traveler', label: 'Add Traveler', onSelect: () => setShowAddTraveler(true) }] : []),
                   { id: 'overview-edit', label: 'Edit', onSelect: () => setIsEditing(true) },
                   ...(onOpenShareTrip ? [{ id: 'itinerary-share-trip-button', label: 'Share', onSelect: onOpenShareTrip }] : []),
                   ...(showDocumentImport ? [{ id: 'overview-import-itinerary', label: 'Import Itinerary', onSelect: () => setDocumentImportOpen(true) }] : []),
-                  ...(featureDayPlanCsvImport && !readOnly ? [{ id: 'day-plan-import', label: 'Import CSV', onSelect: importCsv }] : []),
-                  ...(featureDayPlanCsvExport ? [{ id: 'day-plan-export', label: 'Export CSV', onSelect: exportCsv }] : []),
+                  ...(canImportCsv ? [{ id: 'day-plan-import', label: 'Import Table', onSelect: importCsv }] : []),
+                  ...(canExportCsv ? [{ id: 'day-plan-export', label: 'Export Table', onSelect: exportCsv }] : []),
                   ...(onGenerateAiItinerary && aiItineraryGenerationAllowed && !readOnly && !aiItineraryPending ? [{ id: 'overview-generate-itinerary', label: 'Generate itinerary', onSelect: () => setConfirmGenerate(true) }] : []),
                   { id: 'overview-print-itinerary', label: 'Print itinerary', onSelect: handlePrintItinerary },
                 ]} />}

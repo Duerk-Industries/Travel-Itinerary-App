@@ -45,7 +45,7 @@ const exportOnNative = async (csvContent: string, fileName: string): Promise<Csv
     if (!isAvailable) return 'unavailable';
     await Sharing.shareAsync(file.uri, {
       mimeType: 'text/csv',
-      dialogTitle: 'Export CSV',
+      dialogTitle: 'Export Table',
       UTI: 'public.comma-separated-values-text',
     });
     return 'shared';
