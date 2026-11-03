@@ -2163,6 +2163,17 @@ const styleFactories = {
     fontSize: 12,
     fontWeight: '600',
   },
+  mentionList: {
+    backgroundColor: theme?.colors.surfaceMuted ?? _theme.colors.surfaceMuted,
+    padding: 8,
+  },
+  mentionOption: {
+    padding: 10,
+    minHeight: 44,
+  },
+  mentionOptionText: {
+    color: theme?.colors.text ?? _theme.colors.text,
+  },
   unreadSeparator: {
     flexDirection: 'row',
     alignItems: 'center',

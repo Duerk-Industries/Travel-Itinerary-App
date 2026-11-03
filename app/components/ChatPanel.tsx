@@ -418,11 +418,11 @@ const ChatPanel: React.FC<Props> = ({
 
       {/* Input */}
       {suggestions.length > 0 && (
-        <View accessibilityLabel="Mention a traveler or follower" style={{ backgroundColor: theme.colors.surfaceMuted, padding: 8 }}>
+        <View accessibilityLabel="Mention a traveler or follower" style={themedStyles.mentionList}>
           {suggestions.map(person => (
             <TouchableOpacity key={person.userId} accessibilityRole="button" accessibilityLabel={`Mention ${person.displayName}, ${person.description ?? person.role}`}
-              testID={`chat-mention-${person.userId}`} onPress={() => chooseMention(person)} style={{ padding: 10, minHeight: 44 }}>
-              <Text style={{ color: theme.colors.text }}>@{person.displayName} · {person.description ?? person.role}</Text>
+              testID={`chat-mention-${person.userId}`} onPress={() => chooseMention(person)} style={themedStyles.mentionOption}>
+              <Text style={themedStyles.mentionOptionText}>@{person.displayName} · {person.description ?? person.role}</Text>
             </TouchableOpacity>
           ))}
         </View>
