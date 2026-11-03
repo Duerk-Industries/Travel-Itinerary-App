@@ -209,10 +209,13 @@ export const listMedia = async (userId: string, tripId: string): Promise<BlogMed
   // ever touches blog_items, not blog_media_assets.
   const itemIds = Array.from(new Set(assets.map((asset) => asset.blogItemId).filter(Boolean)));
   const deletedItemIds = new Set<string>();
-  await Promise.all(itemIds.map(async (itemId) => {
-    const itemSnap = await db.collection('blog_items').doc(itemId).get();
-    if (itemSnap.exists && (itemSnap.data() as any)?.deletedAt != null) deletedItemIds.add(itemId);
-  }));
+  if (itemIds.length) {
+    // One batched read instead of a round trip per item.
+    const itemSnaps = await db.getAll(...itemIds.map((itemId) => db.collection('blog_items').doc(itemId)));
+    for (const itemSnap of itemSnaps) {
+      if (itemSnap.exists && (itemSnap.data() as any)?.deletedAt != null) deletedItemIds.add(itemSnap.id);
+    }
+  }
   return assets.filter((asset) => !deletedItemIds.has(asset.blogItemId));
 };
 // Removes a single asset from a gallery (not for standalone media.photo/media.video items — those

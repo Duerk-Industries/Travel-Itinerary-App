@@ -17,7 +17,7 @@ import { processMediaUpload } from '../services/blogMediaProcessingService';
 import { objectExists, createBlogReadUrl, blogRenditionKey } from '../services/blogStorageClient';
 import { queryBlog } from '../db.postgres';
 import { getCanonicalPublicPathFirebase } from '../blog/firebasePublicationRepository';
-import { logError } from '../logger';
+import { logError, logInfo } from '../logger';
 import { isLocalEnv } from '../env';
 import { evaluateBlogVisibility } from '../services/blogVisibilityService';
 import { suggestBlogMediaCaption } from '../services/blogCaptionSuggestionService';
@@ -53,19 +53,21 @@ const textMutationId = (userId: string, key: string): string => {
 const validAudience = (value: unknown): value is BlogAudience => value === 'travelers' || value === 'followers' || value === 'public';
 // Signed read URLs are short-lived and specific to a rendition object, so they're computed at
 // response time rather than stored — only ready assets have anything to render.
+// Only state === 'ready' assets get here, so their renditions exist; skip the per-object existence round trip.
+const READY_ASSET_URL = { verifyExists: false } as const;
 const attachMediaUrls = async (assets: any[]): Promise<any[]> => Promise.all(assets.map(async (asset) => {
   if (asset.state !== 'ready') return asset;
   if (asset.mediaKind === 'audio') {
-    const primaryUrl = await createBlogReadUrl(`trip-blog/${asset.uploaderUserId}/${asset.assetId ?? asset.id}/source`);
+    const primaryUrl = await createBlogReadUrl(`trip-blog/${asset.uploaderUserId}/${asset.assetId ?? asset.id}/source`, READY_ASSET_URL);
     return { ...asset, primaryUrl };
   }
   if (asset.mediaKind === 'video') {
-    const primaryUrl = await createBlogReadUrl(blogRenditionKey(asset.uploaderUserId, asset.assetId ?? asset.id, 'primary.mp4'));
+    const primaryUrl = await createBlogReadUrl(blogRenditionKey(asset.uploaderUserId, asset.assetId ?? asset.id, 'primary.mp4'), READY_ASSET_URL);
     return { ...asset, primaryUrl };
   }
   const [primaryUrl, thumbnailUrl] = await Promise.all([
-    createBlogReadUrl(blogRenditionKey(asset.uploaderUserId, asset.assetId ?? asset.id, 'primary.jpg')),
-    createBlogReadUrl(blogRenditionKey(asset.uploaderUserId, asset.assetId ?? asset.id, 'thumb.jpg')),
+    createBlogReadUrl(blogRenditionKey(asset.uploaderUserId, asset.assetId ?? asset.id, 'primary.jpg'), READY_ASSET_URL),
+    createBlogReadUrl(blogRenditionKey(asset.uploaderUserId, asset.assetId ?? asset.id, 'thumb.jpg'), READY_ASSET_URL),
   ]);
   return { ...asset, primaryUrl, thumbnailUrl };
 }));
@@ -99,6 +101,7 @@ router.get('/:tripId/blog/capabilities', async (req, res) => {
 
 router.get('/:tripId/blog', async (req, res) => {
   try {
+    const startedAt = Date.now();
     if (!(await isFeatureEnabled('trip_blog'))) {
       res.status(404).json({ error: 'Trip blog is not enabled' });
       return;
@@ -110,12 +113,18 @@ router.get('/:tripId/blog', async (req, res) => {
       cursor: typeof req.query.cursor === 'string' ? req.query.cursor : undefined,
       limit: req.query.limit ? Number(req.query.limit) : undefined,
     };
-    const blog = await blogRepository().getBlog(userIdOf(req), req.params.tripId, options);
-    const visibility = await evaluateBlogVisibility(req.params.tripId);
+    // These lookups don't depend on each other, so run them together instead of one round trip after another.
+    const [blog, visibility, context, allMedia] = await Promise.all([
+      blogRepository().getBlog(userIdOf(req), req.params.tripId, options),
+      evaluateBlogVisibility(req.params.tripId),
+      loadBlogVisibilityContext(req.params.tripId),
+      blogMediaRepository().listMedia(userIdOf(req), req.params.tripId),
+    ]);
     blog.visibilityState = visibility.isPublic ? 'public' : 'private';
-    const context = await loadBlogVisibilityContext(req.params.tripId);
     blog.publicOptOut = context?.members.find(m => m.userId === userIdOf(req))?.optOut === true;
-    const media = await blogMediaRepository().listMedia(userIdOf(req), req.params.tripId);
+    // Only media for the days in this page (plus undated trip photos) is ever returned, so don't sign URLs for the rest.
+    const pageDays = new Set(blog.days.map((day) => day.localDate));
+    const media = allMedia.filter((asset: any) => !asset.dayDate || pageDays.has(asset.dayDate));
     const withUrls = await attachMediaUrls(media);
     // `id` must be the underlying blog_items row id (asset.blogItemId), not the media asset's own
     // id — PATCH/DELETE /blog/items/:itemId operate on blog_items, so shipping the asset id as
@@ -193,7 +202,10 @@ router.get('/:tripId/blog', async (req, res) => {
     // no `engagement`/`contributors` field appears at all, so a client that ignores them behaves
     // exactly as it did before this phase — the NFR-1 compatibility guarantee in §5.4.
     if (await isFeatureEnabled('trip_blog_social_layer') && await isFeatureEnabled('trip_blog_reactions')) {
-      const membership = await ensureUserCanReadTrip(req.params.tripId, userIdOf(req));
+      const [membership, contributorsByDay] = await Promise.all([
+        ensureUserCanReadTrip(req.params.tripId, userIdOf(req)),
+        blogRepository().getContributorsForDays(blog.days.map((day) => (day as any).id)),
+      ]);
       const visibleAudiences: BlogAudience[] = membership?.access === 'follower' ? ['followers', 'public'] : ['travelers', 'followers', 'public'];
 
       const targets: { targetKind: 'day' | 'item' | 'asset'; targetId: string }[] = [];
@@ -208,7 +220,6 @@ router.get('/:tripId/blog', async (req, res) => {
       }
       const summaries = await blogEngagementRepository().getEngagementSummaries(userIdOf(req), targets, visibleAudiences);
       const zeroSummary = { reactionCounts: {}, reactionTotal: 0, commentCount: 0, userReaction: null };
-      const contributorsByDay = await blogRepository().getContributorsForDays(blog.days.map((day) => (day as any).id));
 
       for (const day of blog.days) {
         (day as any).engagement = summaries[`day:${(day as any).id}`] ?? zeroSummary;
@@ -242,6 +253,8 @@ router.get('/:tripId/blog', async (req, res) => {
     }
     const tripPhotos = mediaItems.filter((item) => !item.dayDate && item.mediaKind === 'photo' && item.state === 'ready').sort((a, b) => String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? '')));
     res.json({ ...blog, tripPhotos, tripCover: tripPhotos[0] ?? null, publicPath });
+    const elapsedMs = Date.now() - startedAt;
+    if (elapsedMs > 1500) logInfo(`[blog] slow blog load trip=${req.params.tripId} elapsedMs=${elapsedMs} days=${blog.days.length} mediaSigned=${media.length}`);
   } catch (err) {
     errorResponse(res, err);
   }
