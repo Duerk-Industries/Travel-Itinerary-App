@@ -3682,7 +3682,8 @@ export const listChatMentionableUsers = async (tripId: string, userId: string): 
   const { rows } = await getPool().query<{ userId: string; role: 'traveler' | 'follower' }>(
     `SELECT user_id as "userId", 'traveler'::text as role FROM group_members
      WHERE group_id = $1 AND removed_at IS NULL AND user_id IS NOT NULL
-     UNION SELECT follower_user_id as "userId", 'follower'::text as role FROM trip_followers WHERE trip_id = $2`,
+     UNION SELECT follower_user_id as "userId", 'follower'::text as role FROM trip_followers WHERE trip_id = $2
+     ORDER BY role DESC`,
     [access.groupId, tripId]
   );
   const users = new Map<string, import('./types').ChatMentionableUser>();

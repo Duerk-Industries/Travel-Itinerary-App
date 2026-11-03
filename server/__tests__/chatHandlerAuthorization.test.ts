@@ -165,6 +165,33 @@ describe('chatHandler authorization', () => {
     }));
   });
 
+  it.each([
+    ['@all Hello!', ['traveler', 'follower']],
+    ['@travelers Hello!', ['traveler']],
+    ['Hi @ALL, @travelers @all @Alex Smith', ['traveler', 'follower']],
+  ])('expands %s to current trip recipients without duplicates or self notifications', async (body, expected) => {
+    const { socket, handlers } = createSocketMock('sender');
+    registerChatHandlers(createIoMock().io as never, socket as never);
+    ensureUserInTripMock.mockResolvedValueOnce({ groupId: 'g1' });
+    addTripMessageMock.mockResolvedValueOnce({ id: 'group-msg', body } as never);
+    jest.mocked(db.listChatMentionableUsers).mockResolvedValueOnce([
+      { userId: 'sender', displayName: 'Sender', role: 'traveler' },
+      { userId: 'traveler', displayName: 'Alex Smith', role: 'traveler' },
+      { userId: 'follower', displayName: 'Sam Jones', role: 'follower' },
+    ]);
+    await handlers.get(CLIENT_EVENTS.SEND_MESSAGE)!({ tripId: 'trip-1', body });
+    expect(notify).toHaveBeenCalledWith(expect.objectContaining({ userIds: expected, category: 'chat_mention' }));
+  });
+
+  it.each(['Email hello@all.com', '@allison hello', '@travelers_extra hello', '@all-hands hello'])('does not expand ordinary text: %s', async body => {
+    const { socket, handlers } = createSocketMock('sender');
+    registerChatHandlers(createIoMock().io as never, socket as never);
+    ensureUserInTripMock.mockResolvedValueOnce({ groupId: 'g1' });
+    addTripMessageMock.mockResolvedValueOnce({ id: 'ordinary-msg', body } as never);
+    await handlers.get(CLIENT_EVENTS.SEND_MESSAGE)!({ tripId: 'trip-1', body });
+    expect(notify).not.toHaveBeenCalled();
+  });
+
   it('returns no autocomplete identities when access is denied', async () => {
     const { socket, handlers } = createSocketMock('outsider');
     registerChatHandlers(createIoMock().io as never, socket as never);

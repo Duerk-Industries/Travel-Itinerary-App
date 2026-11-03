@@ -47,6 +47,12 @@ interface Props {
 const PANEL_WIDTH = layoutMetrics.ChatPanel_PANEL_WIDTH;
 const PANEL_HEIGHT = layoutMetrics.ChatPanel_PANEL_HEIGHT;
 
+type MentionSuggestion = ChatMentionableUser & { group?: boolean; description?: string };
+const GROUP_MENTIONS: MentionSuggestion[] = [
+  { userId: '@all', displayName: 'all', role: 'traveler', group: true, description: 'All travelers and followers' },
+  { userId: '@travelers', displayName: 'travelers', role: 'traveler', group: true, description: 'Travelers only' },
+];
+
 // Keep the desktop panel within the browser width. Phone-sized browsers use
 // the full-screen layout below.
 const getResponsivePanelWidth = (): number => {
@@ -88,7 +94,7 @@ const ChatPanel: React.FC<Props> = ({
   const inputRef = useRef<TextInput>(null);
   const mentionMatch = inputText.slice(0, cursor).match(/(?:^|\s)@([^@\n]*)$/);
   const mentionQuery = mentionMatch?.[1].toLocaleLowerCase();
-  const suggestions = mentionQuery === undefined ? [] : mentionUsers.filter(person => person.userId !== currentUserId
+  const suggestions: MentionSuggestion[] = mentionQuery === undefined ? [] : [...GROUP_MENTIONS, ...mentionUsers].filter(person => person.userId !== currentUserId
     && person.displayName.toLocaleLowerCase().includes(mentionQuery)).slice(0, 8);
 
   useEffect(() => {
@@ -101,14 +107,14 @@ const ChatPanel: React.FC<Props> = ({
     return () => { active = false; socket.off('connect', load); };
   }, [socket, tripId]);
 
-  const chooseMention = (person: ChatMentionableUser) => {
+  const chooseMention = (person: MentionSuggestion) => {
     if (!mentionMatch) return;
     const start = cursor - mentionMatch[1].length - 1;
     const inserted = `@${person.displayName} `;
     const next = inputText.slice(0, start) + inserted + inputText.slice(cursor);
     if (next.length > 2000) return;
     setInputText(next); setCursor(start + inserted.length);
-    setSelectedMentions(previous => [...previous.filter(user => user.userId !== person.userId), person]);
+    if (!person.group) setSelectedMentions(previous => [...previous.filter(user => user.userId !== person.userId), person]);
     inputRef.current?.focus();
   };
   const [loading, setLoading] = useState(true);
@@ -414,9 +420,9 @@ const ChatPanel: React.FC<Props> = ({
       {suggestions.length > 0 && (
         <View accessibilityLabel="Mention a traveler or follower" style={{ backgroundColor: theme.colors.surfaceMuted, padding: 8 }}>
           {suggestions.map(person => (
-            <TouchableOpacity key={person.userId} accessibilityRole="button" accessibilityLabel={`Mention ${person.displayName}, ${person.role}`}
+            <TouchableOpacity key={person.userId} accessibilityRole="button" accessibilityLabel={`Mention ${person.displayName}, ${person.description ?? person.role}`}
               testID={`chat-mention-${person.userId}`} onPress={() => chooseMention(person)} style={{ padding: 10, minHeight: 44 }}>
-              <Text style={{ color: theme.colors.text }}>@{person.displayName} · {person.role}</Text>
+              <Text style={{ color: theme.colors.text }}>@{person.displayName} · {person.description ?? person.role}</Text>
             </TouchableOpacity>
           ))}
         </View>

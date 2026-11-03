@@ -168,6 +168,18 @@ describe('ChatPanel', () => {
     act(() => { tree.unmount(); });
   });
 
+  test.each(['all', 'travelers'])('suggests and inserts @%s without sending a synthetic user identity', name => {
+    const socket = createSocketMock();
+    let tree: any;
+    act(() => { tree = renderer.create(<ChatPanel socket={socket} {...baseProps} />); });
+    act(() => { tree.root.findByProps({ testID: 'chat-input' }).props.onChangeText(`Hi @${name.slice(0, 2)}`); });
+    act(() => { tree.root.findByProps({ testID: `chat-mention-@${name}` }).props.onPress(); });
+    expect(tree.root.findByProps({ testID: 'chat-input' }).props.value).toBe(`Hi @${name} `);
+    act(() => { tree.root.findByProps({ testID: 'chat-send' }).props.onPress(); });
+    expect(socket.emit).toHaveBeenCalledWith(CLIENT_EVENTS.SEND_MESSAGE, { tripId: 'trip-1', body: `Hi @${name}` });
+    act(() => { tree.unmount(); });
+  });
+
   test('shows empty state when message history is empty', () => {
     const socket = createSocketMock();
     let tree: any;

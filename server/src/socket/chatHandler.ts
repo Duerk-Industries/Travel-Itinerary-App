@@ -192,12 +192,15 @@ export const registerChatHandlers = (io: Server, socket: Socket): void => {
         // Broadcast to all members of the trip room (including sender)
         io.to(`trip:${tripId}`).emit(SERVER_EVENTS.NEW_MESSAGE, saved);
         // Resolve supplied identities against current trip access; never trust recipient IDs.
-        if (Array.isArray(payload.mentions) && payload.mentions.length) {
+        const groupMentions = new Set([...body.matchAll(/(?:^|\s)@(all|travelers)(?![\p{L}\p{N}_-])/giu)].map(match => match[1].toLowerCase()));
+        if (groupMentions.size || (Array.isArray(payload.mentions) && payload.mentions.length)) {
           try {
-            const requested = new Set(payload.mentions.filter((id): id is string => typeof id === 'string').slice(0, 50));
+            const requested = new Set(Array.isArray(payload.mentions) ? payload.mentions.filter((id): id is string => typeof id === 'string').slice(0, 50) : []);
             const candidates = await listChatMentionableUsers(tripId, user.id);
-            const userIds = candidates.filter(candidate => candidate.userId !== user.id && requested.has(candidate.userId)
-              && body.includes(`@${candidate.displayName}`)).map(candidate => candidate.userId);
+            const userIds = [...new Set(candidates.filter(candidate => candidate.userId !== user.id && (
+              groupMentions.has('all') || (groupMentions.has('travelers') && candidate.role === 'traveler') ||
+              (requested.has(candidate.userId) && body.includes(`@${candidate.displayName}`))
+            )).map(candidate => candidate.userId))];
             await notify({ userIds, category: 'chat_mention', tripId, actorUserId: user.id,
               title: `${displayName} mentioned you in Trip Chat`, body: saved.body,
               payload: { messageId: saved.id }, dedupeKey: `chat:${saved.id}:mention` });
