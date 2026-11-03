@@ -85,6 +85,17 @@ describe('notification service', () => {
     expect(outbox.length).toBeGreaterThan(0);
   });
 
+  it('chat mentions reach the inbox, enqueue phone push, and open Trip Chat', async () => {
+    await notify({ userIds: [userId], category: 'chat_mention', title: 'Chat mention', body: 'Hi @Traveler', dedupeKey: 'chat-mention-test' });
+    const inbox = await request(app).get('/api/notifications').set('Authorization', `Bearer ${token}`).expect(200);
+    const mention = inbox.body.notifications.find((row: { category: string }) => row.category === 'chat_mention');
+    expect(mention).toBeTruthy();
+    const outbox = isFirebase() ? await docs('notification_outbox') : (await sql('SELECT * FROM notification_outbox')).rows;
+    expect(outbox).toContainEqual(expect.objectContaining({ channel: 'push', [isFirebase() ? 'notificationId' : 'notification_id']: mention.id }));
+    const opened = await request(app).get(`/api/notifications/${mention.id}/open`).set('Authorization', `Bearer ${token}`).expect(200);
+    expect(opened.body.openChat).toBe(true);
+  });
+
   it('dedupe_key prevents duplicate notifications for the same user', async () => {
     await notify({
       userIds: [userId],

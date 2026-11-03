@@ -150,6 +150,24 @@ describe('ChatPanel', () => {
     expect(tree.root.findAllByProps({ testID: 'chat-close' })).toHaveLength(0);
   });
 
+  test('autocompletes travelers and followers and sends selected identities', () => {
+    const socket = createSocketMock();
+    let tree: any;
+    act(() => { tree = renderer.create(<ChatPanel socket={socket} {...baseProps} />); });
+    const request = socket.emit.mock.calls.find((call: any[]) => call[0] === CLIENT_EVENTS.MENTIONABLE_USERS);
+    act(() => { request[2]({ tripId: 'trip-1', users: [
+      { userId: 'alex', displayName: 'Alex Smith', role: 'follower' },
+      { userId: 'sam', displayName: 'Sam Jones', role: 'traveler' },
+    ] }); });
+    act(() => { tree.root.findByProps({ testID: 'chat-input' }).props.onChangeText('Hi @Al'); });
+    expect(tree.root.findAllByProps({ testID: 'chat-mention-sam' })).toHaveLength(0);
+    act(() => { tree.root.findByProps({ testID: 'chat-mention-alex' }).props.onPress(); });
+    expect(tree.root.findByProps({ testID: 'chat-input' }).props.value).toBe('Hi @Alex Smith ');
+    act(() => { tree.root.findByProps({ testID: 'chat-send' }).props.onPress(); });
+    expect(socket.emit).toHaveBeenCalledWith(CLIENT_EVENTS.SEND_MESSAGE, { tripId: 'trip-1', body: 'Hi @Alex Smith', mentions: ['alex'] });
+    act(() => { tree.unmount(); });
+  });
+
   test('shows empty state when message history is empty', () => {
     const socket = createSocketMock();
     let tree: any;

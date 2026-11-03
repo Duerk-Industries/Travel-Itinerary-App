@@ -5761,6 +5761,31 @@ export const listTripPayments = async (userId: string, tripId: string): Promise<
   return rows;
 };
 
+export const listChatMentionableUsers = async (tripId: string, userId: string): Promise<import('./types').ChatMentionableUser[]> => {
+  const access = await ensureUserCanReadTrip(tripId, userId);
+  if (!access) throw new Error('Not authorized to view trip chat participants');
+  const db = getDb();
+  const [members, followers] = await Promise.all([
+    db.collection('group_members').where('groupId', '==', access.groupId).get(),
+    db.collection('trip_followers').where('tripId', '==', tripId).get(),
+  ]);
+  const candidates = [
+    ...members.docs.filter(doc => !doc.data().removedAt).map(doc => ({ userId: String(doc.data().userId ?? ''), role: 'traveler' as const })),
+    ...followers.docs.map(doc => ({ userId: String(doc.data().followerUserId ?? ''), role: 'follower' as const })),
+  ];
+  const users = new Map<string, import('./types').ChatMentionableUser>();
+  for (const candidate of candidates) {
+    if (!candidate.userId || users.has(candidate.userId) || !(await ensureUserCanReadTrip(tripId, candidate.userId))) continue;
+    const [userDoc, profileDoc] = await Promise.all([
+      db.collection('users').doc(candidate.userId).get(), db.collection('web_users').doc(candidate.userId).get(),
+    ]);
+    const profile = profileDoc.data();
+    const displayName = [profile?.firstName, profile?.lastName].filter(Boolean).join(' ').trim() || String(userDoc.data()?.email ?? '').split('@')[0] || 'Traveler';
+    users.set(candidate.userId, { ...candidate, displayName });
+  }
+  return [...users.values()];
+};
+
 export const listTripFollowers = async (userId: string, tripId: string) => {
   const db = getDb();
   const context = await getTripOwnerContextFirebase(tripId, userId);

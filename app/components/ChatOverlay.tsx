@@ -13,6 +13,7 @@ type Props = {
   userId: string | null;
   userName: string | null;
   theme?: AppTheme;
+  notificationRequest?: { tripId: string; key: number } | null;
 };
 
 /**
@@ -20,11 +21,14 @@ type Props = {
  * context. Keeping this as a leaf consumer means open/close/unread
  * transitions only re-render this subtree rather than the entire shell.
  */
-const ChatOverlay: React.FC<Props> = ({ userToken, activeTripId, userId, userName, theme: _providedTheme }) => {
+const ChatOverlay: React.FC<Props> = ({ userToken, activeTripId, userId, userName, notificationRequest, theme: _providedTheme }) => {
   const _styleTheme = useStyleTheme();
   const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const { chatOpen, chatMinimized, chatUnread, openChat, closeChat, minimizeChat, restoreChat, setChatUnread } =
     useChat();
+  React.useEffect(() => {
+    if (userToken && notificationRequest?.tripId === activeTripId) openChat();
+  }, [userToken, activeTripId, notificationRequest, openChat]);
 
   if (!userToken || !activeTripId) return null;
 
@@ -38,6 +42,7 @@ const ChatOverlay: React.FC<Props> = ({ userToken, activeTripId, userId, userNam
 
   return (
     <ChatPanel
+      key={activeTripId}
       socket={getSocket()}
       tripId={activeTripId}
       currentUserId={userId ?? ''}

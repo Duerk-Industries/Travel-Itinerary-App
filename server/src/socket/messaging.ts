@@ -40,6 +40,7 @@ export interface PresenceUser {
 export type PresenceList = PresenceUser[];
 
 export const CLIENT_EVENTS = {
+  MENTIONABLE_USERS: 'chat:mentionable_users',
   JOIN_TRIP: 'chat:join_trip',
   LEAVE_TRIP: 'chat:leave_trip',
   SEND_MESSAGE: 'chat:send_message',

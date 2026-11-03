@@ -644,6 +644,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const offlineReadOnly = offlineMode || connection.status === 'offline';
   // userEmail / userId / userRole are owned by useAuthSession (declared above).
   const [pendingNotificationId, setPendingNotificationId] = useState<string | null>(null);
+  const [chatNotificationRequest, setChatNotificationRequest] = useState<{ tripId: string; key: number } | null>(null);
   const [shareTripModalOpen, setShareTripModalOpen] = useState(false);
   const [overviewEditSignal, setOverviewEditSignal] = useState(0);
   const [goToDay1Signal, setGoToDay1Signal] = useState(0);
@@ -3540,6 +3541,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               <OfflineSaveButton controller={offlineSave} theme={theme} />
               {!offlineReadOnly && <NotificationInbox backendUrl={backendUrl} token={userToken} openNotificationId={pendingNotificationId} onOpenHandled={() => setPendingNotificationId(null)} onOpen={target => {
                 if (target.tripId) setActiveTripId(target.tripId);
+                if (target.openChat && target.tripId) setChatNotificationRequest({ tripId: target.tripId, key: Date.now() });
                 requestPageChange(target.page);
               }} />}
 
@@ -4653,6 +4655,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         />
       ) : null}
       <ChatOverlay
+        notificationRequest={chatNotificationRequest}
         userToken={userToken}
         activeTripId={activeTripId}
         userId={userId ?? null}

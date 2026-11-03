@@ -28,6 +28,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Socket } from 'socket.io-client';
 import { CLIENT_EVENTS, SERVER_EVENTS } from '../../packages/messaging/src/events';
 import type { ChatMessage } from '../../packages/messaging/src/types';
+import type { ChatMentionableUser } from '../../server/src/types';
 import { formatTimeOfDay } from '../utils/timeFormat';
 
 
@@ -81,6 +82,35 @@ const ChatPanel: React.FC<Props> = ({
   const themedStyles = React.useMemo(() => buildStyles(theme), [theme]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
+  const [mentionUsers, setMentionUsers] = useState<ChatMentionableUser[]>([]);
+  const [selectedMentions, setSelectedMentions] = useState<ChatMentionableUser[]>([]);
+  const [cursor, setCursor] = useState(0);
+  const inputRef = useRef<TextInput>(null);
+  const mentionMatch = inputText.slice(0, cursor).match(/(?:^|\s)@([^@\n]*)$/);
+  const mentionQuery = mentionMatch?.[1].toLocaleLowerCase();
+  const suggestions = mentionQuery === undefined ? [] : mentionUsers.filter(person => person.userId !== currentUserId
+    && person.displayName.toLocaleLowerCase().includes(mentionQuery)).slice(0, 8);
+
+  useEffect(() => {
+    let active = true;
+    setMentionUsers([]); setInputText(''); setSelectedMentions([]); setCursor(0);
+    const load = () => socket.emit(CLIENT_EVENTS.MENTIONABLE_USERS, tripId, (result: { tripId: string; users: ChatMentionableUser[] }) => {
+      if (active && result?.tripId === tripId && Array.isArray(result.users)) setMentionUsers(result.users);
+    });
+    load(); socket.on('connect', load);
+    return () => { active = false; socket.off('connect', load); };
+  }, [socket, tripId]);
+
+  const chooseMention = (person: ChatMentionableUser) => {
+    if (!mentionMatch) return;
+    const start = cursor - mentionMatch[1].length - 1;
+    const inserted = `@${person.displayName} `;
+    const next = inputText.slice(0, start) + inserted + inputText.slice(cursor);
+    if (next.length > 2000) return;
+    setInputText(next); setCursor(start + inserted.length);
+    setSelectedMentions(previous => [...previous.filter(user => user.userId !== person.userId), person]);
+    inputRef.current?.focus();
+  };
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
@@ -254,9 +284,11 @@ const ChatPanel: React.FC<Props> = ({
   const sendMessage = useCallback(() => {
     const body = inputText.trim();
     if (!body) return;
-    socket.emit(CLIENT_EVENTS.SEND_MESSAGE, { tripId, body });
+    const mentions = selectedMentions.filter(person => body.includes(`@${person.displayName}`)).map(person => person.userId);
+    socket.emit(CLIENT_EVENTS.SEND_MESSAGE, { tripId, body, ...(mentions.length ? { mentions } : {}) });
     setInputText('');
-  }, [inputText, socket, tripId]);
+    setSelectedMentions([]); setCursor(0);
+  }, [inputText, selectedMentions, socket, tripId]);
 
   // -------------------------------------------------------------------------
   // Render helpers
@@ -379,11 +411,23 @@ const ChatPanel: React.FC<Props> = ({
       )}
 
       {/* Input */}
+      {suggestions.length > 0 && (
+        <View accessibilityLabel="Mention a traveler or follower" style={{ backgroundColor: theme.colors.surfaceMuted, padding: 8 }}>
+          {suggestions.map(person => (
+            <TouchableOpacity key={person.userId} accessibilityRole="button" accessibilityLabel={`Mention ${person.displayName}, ${person.role}`}
+              testID={`chat-mention-${person.userId}`} onPress={() => chooseMention(person)} style={{ padding: 10, minHeight: 44 }}>
+              <Text style={{ color: theme.colors.text }}>@{person.displayName} · {person.role}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
       <View style={themedStyles.inputRow}>
         <TextInput
+          ref={inputRef}
           style={themedStyles.input}
           value={inputText}
-          onChangeText={setInputText}
+          onChangeText={text => { setInputText(text); setCursor(text.length); }}
+          onSelectionChange={event => setCursor(event.nativeEvent.selection.end)}
           placeholder="Message the group… (@ to mention)"
           placeholderTextColor={themeStyle('components_ChatPanel_4', {  }, (theme ?? _styleTheme))}
           multiline
