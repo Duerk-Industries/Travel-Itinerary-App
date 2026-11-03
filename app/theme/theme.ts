@@ -1778,6 +1778,7 @@ const styleFactories = {
     optionLabel: {
       fontSize: 13,
       fontWeight: '600',
+      textAlign: 'center',
       color: _theme.colors.text,
     },
     cancel: {
