@@ -3486,8 +3486,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           if (!discarded) { setPendingLogoutError("Couldn't remove the saved expenses. You're still signed in; try again or keep them on this device."); return; }
           setPendingLogoutVisible(false); logout();
         }} />
-      <View style={[styles.topBar, isNarrowLayout && !showBottomTabs && styles.topBarStacked]}>
-        <View style={[styles.topBarLeft, isNarrowLayout && !showBottomTabs && styles.topBarLeftNarrow, showBottomTabs && themeStyle('App_14', {  }, _styleTheme)]}>
+      <View style={[styles.topBar, isNarrowLayout && !showBottomTabs && styles.topBarStacked, showBottomTabs && styles.topBarPhone]}>
+        <View style={[styles.topBarLeft, isNarrowLayout && !showBottomTabs && styles.topBarLeftNarrow, showBottomTabs && styles.topBarLeftPhone]}>
           {userToken && activePage !== 'home' && !showBottomTabs ? (
             <TouchableOpacity
               style={styles.homeButton}
@@ -3498,7 +3498,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               <Text style={styles.homeButtonText}>⌂</Text>
             </TouchableOpacity>
           ) : null}
-          {userToken ? (
+          {userToken && !showBottomTabs ? (
             <TouchableOpacity
               style={[styles.backButton, pageHistory.length === 0 && styles.buttonDisabled]}
               onPress={goBack}
@@ -3509,7 +3509,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               <Text style={styles.backButtonText}>{'<'}</Text>
             </TouchableOpacity>
           ) : null}
-          {userToken ? (
+          {userToken && !showBottomTabs ? (
             <TouchableOpacity
               style={[styles.backButton, pageForwardHistory.length === 0 && styles.buttonDisabled]}
               onPress={goForward}
@@ -3529,15 +3529,15 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           )}
           <Text
             style={[styles.title, isPhoneLayout && styles.titleNarrow]}
-            numberOfLines={isPhoneLayout ? 2 : 1}
+            numberOfLines={showBottomTabs ? 1 : isPhoneLayout ? 2 : 1}
             ellipsizeMode="tail"
           >
             WanderBunnies
           </Text>
         </View>
         {userToken ? (
-          <View style={[styles.topRightWrapper, isNarrowLayout && !showBottomTabs && styles.topRightWrapperNarrow]}>
-            <View style={[styles.topRight, isNarrowLayout && !showBottomTabs && styles.topRightNarrow]}>
+          <View style={[styles.topRightWrapper, isNarrowLayout && !showBottomTabs && styles.topRightWrapperNarrow, showBottomTabs && styles.topBarActionsPhone]}>
+            <View style={[styles.topRight, isNarrowLayout && !showBottomTabs && styles.topRightNarrow, showBottomTabs && styles.topBarActionsPhone]}>
               <OfflineSaveButton controller={offlineSave} theme={theme} />
               {!offlineReadOnly && <NotificationInbox backendUrl={backendUrl} token={userToken} openNotificationId={pendingNotificationId} onOpenHandled={() => setPendingNotificationId(null)} onOpen={target => {
                 if (target.tripId) setActiveTripId(target.tripId);

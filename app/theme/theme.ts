@@ -7546,6 +7546,17 @@ export const buildStyles = (theme: AppTheme) => StyleSheet.create(solidBackgroun
     alignItems: 'stretch',
     rowGap: 8,
   }),
+  topBarPhone: ({
+    flexWrap: 'nowrap',
+  }),
+  topBarLeftPhone: ({
+    flex: 1,
+    flexWrap: 'nowrap',
+  }),
+  topBarActionsPhone: ({
+    flexShrink: 0,
+    flexWrap: 'nowrap',
+  }),
   topBarLeft: ({
     flexDirection: 'row',
     alignItems: 'center',
