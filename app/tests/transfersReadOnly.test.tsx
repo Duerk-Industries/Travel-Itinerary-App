@@ -195,6 +195,23 @@ describe('FlightsTab read-only mode', () => {
     expect(button.findByType('Text').props.style).toEqual(edit.findByType('Text').props.style);
   });
 
+  test.each<['flights' | 'ground', string[]]>([['ground', ['Departure Date', 'Departure Time', 'Departure Location', 'Arrival Location', 'Arrival Date', 'Arrival Time', 'Passenger']], ['flights', ['Passenger', 'Departure Date', 'Departure Location', 'Departure Time', 'Arrival Date', 'Arrival Location', 'Arrival Time']]])('%s table column order', (transferScope, labels) => {
+    const { toJSON } = render(
+      <FlightsTab
+        transferScope={transferScope}
+        backendUrl="http://localhost" userToken="token" activeTripId="trip-1"
+        flights={[]} setFlights={jest.fn() as any} groupMembers={[member]} defaultPayerId="member-1"
+        formatMemberName={(m) => `${m.firstName} ${m.lastName}`} payerName={() => 'Bryan Traveler'}
+        headers={{}} jsonHeaders={{}} findActiveTrip={() => trip}
+        fetchGroupMembersForActiveTrip={async () => {}} styles={styles} airportOptions={[]} onSearchAirports={() => {}}
+      />
+    );
+    const tree = JSON.stringify(toJSON());
+    const positions = labels.map((label) => tree.indexOf(`"${label}"`));
+    expect(positions.every((position) => position >= 0)).toBe(true);
+    expect([...positions].sort((a, b) => a - b)).toEqual(positions);
+  });
+
   test.each(['flights', 'ground'] as const)('%s screen filters rows and totals, and offers the right transfer types', (transferScope) => {
     const ground: Flight = { ...flight, id: 'train-1', transfer_type: 'Train', transferType: 'Train', cost: 37 };
     const air: Flight = { ...flight, cost: 250 };
