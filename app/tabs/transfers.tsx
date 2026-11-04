@@ -593,6 +593,12 @@ const withGroundLeadingColumns = <T extends { key: string }>(cols: T[]): T[] => 
   ...cols.filter((column) => !GROUND_LEADING_COLUMNS.includes(column.key)),
 ];
 
+const FLIGHT_TABLE_COLUMN_ORDER = ['departure_date', 'departure_location', 'departure_time', 'arrival_date', 'arrival_location', 'arrival_time',
+  'status', 'booking_reference', 'carrier', 'flight_number', 'layover_duration', 'passenger_name', 'cost', 'costPerPerson', 'actions'];
+const withFlightColumns = <T extends { key: string; label: string }>(cols: T[]): T[] =>
+  FLIGHT_TABLE_COLUMN_ORDER.flatMap(key => cols.filter(column => column.key === key))
+    .map(column => column.key === 'costPerPerson' ? { ...column, label: 'Cost/Person' } : column);
+
 // Shrinks the Edit/Delete buttons in the transfers table down to roughly
 // one line of text tall, instead of the app-wide button paddings meant for standalone buttons.
 const COMPACT_ACTION_BUTTON: ViewStyle = themeStyle('tabs_transfers_1', {  }, getStyleTheme('auto', null));
@@ -646,8 +652,8 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   const tableColumns = useMemo(() => {
     const visible = columns.filter(column => (Platform.OS !== 'web' || column.key !== 'actions') && (!ground || !['layover_duration', 'flight_number'].includes(column.key)))
       .map(column => ground && column.key === 'carrier' ? { ...column, label: 'Provider' } : column);
-    return ground ? withGroundLeadingColumns(visible) : visible;
-  }, [ground]);
+    return ground ? withGroundLeadingColumns(visible) : transferScope === 'flights' ? withFlightColumns(visible) : visible;
+  }, [ground, transferScope]);
   const isWizard = mode === 'wizard';
   const containerRef = useRef<React.ElementRef<typeof View> | null>(null);
   const memberNames = useMemo(() => {
@@ -816,8 +822,12 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   const gridColumns = useMemo(() => {
     const visible = allGridColumns.filter(column => !ground || !['layover_duration', 'flight_number'].includes(column.key))
       .map(column => ground && column.key === 'carrier' ? { ...column, label: 'Provider' } : column);
+    if (transferScope === 'flights') return withFlightColumns([...visible, {
+      key: 'costPerPerson', label: 'Cost/Person', width: 140, editor: 'readonly' as const, editable: false,
+      getValue: (row: Flight) => formatMoney(row.passenger_ids?.length ? Number(row.cost || 0) / row.passenger_ids.length : 0, row.currency ?? tripCurrency),
+    }]);
     return ground ? withGroundLeadingColumns(visible) : visible;
-  }, [allGridColumns, ground]);
+  }, [allGridColumns, ground, transferScope, tripCurrency]);
   const beginGridEdit = () => { if (readOnly) return; const snapshot = flights.map((row) => ({ ...row, passenger_ids: [...(row.passenger_ids ?? [])], paidBy: [...(row.paidBy ?? row.paid_by ?? [])] })); setGridRows(snapshot); setGridOriginalRows(snapshot); setGridDeleteIds(new Set()); setGridHistory([]); setGridRedo([]); setGridErrors([]); setGridMessage(null); setTableEditing(true); };
   const cancelGridEdit = () => { setTableEditing(false); setGridRows([]); setGridOriginalRows([]); setGridDeleteIds(new Set()); setGridHistory([]); setGridRedo([]); setGridErrors([]); setGridMessage(null); };
   const recordGridChange = (rows: Flight[], deleteIds: Set<string>) => { setGridHistory((items) => [...items.slice(-99), { rows: gridRows, deleteIds: Array.from(gridDeleteIds) }]); setGridRedo([]); setGridRows(rows); setGridDeleteIds(deleteIds); };

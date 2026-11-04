@@ -234,8 +234,8 @@ describe('FlightsTab read-only mode', () => {
     expect(button.findByType('Text').props.style).toEqual(edit.findByType('Text').props.style);
   });
 
-  test.each<['flights' | 'ground', string[]]>([['ground', ['Departure Date', 'Departure Time', 'Departure Location', 'Arrival Location', 'Arrival Date', 'Arrival Time', 'Passenger']], ['flights', ['Passenger', 'Departure Date', 'Departure Location', 'Departure Time', 'Arrival Date', 'Arrival Location', 'Arrival Time']]])('%s table column order', (transferScope, labels) => {
-    const { toJSON } = render(
+  test.each<['flights' | 'ground', string[]]>([['ground', ['Departure Date', 'Departure Time', 'Departure Location', 'Arrival Location', 'Arrival Date', 'Arrival Time', 'Passenger']], ['flights', ['Departure Date', 'Departure Location', 'Departure Time', 'Arrival Date', 'Arrival Location', 'Arrival Time', 'Status', 'Booking Ref', 'Airline', 'Flight Number', 'Layover', 'Passenger', 'Cost', 'Cost/Person']]])('%s table column order', (transferScope, labels) => {
+    const { toJSON, queryByText, getByTestId } = render(
       <FlightsTab
         transferScope={transferScope}
         backendUrl="http://localhost" userToken="token" activeTripId="trip-1"
@@ -249,6 +249,15 @@ describe('FlightsTab read-only mode', () => {
     const positions = labels.map((label) => tree.indexOf(`"${label}"`));
     expect(positions.every((position) => position >= 0)).toBe(true);
     expect([...positions].sort((a, b) => a - b)).toEqual(positions);
+    if (transferScope === 'flights') {
+      expect(queryByText('Type')).toBeNull();
+      fireEvent.press(getByTestId('transfer-table-edit'));
+      expect(queryByText('Type')).toBeNull();
+      const editingTree = JSON.stringify(toJSON());
+      const editingPositions = [...labels, 'Actions'].map(label => editingTree.indexOf(`"${label}"`));
+      expect(editingPositions.every(position => position >= 0)).toBe(true);
+      expect([...editingPositions].sort((a, b) => a - b)).toEqual(editingPositions);
+    }
   });
 
   test.each(['flights', 'ground'] as const)('%s screen filters rows and totals, and offers the right transfer types', (transferScope) => {
