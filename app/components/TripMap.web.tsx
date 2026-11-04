@@ -7,6 +7,7 @@ import { travelEstimate } from '../../packages/domain/src/planningTravelEstimate
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { ThemedText as Text } from './ThemedText';
+import MapToggleButton from './MapToggleButton';
 
 
 import type { Map as LibreMap } from 'maplibre-gl';
@@ -108,7 +109,7 @@ export default function TripMap({ points, selectedId, onSelect, testID, onOpenCh
     if (point && map.current) map.current.easeTo({ center: [point.lng!, point.lat!], zoom: Math.max(map.current.getZoom(), 13), duration: typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 250 });
   }, [selected, key]);
   return <View testID={testID} style={themeStyle('components_TripMap_web_3', {  }, _styleTheme)}>
-    <TouchableOpacity accessibilityRole="button" onPress={() => { setOpen(!open); onOpenChange?.(!open); }} style={themeStyle('components_TripMap_web_4', {  }, _styleTheme)}><Text tone="link">{open ? 'Hide map' : 'Show map'}</Text></TouchableOpacity>
+    <MapToggleButton open={open} onPress={() => { setOpen(!open); onOpenChange?.(!open); }} />
     {open && <>
       {failed && <>
         <Text accessibilityRole="alert">Interactive map unavailable — showing a basic map instead.</Text>

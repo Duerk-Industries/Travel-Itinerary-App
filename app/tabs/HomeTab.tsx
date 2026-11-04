@@ -13,6 +13,7 @@ import { useImageSource } from '../utils/imageSource';
 import BannerPicturePicker from '../components/BannerPicturePicker';
 import DestinationPlaceholderCard from '../components/DestinationPlaceholderCard';
 import Icon, { type IconName } from '../components/Icon';
+import { scrollClearanceStyle, usePageScrollClearance } from '../contexts/PageScrollClearanceContext';
 
 type Trip = {
   id: string;
@@ -85,6 +86,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
 }) => {
   const _styleTheme = useStyleTheme();
   const safeAreaInsets = useSafeAreaInsets();
+  const scrollClearance = usePageScrollClearance();
   const { width: viewportWidth } = useWindowDimensions();
   const isPhoneLayout = viewportWidth < 680;
   const isCompactLayout = viewportWidth < 520;
@@ -210,7 +212,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
     <View style={[styles.card, themeStyle('tabs_HomeTab_1', {  }, _styleTheme)]}>
       <ScrollView
         style={themeStyle('tabs_HomeTab_2', {  }, _styleTheme)}
-        contentContainerStyle={[styles.homeScrollContent, themeStyle('tabs_HomeTab_3', {  }, _styleTheme)]}
+        contentContainerStyle={[styles.homeScrollContent, themeStyle('tabs_HomeTab_3', {  }, _styleTheme), scrollClearanceStyle(scrollClearance)]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"

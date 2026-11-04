@@ -4,6 +4,7 @@
 /// <reference types="jest" />
 /// <reference types="node" />
 
+import { PageScrollClearanceContext } from '../contexts/PageScrollClearanceContext';
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import HomeTab from '../tabs/HomeTab';
@@ -311,4 +312,12 @@ describe('HomeTab', () => {
     expect(render(<HomeTab {...props} onShareTrip={onShareTrip} readOnly />).queryByTestId('home-share-trip')).toBeNull();
   });
 
+
+  test('ends its scroll area with room for the floating chat buttons, so the page can run down to the tab bar', () => {
+    const props = { backendUrl: 'http://localhost', headers: {}, activeTripId: 't2', trips, followedTrips, styles, onSelectTrip: jest.fn(), onSelectFollowedTrip: jest.fn(), onNavigate: jest.fn() };
+    const flat = (style: any) => Object.assign({}, ...[style].flat(Infinity).filter(Boolean));
+    const contentPadding = (tree: any) => flat(tree.UNSAFE_getAllByType(require('react-native').ScrollView)[0].props.contentContainerStyle).paddingBottom;
+    expect(contentPadding(render(<PageScrollClearanceContext.Provider value={80}><HomeTab {...props} /></PageScrollClearanceContext.Provider>))).toBe(80);
+    expect(contentPadding(render(<HomeTab {...props} />))).toBeUndefined();
+  });
 });

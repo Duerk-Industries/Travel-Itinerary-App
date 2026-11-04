@@ -138,6 +138,7 @@ import { printItinerary as openPrintableItinerary } from '../utils/printableItin
 import CsvTransferControls from '../components/CsvTransferControls';
 import { startItemSaveTask } from '../utils/analytics/track';
 import { formatClockTime } from '../utils/timeFormat';
+import { scrollClearanceStyle, usePageScrollClearance } from '../contexts/PageScrollClearanceContext';
 
 type Trip = {
   id: string;
@@ -550,6 +551,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   onItineraryCacheChange,
 }) => {
   const _styleTheme = useStyleTheme();
+  const scrollClearance = usePageScrollClearance();
   const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const { width: viewportWidth } = useWindowDimensions();
   const isPhoneLayout = viewportWidth < 700;
@@ -3408,7 +3410,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         <ScrollView
           ref={scrollRef}
           style={[styles.card, responsiveCardStyle, themeStyle('tabs_overview_48', {  }, (theme ?? _styleTheme))]}
-          contentContainerStyle={themeStyle('tabs_overview_49', { isPhoneLayout: isPhoneLayout }, (theme ?? _styleTheme))}
+          contentContainerStyle={[themeStyle('tabs_overview_49', { isPhoneLayout: isPhoneLayout }, (theme ?? _styleTheme)), scrollClearanceStyle(scrollClearance)]}
           onScroll={(e: any) => { const y = e?.nativeEvent?.contentOffset?.y; if (typeof y === 'number') setScrollY(y); }}
           scrollEventThrottle={16}
           keyboardShouldPersistTaps="handled"
@@ -3513,7 +3515,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       <ScrollView
         ref={scrollRef}
         style={[styles.card, responsiveCardStyle, themeStyle('tabs_overview_55', {  }, (theme ?? _styleTheme))]}
-        contentContainerStyle={themeStyle('tabs_overview_56', { isPhoneLayout: isPhoneLayout }, (theme ?? _styleTheme))}
+        contentContainerStyle={[themeStyle('tabs_overview_56', { isPhoneLayout: isPhoneLayout }, (theme ?? _styleTheme)), scrollClearanceStyle(scrollClearance)]}
           onScroll={(e: any) => { const y = e?.nativeEvent?.contentOffset?.y; if (typeof y === 'number') setScrollY(y); }}
         scrollEventThrottle={16}
         keyboardShouldPersistTaps="handled"
