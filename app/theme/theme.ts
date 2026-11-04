@@ -1778,6 +1778,7 @@ const styleFactories = {
     optionLabel: {
       fontSize: 13,
       fontWeight: '600',
+      textAlign: 'center',
       color: _theme.colors.text,
     },
     cancel: {
@@ -2161,6 +2162,17 @@ const styleFactories = {
     color: theme?.colors.textMuted ?? _theme.colors.text,
     fontSize: 12,
     fontWeight: '600',
+  },
+  mentionList: {
+    backgroundColor: theme?.colors.surfaceMuted ?? _theme.colors.surfaceMuted,
+    padding: 8,
+  },
+  mentionOption: {
+    padding: 10,
+    minHeight: 44,
+  },
+  mentionOptionText: {
+    color: theme?.colors.text ?? _theme.colors.text,
   },
   unreadSeparator: {
     flexDirection: 'row',
@@ -6641,7 +6653,7 @@ const styleFactories = {
   // tabs/LodgingTab.tsx
   tabs_LodgingTab_17: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ flexGrow: 1 }),
   // tabs/LodgingTab.tsx
-  tabs_LodgingTab_18: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ minWidth: 878 }),
+  tabs_LodgingTab_18: (_theme: AppTheme, { hideActions }: ThemeStyleValues): any => ({ minWidth: hideActions ? 600 : 878 }),
   // tabs/LodgingTab.tsx
   tabs_LodgingTab_19: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ position: 'sticky', left: 0, zIndex: 4, backgroundColor: theme?.colors.surface }),
   // tabs/LodgingTab.tsx
@@ -7544,6 +7556,17 @@ export const buildStyles = (theme: AppTheme) => StyleSheet.create(solidBackgroun
   topBarStacked: ({
     alignItems: 'stretch',
     rowGap: 8,
+  }),
+  topBarPhone: ({
+    flexWrap: 'nowrap',
+  }),
+  topBarLeftPhone: ({
+    flex: 1,
+    flexWrap: 'nowrap',
+  }),
+  topBarActionsPhone: ({
+    flexShrink: 0,
+    flexWrap: 'nowrap',
   }),
   topBarLeft: ({
     flexDirection: 'row',

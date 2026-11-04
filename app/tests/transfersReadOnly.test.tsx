@@ -97,6 +97,45 @@ const flight: Flight = {
 };
 
 describe('FlightsTab read-only mode', () => {
+  test.each([false, true])('ground table displays hotel/activity names and keeps custom addresses (custom: %s)', custom => {
+    const transfer: Flight = { ...flight, transferType: 'Public Transit', transfer_type: 'Public Transit',
+      departure_location: custom ? 'Custom pickup street' : 'Hotel Road', arrival_location: custom ? 'Custom dropoff street' : 'Museum Road',
+      departure_date: '2027-03-02', arrival_date: '2027-03-03' };
+    const view = render(<FlightsTab backendUrl="http://localhost" userToken="token" activeTripId="trip-1"
+      transferScope="ground" flights={[transfer]} setFlights={jest.fn()} groupMembers={[member]} defaultPayerId={member.id}
+      lodgings={[{ id: 'hotel', name: 'Hotel A', address: 'Hotel Road', checkInDate: '2027-03-01', checkOutDate: '2027-03-03', status: 'Booked' }]}
+      activities={[{ id: 'museum', name: 'Museum Visit', startLocation: 'Museum Road', date: '2027-03-03', status: 'Booked' }]}
+      formatMemberName={m => m.id} payerName={() => 'Member'} headers={{}} jsonHeaders={{}}
+      findActiveTrip={() => trip} fetchGroupMembersForActiveTrip={async () => {}}
+      styles={styles} airportOptions={[]} onSearchAirports={() => {}} />);
+    expect(view.getByText(custom ? 'Custom pickup street' : 'Hotel A')).toBeTruthy();
+    expect(view.getByText(custom ? 'Custom dropoff street' : 'Museum Visit')).toBeTruthy();
+    if (!custom) {
+      expect(view.queryByText('Hotel Road')).toBeNull();
+      expect(view.queryByText('Museum Road')).toBeNull();
+    }
+  });
+
+  test.each(['flights', 'ground'] as const)('web %s rows open detail actions and hide Actions outside grid editing', transferScope => {
+    const originalOS = Platform.OS;
+    Platform.OS = 'web';
+    try {
+      const transfer: Flight = transferScope === 'ground' ? { ...flight, transferType: 'Public Transit', transfer_type: 'Public Transit' } : flight;
+      const view = render(<FlightsTab backendUrl="http://localhost" userToken="token" activeTripId="trip-1"
+        transferScope={transferScope} flights={[transfer]} setFlights={jest.fn()} groupMembers={[member]} defaultPayerId={member.id}
+        formatMemberName={m => m.id} payerName={() => 'Member'} headers={{}} jsonHeaders={{}}
+        findActiveTrip={() => trip} fetchGroupMembersForActiveTrip={async () => {}}
+        styles={styles} airportOptions={[]} onSearchAirports={() => {}} />);
+      expect(view.queryByText('Actions')).toBeNull();
+      expect(view.queryByTestId('transfer-delete-flight-1')).toBeNull();
+      fireEvent.press(view.getByTestId('transfer-row-flight-1'));
+      const kind = 'flight';
+      expect(view.getByTestId(`${kind}-details-delete`)).toBeTruthy();
+      fireEvent.press(view.getByTestId(`${kind}-details-edit`));
+      expect(view.getByTestId('flight-modal-save')).toBeTruthy();
+      view.unmount();
+    } finally { Platform.OS = originalOS; }
+  });
   test.each(['Flight', 'Public Transit'] as const)('opens an external %s editor without rendering its list', (transferType) => {
     const transfer = { ...flight, transferType, transfer_type: transferType };
     const onExternalEditHandled = jest.fn();
@@ -193,6 +232,32 @@ describe('FlightsTab read-only mode', () => {
     const edit = getByTestId('transfer-edit-flight-1');
     expect(button.props.style).toEqual(edit.props.style);
     expect(button.findByType('Text').props.style).toEqual(edit.findByType('Text').props.style);
+  });
+
+  test.each<['flights' | 'ground', string[]]>([['ground', ['Departure Date', 'Departure Time', 'Departure Location', 'Arrival Location', 'Arrival Date', 'Arrival Time', 'Passenger']], ['flights', ['Departure Date', 'Departure Location', 'Departure Time', 'Arrival Date', 'Arrival Location', 'Arrival Time', 'Status', 'Booking Ref', 'Airline', 'Flight Number', 'Layover', 'Passenger', 'Cost', 'Cost/Person']]])('%s table column order', (transferScope, labels) => {
+    const { toJSON, queryByText, getByTestId } = render(
+      <FlightsTab
+        transferScope={transferScope}
+        backendUrl="http://localhost" userToken="token" activeTripId="trip-1"
+        flights={[]} setFlights={jest.fn() as any} groupMembers={[member]} defaultPayerId="member-1"
+        formatMemberName={(m) => `${m.firstName} ${m.lastName}`} payerName={() => 'Bryan Traveler'}
+        headers={{}} jsonHeaders={{}} findActiveTrip={() => trip}
+        fetchGroupMembersForActiveTrip={async () => {}} styles={styles} airportOptions={[]} onSearchAirports={() => {}}
+      />
+    );
+    const tree = JSON.stringify(toJSON());
+    const positions = labels.map((label) => tree.indexOf(`"${label}"`));
+    expect(positions.every((position) => position >= 0)).toBe(true);
+    expect([...positions].sort((a, b) => a - b)).toEqual(positions);
+    if (transferScope === 'flights') {
+      expect(queryByText('Type')).toBeNull();
+      fireEvent.press(getByTestId('transfer-table-edit'));
+      expect(queryByText('Type')).toBeNull();
+      const editingTree = JSON.stringify(toJSON());
+      const editingPositions = [...labels, 'Actions'].map(label => editingTree.indexOf(`"${label}"`));
+      expect(editingPositions.every(position => position >= 0)).toBe(true);
+      expect([...editingPositions].sort((a, b) => a - b)).toEqual(editingPositions);
+    }
   });
 
   test.each(['flights', 'ground'] as const)('%s screen filters rows and totals, and offers the right transfer types', (transferScope) => {

@@ -115,6 +115,22 @@ beforeEach(() => {
 });
 
 describe('CarRentalsPanel', () => {
+  it('hides web row actions, opens details on row click, and keeps grid actions available', () => {
+    const originalOS = ReactNative.Platform.OS;
+    ReactNative.Platform.OS = 'web';
+    try {
+      const view = render(<CarRentalsPanel {...baseProps} carRentals={[makeCarRental()]} />);
+      expect(view.queryByText('Actions')).toBeNull();
+      expect(view.queryByTestId('car-rental-edit-car-1')).toBeNull();
+      fireEvent.press(view.getByTestId('car-rental-row-car-1'));
+      expect(view.getByTestId('car-rental-details-edit')).toBeTruthy();
+      fireEvent.press(view.getByTestId('car-rental-details-delete'));
+      expect(baseProps.onRemoveCarRental).toHaveBeenCalledWith('car-1');
+      fireEvent.press(view.getByTestId('car-rental-table-edit'));
+      expect(view.getByText('Actions')).toBeTruthy();
+      view.unmount();
+    } finally { ReactNative.Platform.OS = originalOS; }
+  });
   it('leaves adding and table editing to the bottom bar on a phone', () => {
     const dimensions = jest.spyOn(ReactNative, 'useWindowDimensions').mockReturnValue({ width: 430, height: 900, scale: 1, fontScale: 1 });
     try {

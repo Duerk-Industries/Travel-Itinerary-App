@@ -19,6 +19,7 @@ export interface NotifyOptions {
 }
 
 export const DEFAULT_PREFERENCES: Record<string, { inApp: boolean; push: boolean; email: boolean }> = {
+  chat_mention: { inApp: true, push: true, email: false },
   import_result: { inApp: true, push: false, email: false },
   cancellation_deadline: { inApp: true, push: false, email: false },
   ai_finished: { inApp: true, push: false, email: false },

@@ -36,13 +36,29 @@ export const createBlogUploadUrl = async (objectKey: string, contentType: string
   }
 };
 
-/** Signed GET URL for rendering a processed rendition. Returns null if the object doesn't exist yet (still processing) or signing fails. */
-export const createBlogReadUrl = async (objectKey: string): Promise<string | null> => {
+// Signed read URLs live an hour; reuse one for a while so repeat loads (every edit refreshes the blog) skip the
+// signing round trip. 20 minutes keeps at least 40 minutes of validity, well past the client's 45-minute refresh.
+const READ_URL_REUSE_MS = 20 * 60_000;
+const readUrlCache = new Map<string, { url: string; reuseUntil: number }>();
+export const clearBlogReadUrlCacheForTesting = (): void => { readUrlCache.clear(); };
+
+/**
+ * Signed GET URL for rendering a processed rendition. Returns null if signing fails, or (when verifyExists, the
+ * default) if the object doesn't exist yet. Callers that already know the asset is ready pass verifyExists: false to
+ * skip a storage round trip per rendition.
+ */
+export const createBlogReadUrl = async (objectKey: string, options: { verifyExists?: boolean } = {}): Promise<string | null> => {
+  const cached = readUrlCache.get(objectKey);
+  if (cached && cached.reuseUntil > Date.now()) return cached.url;
   try {
     const file = getStorage().bucket(BUCKET_NAME).file(objectKey);
-    const [exists] = await file.exists();
-    if (!exists) return null;
+    if (options.verifyExists !== false) {
+      const [exists] = await file.exists();
+      if (!exists) return null;
+    }
     const [url] = await file.getSignedUrl({ version: 'v4', action: 'read', expires: Date.now() + READ_URL_TTL_MS });
+    if (readUrlCache.size > 5000) readUrlCache.clear();
+    readUrlCache.set(objectKey, { url, reuseUntil: Date.now() + READ_URL_REUSE_MS });
     return url;
   } catch (err) {
     logError('[blog-storage] failed to create read signed URL', err);

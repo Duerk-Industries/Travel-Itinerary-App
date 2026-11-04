@@ -21,11 +21,14 @@ import { CLIENT_EVENTS, SERVER_EVENTS } from '../src/socket/messaging';
 
 jest.mock('../src/db', () => ({
   ensureUserInTrip: jest.fn(),
+  ensureUserCanReadTrip: jest.fn(),
+  listChatMentionableUsers: jest.fn(),
   addTripMessage: jest.fn(),
   listTripMessagesPage: jest.fn(async () => ({ messages: [], hasMore: false })),
   markMessagesRead: jest.fn(async () => undefined),
   countUnreadMessages: jest.fn(async () => 0),
 }));
+jest.mock('../src/services/notificationService', () => ({ notify: jest.fn(async () => undefined) }));
 jest.mock('../src/socket/userHelper', () => ({
   getUserDisplayName: jest.fn(async (_id: string, email: string) => email),
 }));
@@ -36,6 +39,7 @@ jest.mock('../src/logger', () => ({
 
 import { registerChatHandlers } from '../src/socket/chatHandler';
 import * as db from '../src/db';
+import { notify } from '../src/services/notificationService';
 
 type Handler = (...args: unknown[]) => unknown;
 
@@ -141,6 +145,69 @@ describe('chatHandler authorization', () => {
     expect(countUnread).toHaveBeenCalledWith('trip-1', 'recipient');
     expect(io.to).toHaveBeenCalledWith('user:recipient');
     expect(roomEmit).toHaveBeenCalledWith(SERVER_EVENTS.UNREAD_COUNT, { tripId: 'trip-1', count: 3 });
+  });
+
+  it('notifies selected current participants once, excluding self, outsiders, and deleted mentions', async () => {
+    const { socket, handlers } = createSocketMock('sender');
+    const { io } = createIoMock();
+    registerChatHandlers(io as never, socket as never);
+    ensureUserInTripMock.mockResolvedValueOnce({ groupId: 'g1' });
+    addTripMessageMock.mockResolvedValueOnce({ id: 'msg-mention', body: 'Hi @Alex Smith' } as never);
+    jest.mocked(db.listChatMentionableUsers).mockResolvedValueOnce([
+      { userId: 'alex', displayName: 'Alex Smith', role: 'follower' },
+      { userId: 'sender', displayName: 'Sender', role: 'traveler' },
+      { userId: 'removed-text', displayName: 'Other Person', role: 'traveler' },
+    ]);
+    await handlers.get(CLIENT_EVENTS.SEND_MESSAGE)!({ tripId: 'trip-1', body: 'Hi @Alex Smith', mentions: ['alex', 'alex', 'sender', 'outsider', 'removed-text'] });
+    expect(notify).toHaveBeenCalledWith(expect.objectContaining({
+      userIds: ['alex'], category: 'chat_mention', tripId: 'trip-1',
+      payload: { messageId: 'msg-mention' }, dedupeKey: 'chat:msg-mention:mention',
+    }));
+  });
+
+  it.each([
+    ['@all Hello!', ['traveler', 'follower']],
+    ['@travelers Hello!', ['traveler']],
+    ['Hi @ALL, @travelers @all @Alex Smith', ['traveler', 'follower']],
+  ])('expands %s to current trip recipients without duplicates or self notifications', async (body, expected) => {
+    const { socket, handlers } = createSocketMock('sender');
+    registerChatHandlers(createIoMock().io as never, socket as never);
+    ensureUserInTripMock.mockResolvedValueOnce({ groupId: 'g1' });
+    addTripMessageMock.mockResolvedValueOnce({ id: 'group-msg', body } as never);
+    jest.mocked(db.listChatMentionableUsers).mockResolvedValueOnce([
+      { userId: 'sender', displayName: 'Sender', role: 'traveler' },
+      { userId: 'traveler', displayName: 'Alex Smith', role: 'traveler' },
+      { userId: 'follower', displayName: 'Sam Jones', role: 'follower' },
+    ]);
+    await handlers.get(CLIENT_EVENTS.SEND_MESSAGE)!({ tripId: 'trip-1', body });
+    expect(notify).toHaveBeenCalledWith(expect.objectContaining({ userIds: expected, category: 'chat_mention' }));
+  });
+
+  it.each(['Email hello@all.com', '@allison hello', '@travelers_extra hello', '@all-hands hello'])('does not expand ordinary text: %s', async body => {
+    const { socket, handlers } = createSocketMock('sender');
+    registerChatHandlers(createIoMock().io as never, socket as never);
+    ensureUserInTripMock.mockResolvedValueOnce({ groupId: 'g1' });
+    addTripMessageMock.mockResolvedValueOnce({ id: 'ordinary-msg', body } as never);
+    await handlers.get(CLIENT_EVENTS.SEND_MESSAGE)!({ tripId: 'trip-1', body });
+    expect(notify).not.toHaveBeenCalled();
+  });
+
+  it('returns no autocomplete identities when access is denied', async () => {
+    const { socket, handlers } = createSocketMock('outsider');
+    registerChatHandlers(createIoMock().io as never, socket as never);
+    jest.mocked(db.listChatMentionableUsers).mockRejectedValueOnce(new Error('Not authorized'));
+    const reply = jest.fn();
+    await handlers.get(CLIENT_EVENTS.MENTIONABLE_USERS)!('trip-private', reply);
+    expect(reply).toHaveBeenCalledWith(expect.objectContaining({ users: [], error: expect.any(String) }));
+  });
+
+  it('lets a current follower open chat history', async () => {
+    const { socket, handlers, join } = createSocketMock('follower');
+    registerChatHandlers(createIoMock().io as never, socket as never);
+    ensureUserInTripMock.mockResolvedValueOnce(null);
+    jest.mocked(db.ensureUserCanReadTrip).mockResolvedValueOnce({ groupId: 'g1', access: 'follower' });
+    await handlers.get(CLIENT_EVENTS.JOIN_TRIP)!('trip-1');
+    expect(join).toHaveBeenCalledWith('trip:trip-1');
   });
 
   it('MARK_READ silently no-ops when the user is not a member', async () => {

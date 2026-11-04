@@ -10,7 +10,10 @@ import {
   markMessagesRead,
   countUnreadMessages,
   ensureUserInTrip,
+  ensureUserCanReadTrip,
+  listChatMentionableUsers,
 } from '../db';
+import { notify } from '../services/notificationService';
 
 const INITIAL_PAGE_SIZE = 50;
 const OLDER_PAGE_SIZE = 50;
@@ -20,6 +23,17 @@ import { getUserDisplayName } from './userHelper';
 
 export const registerChatHandlers = (io: Server, socket: Socket): void => {
   const user = socket.data.user;
+
+  socket.on(CLIENT_EVENTS.MENTIONABLE_USERS, async (tripId: unknown, reply: unknown) => {
+    if (typeof tripId !== 'string' || typeof reply !== 'function') return;
+    try {
+      const users = await listChatMentionableUsers(tripId, user.id);
+      reply({ tripId, users });
+    } catch (err) {
+      logError('[chat] mention participants failed', err);
+      reply({ tripId, users: [], error: 'Unable to load mention suggestions.' });
+    }
+  });
 
   // -------------------------------------------------------------------------
   // JOIN_TRIP
@@ -32,7 +46,7 @@ export const registerChatHandlers = (io: Server, socket: Socket): void => {
     // arbitrary trip's room and read chat history / presence / unread state.
     let membership: { groupId: string } | null = null;
     try {
-      membership = await ensureUserInTrip(tripId, user.id);
+      membership = await ensureUserInTrip(tripId, user.id) || await ensureUserCanReadTrip(tripId, user.id);
     } catch (err) {
       logError('[chat] ensureUserInTrip failed', err);
     }
@@ -144,9 +158,9 @@ export const registerChatHandlers = (io: Server, socket: Socket): void => {
   // -------------------------------------------------------------------------
   socket.on(
     CLIENT_EVENTS.SEND_MESSAGE,
-    async (payload: { tripId: string; body: string }) => {
+    async (payload: { tripId: string; body: string; mentions?: unknown }) => {
       const { tripId, body } = payload ?? {};
-      if (!tripId || !body?.trim()) return;
+      if (typeof tripId !== 'string' || typeof body !== 'string' || !body.trim() || body.length > 2000) return;
 
       // Defense-in-depth: re-check trip membership at write time so a stale
       // socket.data.tripId (or a future regression in JOIN_TRIP) can't
@@ -177,6 +191,21 @@ export const registerChatHandlers = (io: Server, socket: Socket): void => {
 
         // Broadcast to all members of the trip room (including sender)
         io.to(`trip:${tripId}`).emit(SERVER_EVENTS.NEW_MESSAGE, saved);
+        // Resolve supplied identities against current trip access; never trust recipient IDs.
+        const groupMentions = new Set([...body.matchAll(/(?:^|\s)@(all|travelers)(?![\p{L}\p{N}_-])/giu)].map(match => match[1].toLowerCase()));
+        if (groupMentions.size || (Array.isArray(payload.mentions) && payload.mentions.length)) {
+          try {
+            const requested = new Set(Array.isArray(payload.mentions) ? payload.mentions.filter((id): id is string => typeof id === 'string').slice(0, 50) : []);
+            const candidates = await listChatMentionableUsers(tripId, user.id);
+            const userIds = [...new Set(candidates.filter(candidate => candidate.userId !== user.id && (
+              groupMentions.has('all') || (groupMentions.has('travelers') && candidate.role === 'traveler') ||
+              (requested.has(candidate.userId) && body.includes(`@${candidate.displayName}`))
+            )).map(candidate => candidate.userId))];
+            await notify({ userIds, category: 'chat_mention', tripId, actorUserId: user.id,
+              title: `${displayName} mentioned you in Trip Chat`, body: saved.body,
+              payload: { messageId: saved.id }, dedupeKey: `chat:${saved.id}:mention` });
+          } catch (err) { logError('[chat] mention notification failed', err); }
+        }
         // Closed chat panels do not subscribe to NEW_MESSAGE. Publish the
         // authoritative unread count to each recipient's sessions as well.
         try {
@@ -210,7 +239,7 @@ export const registerChatHandlers = (io: Server, socket: Socket): void => {
 
       // Same defense-in-depth as SEND_MESSAGE: don't trust socket.data.
       try {
-        const membership = await ensureUserInTrip(tripId, user.id);
+        const membership = await ensureUserInTrip(tripId, user.id) || await ensureUserCanReadTrip(tripId, user.id);
         if (!membership) return;
       } catch (err) {
         logError('[chat] ensureUserInTrip failed (mark-read)', err);

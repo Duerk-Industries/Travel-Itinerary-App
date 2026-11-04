@@ -1449,7 +1449,13 @@ export interface AnalyticsEventRecord {
   expiresAt: string;
 }
 
-export type NotificationCategory = 'blog_mention' | 'blog_comment_reply' | 'blog_nudge' | 'blog_reaction_digest' | 'blog_memory_lane' | 'blog_milestone' | 'blog_visibility' | 'blog_day_photo_reminder' | 'activity_recap' | 'import_result' | 'cancellation_deadline' | 'ai_finished' | 'trip_digest';
+export type NotificationCategory = 'chat_mention' | 'blog_mention' | 'blog_comment_reply' | 'blog_nudge' | 'blog_reaction_digest' | 'blog_memory_lane' | 'blog_milestone' | 'blog_visibility' | 'blog_day_photo_reminder' | 'activity_recap' | 'import_result' | 'cancellation_deadline' | 'ai_finished' | 'trip_digest';
+
+export interface ChatMentionableUser {
+  userId: string;
+  displayName: string;
+  role: 'traveler' | 'follower';
+}
 
 export interface Notification {
   id: string;

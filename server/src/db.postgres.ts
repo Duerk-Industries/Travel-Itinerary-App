@@ -3676,6 +3676,27 @@ export const listTripShareInvites = async (
   return rows;
 };
 
+export const listChatMentionableUsers = async (tripId: string, userId: string): Promise<import('./types').ChatMentionableUser[]> => {
+  const access = await ensureUserCanReadTrip(tripId, userId);
+  if (!access) throw new Error('Not authorized to view trip chat participants');
+  const { rows } = await getPool().query<{ userId: string; role: 'traveler' | 'follower' }>(
+    `SELECT user_id as "userId", 'traveler'::text as role FROM group_members
+     WHERE group_id = $1 AND removed_at IS NULL AND user_id IS NOT NULL
+     UNION SELECT follower_user_id as "userId", 'follower'::text as role FROM trip_followers WHERE trip_id = $2
+     ORDER BY role DESC`,
+    [access.groupId, tripId]
+  );
+  const users = new Map<string, import('./types').ChatMentionableUser>();
+  for (const row of rows) {
+    if (users.has(row.userId) || !(await ensureUserCanReadTrip(tripId, row.userId))) continue;
+    const profile = await getUserById(row.userId);
+    const web = await getWebUserProfile(row.userId);
+    const displayName = [web?.firstName, web?.lastName].filter(Boolean).join(' ').trim() || profile?.email?.split('@')[0] || 'Traveler';
+    users.set(row.userId, { ...row, displayName });
+  }
+  return [...users.values()];
+};
+
 export const listTripFollowers = async (userId: string, tripId: string) => {
   const p = getPool();
   const context = await getTripOwnerContext(p, tripId, userId);

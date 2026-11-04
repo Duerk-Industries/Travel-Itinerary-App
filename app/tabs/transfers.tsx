@@ -13,7 +13,7 @@ import type { TransferMode } from '../../server/src/types';
 import TransferDirections from '../components/TransferDirections';
 import type { MapApp } from '../utils/mapLinks';
 import HotelAddressPicker from '../components/HotelAddressPicker';
-import { transferLocationFieldLabel, type TransferActivity, type TransferHotel } from '../utils/transferHotels';
+import { transferLocationFieldLabel, transferLocationLabel, type TransferActivity, type TransferHotel } from '../utils/transferHotels';
 import { isFlightTransfer } from '../utils/transferCategory';
 import { airportDisplayForCode } from '../utils/airportDisplay';
 import type { PlanningCoordinates } from '../../server/src/types';
@@ -586,6 +586,19 @@ const columns: { key: keyof Flight | 'actions' | 'costPerPerson' | 'rating'; lab
   { key: 'actions', label: 'Actions', minWidth: 240 },
 ];
 
+// Ground transfers lead with when and where, in this order; every other column keeps its place after them.
+const GROUND_LEADING_COLUMNS = ['departure_date', 'departure_time', 'departure_location', 'arrival_location', 'arrival_date', 'arrival_time'];
+const withGroundLeadingColumns = <T extends { key: string }>(cols: T[]): T[] => [
+  ...GROUND_LEADING_COLUMNS.flatMap((key) => cols.filter((column) => column.key === key)),
+  ...cols.filter((column) => !GROUND_LEADING_COLUMNS.includes(column.key)),
+];
+
+const FLIGHT_TABLE_COLUMN_ORDER = ['departure_date', 'departure_location', 'departure_time', 'arrival_date', 'arrival_location', 'arrival_time',
+  'status', 'booking_reference', 'carrier', 'flight_number', 'layover_duration', 'passenger_name', 'cost', 'costPerPerson', 'actions'];
+const withFlightColumns = <T extends { key: string; label: string }>(cols: T[]): T[] =>
+  FLIGHT_TABLE_COLUMN_ORDER.flatMap(key => cols.filter(column => column.key === key))
+    .map(column => column.key === 'costPerPerson' ? { ...column, label: 'Cost/Person' } : column);
+
 // Shrinks the Edit/Delete buttons in the transfers table down to roughly
 // one line of text tall, instead of the app-wide button paddings meant for standalone buttons.
 const COMPACT_ACTION_BUTTON: ViewStyle = themeStyle('tabs_transfers_1', {  }, getStyleTheme('auto', null));
@@ -636,8 +649,11 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   const sectionTitle = transferScope === 'ground' ? 'Ground Transfers' : transferScope === 'flights' ? 'Flights' : 'Transfers';
   const ground = transferScope === 'ground';
   const showTransferCards = compactTransferCards && transferScope !== 'all';
-  const tableColumns = useMemo(() => columns.filter(column => !ground || !['layover_duration', 'flight_number'].includes(column.key))
-    .map(column => ground && column.key === 'carrier' ? { ...column, label: 'Provider' } : column), [ground]);
+  const tableColumns = useMemo(() => {
+    const visible = columns.filter(column => (Platform.OS !== 'web' || column.key !== 'actions') && (!ground || !['layover_duration', 'flight_number'].includes(column.key)))
+      .map(column => ground && column.key === 'carrier' ? { ...column, label: 'Provider' } : column);
+    return ground ? withGroundLeadingColumns(visible) : transferScope === 'flights' ? withFlightColumns(visible) : visible;
+  }, [ground, transferScope]);
   const isWizard = mode === 'wizard';
   const containerRef = useRef<React.ElementRef<typeof View> | null>(null);
   const memberNames = useMemo(() => {
@@ -803,8 +819,15 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     { key: 'averageRating', label: 'Rating', width: 110, editor: 'readonly', editable: false, getValue: (row) => formatRating(row.averageRating, row.ratingCount) },
     { key: 'actions', label: 'Actions', width: 100, editor: 'action', sticky: 'right', editable: false, sortable: false, getValue: () => '' },
   ], [allowedTransferTypes]);
-  const gridColumns = useMemo(() => allGridColumns.filter(column => !ground || !['layover_duration', 'flight_number'].includes(column.key))
-    .map(column => ground && column.key === 'carrier' ? { ...column, label: 'Provider' } : column), [allGridColumns, ground]);
+  const gridColumns = useMemo(() => {
+    const visible = allGridColumns.filter(column => !ground || !['layover_duration', 'flight_number'].includes(column.key))
+      .map(column => ground && column.key === 'carrier' ? { ...column, label: 'Provider' } : column);
+    if (transferScope === 'flights') return withFlightColumns([...visible, {
+      key: 'costPerPerson', label: 'Cost/Person', width: 140, editor: 'readonly' as const, editable: false,
+      getValue: (row: Flight) => formatMoney(row.passenger_ids?.length ? Number(row.cost || 0) / row.passenger_ids.length : 0, row.currency ?? tripCurrency),
+    }]);
+    return ground ? withGroundLeadingColumns(visible) : visible;
+  }, [allGridColumns, ground, transferScope, tripCurrency]);
   const beginGridEdit = () => { if (readOnly) return; const snapshot = flights.map((row) => ({ ...row, passenger_ids: [...(row.passenger_ids ?? [])], paidBy: [...(row.paidBy ?? row.paid_by ?? [])] })); setGridRows(snapshot); setGridOriginalRows(snapshot); setGridDeleteIds(new Set()); setGridHistory([]); setGridRedo([]); setGridErrors([]); setGridMessage(null); setTableEditing(true); };
   const cancelGridEdit = () => { setTableEditing(false); setGridRows([]); setGridOriginalRows([]); setGridDeleteIds(new Set()); setGridHistory([]); setGridRedo([]); setGridErrors([]); setGridMessage(null); };
   const recordGridChange = (rows: Flight[], deleteIds: Set<string>) => { setGridHistory((items) => [...items.slice(-99), { rows: gridRows, deleteIds: Array.from(gridDeleteIds) }]); setGridRedo([]); setGridRows(rows); setGridDeleteIds(deleteIds); };
@@ -959,9 +982,9 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       case 'arrival_date':
         return formatDateLong(baseDisplay);
       case 'departure_location':
-        return ground ? item.departure_location || '-' : formatLocationDisplay(item.departure_location, item.departure_airport_label || item.departureAirportLabel);
+        return ground ? transferLocationLabel(item.departure_location || '', lodgings, item.departure_date || '', activities) || '-' : formatLocationDisplay(item.departure_location, item.departure_airport_label || item.departureAirportLabel);
       case 'arrival_location':
-        return ground ? item.arrival_location || '-' : formatLocationDisplay(item.arrival_location, item.arrival_airport_label || item.arrivalAirportLabel);
+        return ground ? transferLocationLabel(item.arrival_location || '', lodgings, item.arrival_date || item.departure_date || '', activities) || '-' : formatLocationDisplay(item.arrival_location, item.arrival_airport_label || item.arrivalAirportLabel);
       default:
         return baseDisplay;
     }
@@ -988,7 +1011,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       widths[col.key as string] = Math.max(minW, Math.min(estimated, MAX_COLUMN_WIDTH_PX));
     }
     return widths;
-  }, [sortedFlights, groupMembers, airports, tableColumns]);
+  }, [sortedFlights, groupMembers, airports, tableColumns, lodgings, activities]);
   const colWidth = (col: { key: typeof columns[number]['key']; minWidth?: number }) =>
     dynamicColumnWidths[col.key as string] ?? (col.minWidth ?? 120);
 

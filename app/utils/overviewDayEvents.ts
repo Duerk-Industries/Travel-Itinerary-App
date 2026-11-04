@@ -3,6 +3,8 @@ import { normalizeDateString } from './normalizeDateString';
 type FlightForDay = {
   departure_date?: string | null;
   arrival_date?: string | null;
+  departure_time?: string | null;
+  arrival_time?: string | null;
 };
 
 type LodgingForDay = {
@@ -99,7 +101,12 @@ export const buildDayEventsMap = <
     map.set(card.date, {
       index: dayNumber,
       date: card.date,
-      flights: params.flights.filter((f) => flightMatchesDay(f, card.date)),
+      flights: params.flights.filter((f) => flightMatchesDay(f, card.date)).sort((a, b) => {
+        const dateOrder = (a.departure_date || '9999-12-31').localeCompare(b.departure_date || '9999-12-31');
+        if (dateOrder) return dateOrder;
+        // Keep flights and ground transfers in one sequence, with unset times last.
+        return (minutesOf(transferDepartureTime(a)) ?? 1440) - (minutesOf(transferDepartureTime(b)) ?? 1440);
+      }),
       lodgings: params.lodgings.filter((l) => lodgingCoversDay(l, card.date)),
       tours: params.tours.filter((t) => tourMatchesDay(t, card.date)),
       rentals: params.rentals.filter((r) => rentalMatchesDay(r, card.date)),

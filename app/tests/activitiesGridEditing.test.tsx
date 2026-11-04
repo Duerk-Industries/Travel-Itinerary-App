@@ -182,6 +182,21 @@ describe('Activities grid editing', () => {
     expect(view.UNSAFE_getByType(EditableDataGrid).props.rows[0].paidBy).toEqual(['member-2']);
   });
 
+  it.each([false, true])('opens web row details with edit/delete actions (standardized: %s)', featureStandardizedItemDialogs => {
+    const originalOS = ReactNative.Platform.OS;
+    ReactNative.Platform.OS = 'web';
+    try {
+      const view = renderActivityHarness([tourOne], { featureStandardizedItemDialogs });
+      expect(view.queryByText('Actions')).toBeNull();
+      fireEvent.press(view.getByTestId('activity-row-tour-1'));
+      expect(view.queryByTestId('activity-form-modal')).toBeNull();
+      expect(view.getByTestId(featureStandardizedItemDialogs ? 'activity-details-delete' : 'activity-details-delete-tour-1')).toBeTruthy();
+      fireEvent.press(view.getByTestId(featureStandardizedItemDialogs ? 'activity-details-edit' : 'activity-details-edit-tour-1'));
+      expect(view.getByTestId('activity-form-modal')).toBeTruthy();
+      view.unmount();
+    } finally { ReactNative.Platform.OS = originalOS; }
+  });
+
   it('opens the edit form when a non-name activity cell is tapped', () => {
     const view = renderActivityHarness([tourOne]);
 

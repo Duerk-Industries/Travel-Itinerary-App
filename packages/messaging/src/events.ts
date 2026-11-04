@@ -9,6 +9,7 @@
 // ---------------------------------------------------------------------------
 
 export const CLIENT_EVENTS = {
+  MENTIONABLE_USERS: 'chat:mentionable_users',
   /** Client joins a trip room after authenticating */
   JOIN_TRIP: 'chat:join_trip',
   /** Client leaves a trip room (or disconnects) */

@@ -180,6 +180,12 @@ describe('Trip messages DB + REST', () => {
     }
   });
 
+  it('lists current travelers for chat mentions and rejects outsiders', async () => {
+    const users = await db.listChatMentionableUsers(tripId, userId);
+    expect(users).toContainEqual(expect.objectContaining({ userId, role: 'traveler', displayName: expect.any(String) }));
+    await expect(db.listChatMentionableUsers(tripId, '00000000-0000-4000-8000-000000000099')).rejects.toThrow(/Not authorized/);
+  });
+
   it('returns empty message list for new trip', async () => {
     const msgs = await db.listTripMessages(tripId);
     expect(msgs).toEqual([]);

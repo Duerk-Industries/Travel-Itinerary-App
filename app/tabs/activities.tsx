@@ -1177,7 +1177,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
             ))}
           </View>
           {sortedTours.map((t) => (
-            <TouchableOpacity key={t.id} style={styles.tableRow} testID={`activity-row-${t.id}`} onPress={() => { if (!readOnly && featureTapToEditTables) openTourEditor(t); }} activeOpacity={0.8}>
+            <TouchableOpacity key={t.id} style={styles.tableRow} testID={`activity-row-${t.id}`} onPress={() => { if (Platform.OS === 'web') setSelectedTourId(t.id); else if (!readOnly && featureTapToEditTables) openTourEditor(t); }} activeOpacity={0.8}>
               <View style={[styles.cell, fixedColumnStyle(140)]}>
                 <Text style={styles.cellText}>{t.date ? formatDateLong(t.date) : 'Optional'}</Text>
               </View>
