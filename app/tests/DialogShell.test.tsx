@@ -7,22 +7,44 @@ import DialogShell from '../components/DialogShell';
 
 const flatten = (style: any): Record<string, any> => Object.assign({}, ...[style].flat(Infinity).filter(Boolean));
 
-test('dialogs use a viewport modal and stay top aligned inside a long table', () => {
+const renderInTallPage = (useNativeModal?: boolean) => {
   let tree: ReturnType<typeof renderer.create>;
   act(() => {
     tree = renderer.create(<View style={{ height: 50000 }}>
-      <DialogShell visible title="Details" testID="dialog" onClose={() => {}}
+      <DialogShell visible title="Details" testID="dialog" onClose={() => {}} useNativeModal={useNativeModal}
         styles={{ modalOverlay: { justifyContent: 'center' }, confirmModal: { marginTop: 400 } }}>
         <Text>Content</Text>
       </DialogShell>
     </View>);
   });
-  expect(tree!.root.findAllByType(Modal)).toHaveLength(1);
   const overlay = tree!.root.findAllByType(View).find((node: any) => node.props.testID === 'dialog')!;
-  expect(flatten(overlay.props.style)).toMatchObject({ top: 0, bottom: 0, justifyContent: 'flex-start', paddingTop: 24 });
+  return { tree: tree!, overlay };
+};
+
+test('dialogs open in a viewport modal, centered in it', () => {
+  const { tree, overlay } = renderInTallPage();
+  expect(tree.root.findAllByType(Modal)).toHaveLength(1);
+  expect(flatten(overlay.props.style)).toMatchObject({ top: 0, bottom: 0, justifyContent: 'center' });
   const card = overlay.findAllByType(View).find((node: any) => flatten(node.props.style)?.maxHeight === '100%')!;
   expect(flatten(card.props.style)).toMatchObject({ marginTop: 0, maxHeight: '100%' });
-  act(() => tree!.unmount());
+  act(() => tree.unmount());
+});
+
+test('an inline dialog stays top aligned, so a long page cannot push it off screen', () => {
+  const { tree, overlay } = renderInTallPage(false);
+  expect(tree.root.findAllByType(Modal)).toHaveLength(0);
+  expect(flatten(overlay.props.style)).toMatchObject({ top: 0, bottom: 0, justifyContent: 'flex-start', paddingTop: 24 });
+  act(() => tree.unmount());
+});
+
+test('keeps a modal dialog clear of the iPhone status bar and home indicator', () => {
+  const original = Platform.OS;
+  Platform.OS = 'ios';
+  try {
+    const { tree, overlay } = renderInTallPage();
+    expect(flatten(overlay.props.style)).toMatchObject({ paddingTop: 56, paddingBottom: 34 });
+    act(() => tree.unmount());
+  } finally { Platform.OS = original; }
 });
 
 const originalOS = Platform.OS;

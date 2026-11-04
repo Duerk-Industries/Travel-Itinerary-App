@@ -43,7 +43,7 @@ const DialogShellComponent: React.FC<DialogShellProps> = ({
 
   const content = (
     <View
-      style={[styles.modalOverlay, themeStyle('components_DialogShell_1', {  }, _styleTheme), overlayStyle]}
+      style={[styles.modalOverlay, themeStyle('components_DialogShell_1', { inline: !useNativeModal }, _styleTheme), overlayStyle]}
       testID={testID}
       accessible
       accessibilityRole={accessibilityRole}

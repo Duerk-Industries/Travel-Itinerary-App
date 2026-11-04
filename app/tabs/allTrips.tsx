@@ -10,6 +10,7 @@ import FollowTripButton from '../components/FollowTripButton';
 import ConfirmDialog from '../components/ConfirmDialog';
 import ActionDropdown from '../components/ActionDropdown';
 import { formatDateLong } from '../utils/formatDateLong';
+import { scrollClearanceStyle, usePageScrollClearance } from '../contexts/PageScrollClearanceContext';
 
 type Props = {
   backendUrl: string;
@@ -31,6 +32,7 @@ type Props = {
 
 export default function AllTripsTab({ backendUrl, headers, trips, followedTrips, activeTripId, styles, onSelectTrip, onSelectFollowedTrip, onBack, onNavigate, onFollowTrip, onDeleteTrip, onUnfollowTrip, hiddenPages }: Props) {
   const _styleTheme = useStyleTheme();
+  const scrollClearance = usePageScrollClearance();
   const [details, setDetails] = useState<Record<string, Trip>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
@@ -82,7 +84,7 @@ export default function AllTripsTab({ backendUrl, headers, trips, followedTrips,
 
   return (
     <View style={[styles.card, themeStyle('tabs_allTrips_layout1', {  }, _styleTheme)]}>
-      <ScrollView contentContainerStyle={styles.homeScrollContent} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={[styles.homeScrollContent, scrollClearanceStyle(scrollClearance)]} keyboardShouldPersistTaps="handled">
         <Pressable accessibilityRole="button" onPress={onBack}><Text style={styles.homeModalRowMeta}>‹ Home</Text></Pressable>
         <View style={[styles.row, themeStyle('tabs_allTrips_layout2', {  }, _styleTheme)]}>
           <Text accessibilityRole="header" style={styles.homeTitle}>All Trips</Text>

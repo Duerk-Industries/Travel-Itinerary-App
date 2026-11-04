@@ -2561,7 +2561,8 @@ const styleFactories = {
   ? { textShadow: '0px 1px 3px rgba(0,0,0,0.3)' }
   : { textShadowColor: _theme.colors.scrim, textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 }),
   // components/DialogShell.tsx
-  components_DialogShell_1: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'flex-start', alignItems: 'center', padding: 16, paddingTop: 24 }),
+  // An inline dialog (no native modal) can sit inside a very tall page, where centering would put it off screen.
+  components_DialogShell_1: (_theme: AppTheme, { inline }: ThemeStyleValues): any => ({ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: inline ? 'flex-start' : 'center', alignItems: 'center', padding: 16, paddingTop: !inline && Platform.OS === 'ios' ? 56 : 24, paddingBottom: !inline && Platform.OS === 'ios' ? 34 : 16 }),
   // components/DialogShell.tsx
   components_DialogShell_2: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ marginTop: 0, maxHeight: '100%', minHeight: 0, flexShrink: 1 }),
   ctaLabel: (_theme: AppTheme, {}: ThemeStyleValues): any => ({ color: _theme.colors.onCta }),
@@ -4565,7 +4566,8 @@ const styleFactories = {
   },
 })),
   // components/ThemedText.tsx
-  components_ThemedText_1: (_theme: AppTheme, { color }: ThemeStyleValues): any => ({ color }),
+  // Link text matches body text in this palette, so the underline is what marks it as something to press.
+  components_ThemedText_1: (_theme: AppTheme, { color, link }: ThemeStyleValues): any => ({ color, ...(link ? { textDecorationLine: 'underline' } : {}) }),
   // components/TransferDirections.tsx
   components_TransferDirections_1: (_theme: AppTheme, { compact }: ThemeStyleValues): any => ({ gap: 4, marginVertical: compact ? 0 : 12 }),
   // components/TransferDirections.tsx
@@ -4770,8 +4772,8 @@ const styleFactories = {
   components_TripItemDetailsDialog_3: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ flex: 1 }),
   // components/TripMap.tsx
   components_TripMap_1: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ gap: 8 }),
-  // components/TripMap.tsx
-  components_TripMap_2: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ minHeight: 44, justifyContent: 'center' }),
+  components_MapToggleButton_1: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44, paddingHorizontal: 16, borderRadius: 22, borderWidth: 1, borderColor: _theme.colors.border, backgroundColor: _theme.colors.surfaceMuted }),
+  components_MapToggleButton_2: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ fontWeight: '600' }),
   // components/TripMap.tsx
   components_TripMap_3: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ height: 360 }),
   // components/TripMap.tsx
@@ -4794,8 +4796,6 @@ const styleFactories = {
   components_TripMap_web_2: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ padding: 60, maxZoom: 15, duration: 0 }),
   // components/TripMap.web.tsx
   components_TripMap_web_3: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ gap: 8 }),
-  // components/TripMap.web.tsx
-  components_TripMap_web_4: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ minHeight: 44, justifyContent: 'center' }),
   // components/TripMap.web.tsx
   components_TripMap_web_5: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ minHeight: 44, justifyContent: 'center' }),
   // components/TripMap.web.tsx
@@ -9057,10 +9057,13 @@ export const buildStyles = (theme: AppTheme) => StyleSheet.create(solidBackgroun
     right: 0,
     bottom: 0,
     backgroundColor: (theme ?? getAppTheme('light', 'light')).colors.scrim,
-    justifyContent: 'flex-start',
+    // Popups sit in a native modal the size of the screen, so they are centered in it. The extra room at the
+    // top and bottom on iOS keeps a tall one clear of the status bar and the home indicator.
+    justifyContent: 'center',
     alignItems: 'center',
     padding: 16,
-    paddingTop: 24,
+    paddingTop: Platform.OS === 'ios' ? 56 : 24,
+    paddingBottom: Platform.OS === 'ios' ? 34 : 16,
     zIndex: 20000,
   }),
   confirmModal: ({

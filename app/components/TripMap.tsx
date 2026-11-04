@@ -3,6 +3,7 @@ import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useEffect, useState } from 'react';
 import { AppState, Linking, TouchableOpacity, View } from 'react-native';
 import { ThemedText as Text } from './ThemedText';
+import MapToggleButton from './MapToggleButton';
 import type * as NativeMap from '@maplibre/maplibre-react-native';
 import type { TripMapProps } from './TripMap.types';
 import { isLocatedMapPoint, mapBounds } from '../utils/planningMapGeometry';
@@ -37,7 +38,7 @@ export default function TripMap({ points, selectedId, onSelect, testID, nativeEn
   const bounds = resolved.length ? mapBounds(resolved) : undefined;
   const shape: GeoJSON.FeatureCollection<GeoJSON.Point> = { type: 'FeatureCollection', features: resolved.map((p, n) => ({ type: 'Feature', properties: { id: p.id, label: p.label || String(n + 1) }, geometry: { type: 'Point', coordinates: [p.lng!, p.lat!] } })) };
   return <View testID={testID} style={themeStyle('components_TripMap_1', {  }, _styleTheme)}>
-    <TouchableOpacity accessibilityRole="button" accessibilityState={{ expanded: open }} onPress={() => { setOpen(!open); onOpenChange?.(!open); }} style={themeStyle('components_TripMap_2', {  }, _styleTheme)}><Text tone="link">{open ? 'Hide map' : 'Show map'}</Text></TouchableOpacity>
+    <MapToggleButton open={open} onPress={() => { setOpen(!open); onOpenChange?.(!open); }} />
     {open && <>
       {locating && <Text accessibilityLiveRegion="polite">Finding locations�</Text>}
       {locationNotice && <Text accessibilityLiveRegion="polite">{locationNotice}</Text>}

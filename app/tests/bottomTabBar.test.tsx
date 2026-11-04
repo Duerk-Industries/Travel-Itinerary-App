@@ -69,4 +69,10 @@ describe('BottomTabBar', () => {
     expect(onChooseAdd).toHaveBeenCalledWith('share');
   });
 
+
+  test('reaches down behind the home indicator, keeping its tabs above it', () => {
+    const { getByTestId } = renderBar({ bottomInset: 34 });
+    const style = Object.assign({}, ...[getByTestId('bottom-tab-bar').props.style].flat(Infinity).filter(Boolean));
+    expect(style.paddingBottom).toBe(40);
+  });
 });
