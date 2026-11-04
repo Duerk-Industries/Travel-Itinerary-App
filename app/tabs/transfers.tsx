@@ -644,7 +644,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   const ground = transferScope === 'ground';
   const showTransferCards = compactTransferCards && transferScope !== 'all';
   const tableColumns = useMemo(() => {
-    const visible = columns.filter(column => !ground || !['layover_duration', 'flight_number'].includes(column.key))
+    const visible = columns.filter(column => (Platform.OS !== 'web' || column.key !== 'actions') && (!ground || !['layover_duration', 'flight_number'].includes(column.key)))
       .map(column => ground && column.key === 'carrier' ? { ...column, label: 'Provider' } : column);
     return ground ? withGroundLeadingColumns(visible) : visible;
   }, [ground]);

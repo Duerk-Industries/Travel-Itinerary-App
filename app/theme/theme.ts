@@ -6653,7 +6653,7 @@ const styleFactories = {
   // tabs/LodgingTab.tsx
   tabs_LodgingTab_17: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ flexGrow: 1 }),
   // tabs/LodgingTab.tsx
-  tabs_LodgingTab_18: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ minWidth: 878 }),
+  tabs_LodgingTab_18: (_theme: AppTheme, { hideActions }: ThemeStyleValues): any => ({ minWidth: hideActions ? 600 : 878 }),
   // tabs/LodgingTab.tsx
   tabs_LodgingTab_19: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({ position: 'sticky', left: 0, zIndex: 4, backgroundColor: theme?.colors.surface }),
   // tabs/LodgingTab.tsx

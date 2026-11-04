@@ -97,6 +97,26 @@ const flight: Flight = {
 };
 
 describe('FlightsTab read-only mode', () => {
+  test.each(['flights', 'ground'] as const)('web %s rows open detail actions and hide Actions outside grid editing', transferScope => {
+    const originalOS = Platform.OS;
+    Platform.OS = 'web';
+    try {
+      const transfer: Flight = transferScope === 'ground' ? { ...flight, transferType: 'Public Transit', transfer_type: 'Public Transit' } : flight;
+      const view = render(<FlightsTab backendUrl="http://localhost" userToken="token" activeTripId="trip-1"
+        transferScope={transferScope} flights={[transfer]} setFlights={jest.fn()} groupMembers={[member]} defaultPayerId={member.id}
+        formatMemberName={m => m.id} payerName={() => 'Member'} headers={{}} jsonHeaders={{}}
+        findActiveTrip={() => trip} fetchGroupMembersForActiveTrip={async () => {}}
+        styles={styles} airportOptions={[]} onSearchAirports={() => {}} />);
+      expect(view.queryByText('Actions')).toBeNull();
+      expect(view.queryByTestId('transfer-delete-flight-1')).toBeNull();
+      fireEvent.press(view.getByTestId('transfer-row-flight-1'));
+      const kind = 'flight';
+      expect(view.getByTestId(`${kind}-details-delete`)).toBeTruthy();
+      fireEvent.press(view.getByTestId(`${kind}-details-edit`));
+      expect(view.getByTestId('flight-modal-save')).toBeTruthy();
+      view.unmount();
+    } finally { Platform.OS = originalOS; }
+  });
   test.each(['Flight', 'Public Transit'] as const)('opens an external %s editor without rendering its list', (transferType) => {
     const transfer = { ...flight, transferType, transfer_type: transferType };
     const onExternalEditHandled = jest.fn();

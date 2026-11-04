@@ -281,16 +281,16 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
             <Text style={styles.headerText}>Status</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.tableHeaderCell, fixedTableColumn(110)]} onPress={() => sortCarTable('averageRating')}>
+          <TouchableOpacity style={[styles.tableHeaderCell, fixedTableColumn(110), Platform.OS === 'web' && styles.lastCell]} onPress={() => sortCarTable('averageRating')}>
             <Text style={styles.headerText}>Rating</Text>
           </TouchableOpacity>
-          <View style={[styles.tableHeaderCell, fixedTableColumn(180), styles.lastCell, Platform.OS === 'web' && featureTapToEditTables && (themeStyle('components_CarRentalsPanel_5', { theme: theme }, (theme ?? _styleTheme)) as any)]}>
+          {Platform.OS !== 'web' ? <View style={[styles.tableHeaderCell, fixedTableColumn(180), styles.lastCell]}>
             <Text style={styles.headerText}>Actions</Text>
-          </View>
+          </View> : null}
         </View>
 
         {sortedCarRentals.map((car, idx, arr) => (
-          <TouchableOpacity key={car.id} style={[styles.tableRow, idx === arr.length - 1 && styles.lastRow]} onPress={() => { if (!isFollowingMode && featureTapToEditTables) openEditDialog(car); }} activeOpacity={0.8}>
+          <TouchableOpacity key={car.id} style={[styles.tableRow, idx === arr.length - 1 && styles.lastRow]} testID={`car-rental-row-${car.id}`} onPress={() => { if (Platform.OS === 'web') setSelectedRental(car); else if (!isFollowingMode && featureTapToEditTables) openEditDialog(car); }} activeOpacity={0.8}>
             <View style={[styles.tableCell, fixedTableColumn(240), Platform.OS === 'web' && featureTapToEditTables && (themeStyle('components_CarRentalsPanel_6', { theme: theme }, (theme ?? _styleTheme)) as any)]}>
               <Text style={styles.cellText}>
                 {`${car.pickupLocation || 'Pickup'} → ${car.dropoffLocation || 'Drop-off'}`}
@@ -313,10 +313,10 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
               </Text>
             </View>
 
-            <View style={[styles.tableCell, fixedTableColumn(110)]}>
+            <View style={[styles.tableCell, fixedTableColumn(110), Platform.OS === 'web' && styles.lastCell]}>
               <ItemRating status={(car as any).status} averageRating={car.averageRating} ratingCount={car.ratingCount} userStars={car.userStars} readOnly={isFollowingMode} onRate={(stars) => onRateCarRental(car.id, stars)} name={car.vendor || 'this car rental'} testID={`car-rental-rating-${car.id}`} theme={theme} />
             </View>
-            <View style={[styles.tableCell, fixedTableColumn(180), styles.lastCell, Platform.OS === 'web' && featureTapToEditTables && (themeStyle('components_CarRentalsPanel_7', { theme: theme }, (theme ?? _styleTheme)) as any)]}>
+            {Platform.OS !== 'web' ? <View style={[styles.tableCell, fixedTableColumn(180), styles.lastCell]}>
               <View style={styles.actionCell}>
                 <AddToCalendarButton event={rentalCalendarEvent(car)} styles={styles} />
 
@@ -333,7 +333,7 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
                   <Text style={styles.cellText}>View only</Text>
                 )}
               </View>
-            </View>
+            </View> : null}
           </TouchableOpacity>
         ))}
       </View>
@@ -354,7 +354,7 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
         {!isFollowingMode ? <TouchableOpacity style={styles.button} testID="car-rental-details-edit" onPress={() => { openEditDialog(selectedRental); setSelectedRental(null); }}>
           <Text style={styles.buttonText}>Edit</Text>
         </TouchableOpacity> : null}
-        {!isFollowingMode ? <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={() => { void onRemoveCarRental(selectedRental.id); setSelectedRental(null); }}>
+        {!isFollowingMode ? <TouchableOpacity style={[styles.button, styles.dangerButton]} testID="car-rental-details-delete" onPress={() => { void onRemoveCarRental(selectedRental.id); setSelectedRental(null); }}>
           <Text style={styles.dangerButtonText}>Delete</Text>
         </TouchableOpacity> : null}
         <TouchableOpacity style={styles.button} onPress={() => setSelectedRental(null)}><Text style={styles.buttonText}>Close</Text></TouchableOpacity>

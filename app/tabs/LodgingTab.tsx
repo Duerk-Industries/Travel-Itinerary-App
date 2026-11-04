@@ -397,7 +397,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
           nestedScrollEnabled
           directionalLockEnabled
         >
-        <View style={[styles.table, styles.lodgingTable, themeStyle('tabs_LodgingTab_18', {  }, (theme ?? _styleTheme))]}>
+        <View style={[styles.table, styles.lodgingTable, themeStyle('tabs_LodgingTab_18', { hideActions: Platform.OS === 'web' }, (theme ?? _styleTheme))]}>
           <View style={[styles.tableRow, styles.tableHeaderRow]}>
             <TouchableOpacity style={[styles.tableHeaderCell, fixedTableColumn(160), Platform.OS === 'web' && featureTapToEditTables && (themeStyle('tabs_LodgingTab_19', { theme: theme }, (theme ?? _styleTheme)) as any)]} onPress={() => sortLodgingTable('name')}>
               <Text style={styles.headerText}>Name</Text>
@@ -412,15 +412,15 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
               <Text style={styles.headerText}>Status</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={[styles.tableHeaderCell, fixedTableColumn(110)]} onPress={() => sortLodgingTable('averageRating')}>
+            <TouchableOpacity style={[styles.tableHeaderCell, fixedTableColumn(110), Platform.OS === 'web' && styles.lastCell]} onPress={() => sortLodgingTable('averageRating')}>
               <Text style={styles.headerText}>Rating</Text>
             </TouchableOpacity>
-            <View style={[styles.tableHeaderCell, fixedTableColumn(168), styles.lastCell, Platform.OS === 'web' && featureTapToEditTables && (themeStyle('tabs_LodgingTab_20', { theme: theme }, (theme ?? _styleTheme)) as any)]}>
+            {Platform.OS !== 'web' ? <View style={[styles.tableHeaderCell, fixedTableColumn(168), styles.lastCell]}>
               <Text style={styles.headerText}>Actions</Text>
-            </View>
+            </View> : null}
           </View>
           {sortedLodgings.map((lodging) => (
-            <TouchableOpacity key={lodging.id} style={[styles.tableRow, styles.lodgingTableRow]} testID={`lodging-row-${lodging.id}`} onPress={() => { if (!readOnly && featureTapToEditTables) openEditDialog(lodging); }} activeOpacity={0.8}>
+            <TouchableOpacity key={lodging.id} style={[styles.tableRow, styles.lodgingTableRow]} testID={`lodging-row-${lodging.id}`} onPress={() => { if (Platform.OS === 'web') openDetailsDialog(lodging); else if (!readOnly && featureTapToEditTables) openEditDialog(lodging); }} activeOpacity={0.8}>
               <View style={[styles.tableCell, fixedTableColumn(160), Platform.OS === 'web' && featureTapToEditTables && (themeStyle('tabs_LodgingTab_21', { theme: theme }, (theme ?? _styleTheme)) as any)]}>
                 <TouchableOpacity
                   style={styles.tableNameButton}
@@ -440,10 +440,10 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
                 <Text style={styles.cellText}>{normalizeItineraryStatus(lodging.status, LEGACY_ITINERARY_STATUS)}</Text>
               </View>
 
-              <View style={[styles.tableCell, fixedTableColumn(110)]}>
+              <View style={[styles.tableCell, fixedTableColumn(110), Platform.OS === 'web' && styles.lastCell]}>
                 <ItemRating status={lodging.status} averageRating={lodging.averageRating} ratingCount={lodging.ratingCount} userStars={lodging.userStars} readOnly={readOnly} onRate={(stars) => rateOnLodging(lodging.id, stars)} name={lodging.name} testID={`lodging-rating-${lodging.id}`} theme={theme} />
               </View>
-              <View style={[styles.tableCell, fixedTableColumn(168), styles.lastCell, Platform.OS === 'web' && featureTapToEditTables && (themeStyle('tabs_LodgingTab_22', { theme: theme }, (theme ?? _styleTheme)) as any)]}>
+              {Platform.OS !== 'web' ? <View style={[styles.tableCell, fixedTableColumn(168), styles.lastCell]}>
                 <View style={[styles.actionCell, themeStyle('tabs_LodgingTab_23', {  }, (theme ?? _styleTheme))]}>
                   {!readOnly ? (
                     <>
@@ -466,7 +466,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
                     <Text style={styles.cellText}>View only</Text>
                   )}
                 </View>
-              </View>
+              </View> : null}
             </TouchableOpacity>
           ))}
         </View>
