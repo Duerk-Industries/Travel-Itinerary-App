@@ -2,7 +2,6 @@ import { evaluateBlogVisibility } from '../services/blogVisibilityService';
 import { createHash, randomUUID } from 'crypto';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getDb, ensureUserCanReadTrip, ensureUserInTrip } from '../db.firebase';
-import { fetchOverviewWeather } from '../apis/openMeteoWeatherApi';
 import { BlogAudience, BlogCapabilities, BlogDocument, BlogDay, BlogTextInput, BlogTextItem, BlogTextPatch, BlogActivity, BlogGalleryItem } from './types';
 import { getCanonicalPublicPathFirebase } from './firebasePublicationRepository';
 import { buildNarrativeBlogBody } from './narrative';
@@ -198,9 +197,11 @@ export const getBlog = async (userId: string, tripId: string, options: { date?: 
     query = query.where('localDate', '>', options.cursor);
   }
   const limit = Math.min(100, Math.max(1, options.limit ?? 7));
-  const daySnap = await query.orderBy('localDate', 'asc').limit(limit).get();
-
-  const itemSnap = await db.collection('blog_items').where('tripId', '==', tripId).get();
+  const [daySnap, itemSnap, activitySnap] = await Promise.all([
+    query.orderBy('localDate', 'asc').limit(limit).get(),
+    db.collection('blog_items').where('tripId', '==', tripId).get(),
+    db.collection('tours').where('tripId', '==', tripId).get(),
+  ]);
   const items = itemSnap.docs
     .filter((doc) => {
       const data = doc.data() as any;
@@ -208,7 +209,6 @@ export const getBlog = async (userId: string, tripId: string, options: { date?: 
     })
     .map(mapItem)
     .sort((a, b) => a.sortKey.localeCompare(b.sortKey));
-  const activitySnap = await db.collection('tours').where('tripId', '==', tripId).get();
   const activitiesByDate = new Map<string, BlogActivity[]>();
   activitySnap.docs.forEach((doc) => {
     const data = doc.data() as any;
@@ -218,33 +218,11 @@ export const getBlog = async (userId: string, tripId: string, options: { date?: 
     activitiesByDate.set(date, [...(activitiesByDate.get(date) ?? []), activity]);
   });
 
-  // Weather Badge Integration
-  const weatherRequests = daySnap.docs.map(doc => {
-    const data = doc.data() as any;
-    return {
-      date: String(data.localDate),
-      location: data.headline || data.summary || 'Destination'
-    };
-  }).filter(r => r.location !== 'Destination');
-
-  if (weatherRequests.length < daySnap.docs.length) {
-    const tripSnap = await db.collection('trips').doc(tripId).get();
-    const fallbackLocation = String((tripSnap.data() as any)?.name ?? 'Destination');
-    daySnap.docs.forEach(doc => {
-      const date = String((doc.data() as any).localDate);
-      if (!weatherRequests.find(w => w.date === date)) {
-        weatherRequests.push({ date, location: fallbackLocation });
-      }
-    });
-  }
-
-  const { weather } = await fetchOverviewWeather(weatherRequests).catch(() => ({ weather: [] }));
-  const weatherByDate = new Map(weather.map(w => [w.date, w]));
+  // Weather is deliberately not fetched here (see postgresRepository.getBlog): it blocked the whole load.
 
   const days: BlogDay[] = daySnap.docs.map((doc) => {
     const data = doc.data() as any;
     const date = String(data.localDate);
-    const dayWeather = weatherByDate.get(date);
     return {
       id: doc.id,
       tripId,
@@ -256,12 +234,7 @@ export const getBlog = async (userId: string, tripId: string, options: { date?: 
       // treat that as version 1, same starting point as a freshly created day (see ensureDays).
       updateVersion: Number(data.updateVersion ?? 1),
       items: items.filter((item) => item.blogDayId === doc.id),
-      activities: activitiesByDate.get(date) ?? [],
-      weather: dayWeather ? {
-        icon: dayWeather.icon,
-        description: dayWeather.description,
-        temperatureHighC: dayWeather.temperatureHighC
-      } : undefined
+      activities: activitiesByDate.get(date) ?? []
     };
   }).sort((a, b) => a.localDate.localeCompare(b.localDate));
 

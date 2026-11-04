@@ -75,6 +75,23 @@ describe('overviewDayEvents', () => {
   });
 
   describe('buildDayEventsMap', () => {
+    it('intermixes flights and ground transfers by departure, with unknown times last and no input mutation', () => {
+      const flights = [
+        { id: 'late-flight', transfer_type: 'Flight', departure_date: '2027-03-02', departure_time: '18:00' },
+        { id: 'unset', transfer_type: 'Private', departure_date: '2027-03-02', departure_time: '00:00' },
+        { id: 'morning-ground', transfer_type: 'Private', departure_date: '2027-03-02', departure_time: '7:30' },
+        { id: 'overnight', transfer_type: 'Flight', departure_date: '2027-03-01', departure_time: '23:00', arrival_date: '2027-03-02' },
+        { id: 'midday-flight', transfer_type: 'Flight', departure_date: '2027-03-02', departure_time: '12:00' },
+        { id: 'afternoon-ground', transfer_type: 'Public Transit', departure_date: '2027-03-02', departure_time: '15:00' },
+      ];
+      const original = flights.map(flight => flight.id);
+      const result = buildDayEventsMap({ dayCards: [{ date: '2027-03-02' }], flights, lodgings: [], tours: [], rentals: [], details: [] });
+      expect(result.get('2027-03-02')?.flights.map(flight => flight.id)).toEqual([
+        'overnight', 'morning-ground', 'midday-flight', 'afternoon-ground', 'late-flight', 'unset',
+      ]);
+      expect(flights.map(flight => flight.id)).toEqual(original);
+    });
+
     it('groups flights, lodgings, tours, rentals, and details by day', () => {
       const dayCards = [{ date: '2025-04-10' }, { date: '2025-04-11' }, { date: '2025-04-12' }];
       const flights = [

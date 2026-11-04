@@ -94,8 +94,8 @@ export const deliverPush = async (entry: any) => {
   const messages = devices.map((d) => ({
     to: decryptPushToken(String(d.push_token_ciphertext ?? d.pushTokenCiphertext ?? '')),
     sound: 'default' as const,
-    title: 'Travel update',
-    body: 'Open WanderBunnies to view this update.',
+    title: notification.category === 'chat_mention' ? 'You were mentioned in Trip Chat' : 'Travel update',
+    body: notification.category === 'chat_mention' ? 'Open WanderBunnies to read the message.' : 'Open WanderBunnies to view this update.',
     data: { notificationId: notification.id },
   }));
 

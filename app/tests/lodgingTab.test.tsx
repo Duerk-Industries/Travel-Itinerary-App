@@ -5,6 +5,7 @@
 /// <reference types="node" />
 
 import React from 'react';
+import { Platform } from 'react-native';
 import { render, fireEvent, within, waitFor } from '@testing-library/react-native';
 import LodgingTab, { formatShortDate } from '../tabs/LodgingTab';
 import type { Lodging } from '../tabs/lodging';
@@ -61,6 +62,23 @@ const payerName = (id: string) => groupMembers.find(m => m.id === id)?.firstName
 
 describe('LodgingTab', () => {
     const trip = { id: 't1', startDate: '2025-01-01' };
+
+    it('opens web row details with edit/delete actions and hides the Actions column until editing', () => {
+        const originalOS = Platform.OS;
+        Platform.OS = 'web';
+        try {
+            const view = render(<LodgingTab backendUrl="" jsonHeaders={{}} requestHeaders={{}} trip={trip}
+                lodgings={mockLodgings} groupMembers={groupMembers} defaultPayerId="m1" styles={styles}
+                onRefreshLodgings={() => {}} onOpenMap={() => {}} formatMemberName={formatMemberName} payerName={payerName} />);
+            expect(view.queryByText('Actions')).toBeNull();
+            fireEvent.press(view.getByTestId('lodging-row-l1'));
+            const details = view.getByTestId('lodging-details-dialog');
+            expect(within(details).getByText('Edit')).toBeTruthy();
+            fireEvent.press(within(details).getByText('Delete'));
+            expect(view.getByText('Delete Lodging')).toBeTruthy();
+            view.unmount();
+        } finally { Platform.OS = originalOS; }
+    });
 
     it('renders the lodging table correctly', () => {
         const { getByTestId } = render(

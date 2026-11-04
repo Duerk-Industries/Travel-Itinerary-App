@@ -24,7 +24,9 @@ describe('blog comment routes', () => {
   let strangerToken = '';
   let followerId = '';
   let tripId = '';
-  let dayDate = '2026-11-03';
+  // Trip creation rejects past UTC dates for non-admins. Keep this fixture in
+  // the future so the comment tests don't expire or depend on local timezone.
+  const dayDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   let itemId = '';
 
   // A second, unrelated trip + comment, used only for the IDOR test below.

@@ -12,7 +12,7 @@ import { registerForPushNotificationsAsync } from '../utils/pushNotifications';
 type InboxRow = Pick<Notification, 'id' | 'category' | 'title' | 'body' | 'createdAt' | 'readAt'>;
 const LABELS: Record<string, string> = { import_result: 'Imported bookings', cancellation_deadline: 'Cancellation deadlines', ai_finished: 'Itinerary ready', trip_digest: 'Daily summary', activity_recap: 'Activity recap', blog_visibility: 'Blog going public' };
 export default function NotificationInbox({ backendUrl, token, onOpen, openNotificationId, onOpenHandled }: {
-  backendUrl: string; token: string; openNotificationId?: string | null; onOpenHandled?: () => void; onOpen: (target: { tripId: string | null; page: 'ingest' | 'blog' | 'overview'; activityId?: string }) => void;
+  backendUrl: string; token: string; openNotificationId?: string | null; onOpenHandled?: () => void; onOpen: (target: { tripId: string | null; page: 'ingest' | 'blog' | 'overview'; activityId?: string; openChat?: boolean }) => void;
 }) {
   const _styleTheme = useStyleTheme();
   const [enabled, setEnabled] = useState(false);

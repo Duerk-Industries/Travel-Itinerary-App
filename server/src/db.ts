@@ -343,6 +343,9 @@ export const listTripShareInvites = async (...args: Parameters<ReturnType<typeof
   adapter().listTripShareInvites(...args);
 export const listTripFollowers = async (...args: Parameters<ReturnType<typeof adapter>['listTripFollowers']>) =>
   adapter().listTripFollowers(...args);
+
+export const listChatMentionableUsers = async (...args: Parameters<ReturnType<typeof adapter>['listChatMentionableUsers']>) =>
+  adapter().listChatMentionableUsers(...args);
 export const removeTripFollower = async (...args: Parameters<ReturnType<typeof adapter>['removeTripFollower']>) =>
   adapter().removeTripFollower(...args);
 export const createTripShareInvite = async (...args: Parameters<ReturnType<typeof adapter>['createTripShareInvite']>) =>

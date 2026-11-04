@@ -2,7 +2,6 @@ import { evaluateBlogVisibility } from '../services/blogVisibilityService';
 import { createHash, randomUUID } from 'crypto';
 import { ensureUserCanReadTrip, ensureUserInTrip } from '../db';
 import { queryBlog, withBlogTransaction } from '../db.postgres';
-import { fetchOverviewWeather } from '../apis/openMeteoWeatherApi';
 import { BlogAudience, BlogCapabilities, BlogDocument, BlogDay, BlogTextInput, BlogTextItem, BlogTextPatch, BlogTextUpdateResult, BlogActivity, BlogGalleryItem, BlogDayMetaPatch, BlogDayMetaUpdateResult, BlogMastheadPatch } from './types';
 import { BlogContributor } from './engagementTypes';
 import { displayNameFromRow } from './postgresEngagementRepository';
@@ -282,30 +281,10 @@ export const getBlog = async (userId: string, tripId: string, options: { date?: 
     byDay.set(key, list);
   }
 
-  // Weather Badge Integration
-  const weatherRequests = daysResult.rows.map(r => ({
-    date: formatDate(r.local_date),
-    location: r.headline || r.summary || 'Destination' // Fallback to a generic location
-  })).filter(r => r.location !== 'Destination');
-
-  // Attempt to get a real location from the trip if headlines are missing
-  if (weatherRequests.length < daysResult.rows.length) {
-    const tripLocation = await queryBlog<{ name: string }>('SELECT name FROM trips WHERE id = $1', [tripId]);
-    const fallbackLocation = tripLocation.rows[0]?.name || 'Destination';
-    daysResult.rows.forEach(r => {
-      const date = formatDate(r.local_date);
-      if (!weatherRequests.find(w => w.date === date)) {
-        weatherRequests.push({ date, location: fallbackLocation });
-      }
-    });
-  }
-
-  const { weather } = await fetchOverviewWeather(weatherRequests).catch(() => ({ weather: [] }));
-  const weatherByDate = new Map(weather.map(w => [w.date, w]));
-
+  // Weather is deliberately not fetched here: it needed external HTTP calls that blocked the whole blog load,
+  // and the blog UI reads weather from the per-day facts endpoint (blogDayFactsService) instead.
   const days: BlogDay[] = daysResult.rows.map((row) => {
     const date = formatDate(row.local_date);
-    const dayWeather = weatherByDate.get(date);
     return {
       id: String(row.id),
       tripId: String(row.trip_id),
@@ -315,12 +294,7 @@ export const getBlog = async (userId: string, tripId: string, options: { date?: 
       coverAssetId: row.cover_asset_id == null ? null : String(row.cover_asset_id),
       updateVersion: Number(row.update_version ?? 1),
       items: byDay.get(String(row.id)) ?? [],
-      activities: activitiesByDate.get(date) ?? [],
-      weather: dayWeather ? {
-        icon: dayWeather.icon,
-        description: dayWeather.description,
-        temperatureHighC: dayWeather.temperatureHighC
-      } : undefined
+      activities: activitiesByDate.get(date) ?? []
     };
   });
 

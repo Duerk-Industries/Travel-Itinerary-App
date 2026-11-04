@@ -707,6 +707,20 @@ describe('Overview UI (nested itinerary)', () => {
     expect(await findByText('Cairo (CAI)')).toBeTruthy();
   });
 
+  test('orders the transfer section by departure time across flights and ground transfers', async () => {
+    const flights = [
+      { id: 'flight', transfer_type: 'Flight', departure_date: '2026-01-29', departure_time: '12:00' },
+      { id: 'late-ground', transfer_type: 'Public Transit', departure_date: '2026-01-29', departure_time: '16:00' },
+      { id: 'early-ground', transfer_type: 'Private', departure_date: '2026-01-29', departure_time: '08:00' },
+    ];
+    const view = await renderOverview(<OverviewTab {...baseProps} flights={flights as any} />);
+    fireEvent.press(await view.findByTestId('overview-day-card-1'));
+    await view.findByTestId('day-details-transfer-row-flight');
+    expect(view.getAllByTestId(/^day-details-transfer-row-/).map(row => row.props.testID)).toEqual([
+      'day-details-transfer-row-early-ground', 'day-details-transfer-row-flight', 'day-details-transfer-row-late-ground',
+    ]);
+  });
+
   test('opens only the selected ground transfer with directions without the dialog flag', async () => {
     const flights = [
       { id: 'air', trip_id: 'trip1', transfer_type: 'Flight', departure_date: '2026-01-29', departure_location: 'BOS', arrival_location: 'NRT', booking_reference: 'AIR123' },

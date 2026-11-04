@@ -4058,7 +4058,20 @@ export const getTripById = async (tripId: string): Promise<Trip | null> => {
 };
 
 // Flights
+// Only an airport code (three-letter IATA code) is upper-cased; a place name such as "Tokyo Station" keeps its case.
+// Mirrors the Postgres adapter's insertFlight/updateFlight so both stores hold the same value.
+const FLIGHT_LOCATION_FIELDS = ['departureLocation', 'arrivalLocation', 'layoverLocation', 'departureAirportCode', 'arrivalAirportCode', 'layoverLocationCode'] as const;
+const normalizeFlightLocations = <T extends Partial<Flight>>(flight: T): T => {
+  const out: any = { ...flight };
+  for (const field of FLIGHT_LOCATION_FIELDS) {
+    const value = out[field];
+    if (typeof value === 'string' && /^[A-Za-z]{3}$/.test(value.trim())) out[field] = value.trim().toUpperCase();
+  }
+  return out;
+};
+
 export const insertFlight = async (flight: Omit<Flight, 'id'>): Promise<Flight> => {
+  flight = normalizeFlightLocations(flight);
   const db = getDb();
   const id = randomUUID();
   const payload = stripUndefined({ ...flight, status: normalizeItineraryStatus((flight as any).status), id, createdAt: nowIso() });
@@ -4080,6 +4093,7 @@ export const deleteFlight = async (flightId: string, userId: string): Promise<vo
 };
 
 export const updateFlight = async (flightId: string, userId: string, updates: Partial<Flight>): Promise<Flight> => {
+  updates = normalizeFlightLocations(updates);
   const db = getDb();
   const doc = await db.collection('flights').doc(flightId).get();
   if (!doc.exists) throw new Error('Flight not found');
@@ -5759,6 +5773,31 @@ export const listTripPayments = async (userId: string, tripId: string): Promise<
     return String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? ''));
   });
   return rows;
+};
+
+export const listChatMentionableUsers = async (tripId: string, userId: string): Promise<import('./types').ChatMentionableUser[]> => {
+  const access = await ensureUserCanReadTrip(tripId, userId);
+  if (!access) throw new Error('Not authorized to view trip chat participants');
+  const db = getDb();
+  const [members, followers] = await Promise.all([
+    db.collection('group_members').where('groupId', '==', access.groupId).get(),
+    db.collection('trip_followers').where('tripId', '==', tripId).get(),
+  ]);
+  const candidates = [
+    ...members.docs.filter(doc => !doc.data().removedAt).map(doc => ({ userId: String(doc.data().userId ?? ''), role: 'traveler' as const })),
+    ...followers.docs.map(doc => ({ userId: String(doc.data().followerUserId ?? ''), role: 'follower' as const })),
+  ];
+  const users = new Map<string, import('./types').ChatMentionableUser>();
+  for (const candidate of candidates) {
+    if (!candidate.userId || users.has(candidate.userId) || !(await ensureUserCanReadTrip(tripId, candidate.userId))) continue;
+    const [userDoc, profileDoc] = await Promise.all([
+      db.collection('users').doc(candidate.userId).get(), db.collection('web_users').doc(candidate.userId).get(),
+    ]);
+    const profile = profileDoc.data();
+    const displayName = [profile?.firstName, profile?.lastName].filter(Boolean).join(' ').trim() || String(userDoc.data()?.email ?? '').split('@')[0] || 'Traveler';
+    users.set(candidate.userId, { ...candidate, displayName });
+  }
+  return [...users.values()];
 };
 
 export const listTripFollowers = async (userId: string, tripId: string) => {
