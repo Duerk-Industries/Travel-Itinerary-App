@@ -97,6 +97,25 @@ const flight: Flight = {
 };
 
 describe('FlightsTab read-only mode', () => {
+  test.each([false, true])('ground table displays hotel/activity names and keeps custom addresses (custom: %s)', custom => {
+    const transfer: Flight = { ...flight, transferType: 'Public Transit', transfer_type: 'Public Transit',
+      departure_location: custom ? 'Custom pickup street' : 'Hotel Road', arrival_location: custom ? 'Custom dropoff street' : 'Museum Road',
+      departure_date: '2027-03-02', arrival_date: '2027-03-03' };
+    const view = render(<FlightsTab backendUrl="http://localhost" userToken="token" activeTripId="trip-1"
+      transferScope="ground" flights={[transfer]} setFlights={jest.fn()} groupMembers={[member]} defaultPayerId={member.id}
+      lodgings={[{ id: 'hotel', name: 'Hotel A', address: 'Hotel Road', checkInDate: '2027-03-01', checkOutDate: '2027-03-03', status: 'Booked' }]}
+      activities={[{ id: 'museum', name: 'Museum Visit', startLocation: 'Museum Road', date: '2027-03-03', status: 'Booked' }]}
+      formatMemberName={m => m.id} payerName={() => 'Member'} headers={{}} jsonHeaders={{}}
+      findActiveTrip={() => trip} fetchGroupMembersForActiveTrip={async () => {}}
+      styles={styles} airportOptions={[]} onSearchAirports={() => {}} />);
+    expect(view.getByText(custom ? 'Custom pickup street' : 'Hotel A')).toBeTruthy();
+    expect(view.getByText(custom ? 'Custom dropoff street' : 'Museum Visit')).toBeTruthy();
+    if (!custom) {
+      expect(view.queryByText('Hotel Road')).toBeNull();
+      expect(view.queryByText('Museum Road')).toBeNull();
+    }
+  });
+
   test.each(['flights', 'ground'] as const)('web %s rows open detail actions and hide Actions outside grid editing', transferScope => {
     const originalOS = Platform.OS;
     Platform.OS = 'web';

@@ -13,7 +13,7 @@ import type { TransferMode } from '../../server/src/types';
 import TransferDirections from '../components/TransferDirections';
 import type { MapApp } from '../utils/mapLinks';
 import HotelAddressPicker from '../components/HotelAddressPicker';
-import { transferLocationFieldLabel, type TransferActivity, type TransferHotel } from '../utils/transferHotels';
+import { transferLocationFieldLabel, transferLocationLabel, type TransferActivity, type TransferHotel } from '../utils/transferHotels';
 import { isFlightTransfer } from '../utils/transferCategory';
 import { airportDisplayForCode } from '../utils/airportDisplay';
 import type { PlanningCoordinates } from '../../server/src/types';
@@ -972,9 +972,9 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       case 'arrival_date':
         return formatDateLong(baseDisplay);
       case 'departure_location':
-        return ground ? item.departure_location || '-' : formatLocationDisplay(item.departure_location, item.departure_airport_label || item.departureAirportLabel);
+        return ground ? transferLocationLabel(item.departure_location || '', lodgings, item.departure_date || '', activities) || '-' : formatLocationDisplay(item.departure_location, item.departure_airport_label || item.departureAirportLabel);
       case 'arrival_location':
-        return ground ? item.arrival_location || '-' : formatLocationDisplay(item.arrival_location, item.arrival_airport_label || item.arrivalAirportLabel);
+        return ground ? transferLocationLabel(item.arrival_location || '', lodgings, item.arrival_date || item.departure_date || '', activities) || '-' : formatLocationDisplay(item.arrival_location, item.arrival_airport_label || item.arrivalAirportLabel);
       default:
         return baseDisplay;
     }
@@ -1001,7 +1001,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       widths[col.key as string] = Math.max(minW, Math.min(estimated, MAX_COLUMN_WIDTH_PX));
     }
     return widths;
-  }, [sortedFlights, groupMembers, airports, tableColumns]);
+  }, [sortedFlights, groupMembers, airports, tableColumns, lodgings, activities]);
   const colWidth = (col: { key: typeof columns[number]['key']; minWidth?: number }) =>
     dynamicColumnWidths[col.key as string] ?? (col.minWidth ?? 120);
 
