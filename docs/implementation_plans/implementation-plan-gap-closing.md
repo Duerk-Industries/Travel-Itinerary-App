@@ -1,7 +1,7 @@
 # Gap-Closing Plan: Map, Discovery, Email Import, Dark Features, Offline
 
 **Status:** Revised proposal — source-verified 2026-10-18, re-verified 2026-10-19 (§0.5); production settings and measurements unverified
-**Last updated:** 2026-10-21
+**Last updated:** 2026-11-05 (added §11: Pilot and Stippl comparison, pricing, hotel booking, smaller parity items)
 **Review:** Updated against repository code and primary provider documentation, in collaboration with Bryan Duerk
 **Builds on:** `implementation-plan-wanderlog-competitive-analysis.md` (§5.1–5.4), `implementation-plan-trip-day-map.md`, `server/src/ingestion/TECHNICAL_DEBT.md`
 
@@ -72,7 +72,7 @@ This plan closes five functionality gaps found in the competitive analysis again
 4. **Built-but-Dark Features** — notification inbox, staged push rollout, trip-planning notifications, activity recap, and a flag audit.
 5. **Offline Access & Sync** (comparison gap 6) — harden the existing offline trip cache, add a versioned trip bundle, and support offline expense creation with idempotent replay.
 
-*(Comparison gap 5, public pricing and social proof, is handled separately.)*
+*(Comparison gap 5, pricing, is now covered in §11.2. §11 also adds hotel booking (§11.3) and the smaller parity items from the 2026-11-05 Pilot and Stippl comparison (§11.4). Social proof and public marketing pages stay out of scope.)*
 
 ### Core Architectural Pillars
 
@@ -804,6 +804,166 @@ sharing off. Manual upload, list view and saved trip details remain usable indep
 
 **Still open:**
 - The LLM cap value, pending two weeks of `usage_metering` data.
+- The §11.6 decisions (pricing, hotel provider, heart voting, view-only role).
+
+---
+
+## 11. Pilot and Stippl comparison (added 2026-11-05)
+
+**Why this section exists.** Pilot (pilotplans.com) markets itself as completely free, including AI itineraries and offline use. It earns money when travelers book hotels in the app. Its comparison page claims Stippl keeps AI itineraries and offline access behind a PRO plan of about $25 a year, and sends travelers to Booking.com or Airbnb to book. The Stippl column below comes from Pilot's own marketing page (sources dated 2026-06 to 2026-09), so treat it as a claim, not a tested fact.
+
+### 11.1 Where WanderBunnies stands
+
+| Area | Pilot | Stippl (per Pilot) | WanderBunnies today | Covered by |
+| --- | --- | --- | --- | --- |
+| Price | Free; earns from hotel bookings | Free, PRO about $25/yr | Free: 3 active trips, 6 travelers per trip, 5 AI generations a month, no uploads. Premium $5/mo | §11.2 |
+| Group expense splitting | No | Yes | **Yes, the strongest of the three** (ledger, coverage, receipt scanning) | Keep and market |
+| Trip blog, ratings, templates, packing lists, weather | No | Partial | **Yes** | Keep and market |
+| Map, routes, reordering | Yes | Yes | Built, flags off | §1, §7 release gates |
+| Email-forward import with AI parsing | Yes, free | Yes | Built, flags off; uploads Premium only | §3, §11.2 |
+| Offline on mobile | Free | PRO | Built; device acceptance outstanding | §5 |
+| Group chat, real-time editing | Yes | Partial | Yes | — |
+| PDF export | Yes | Yes | Yes (`app/utils/printableItinerary.ts`, print to PDF) | — |
+| **Book hotels in the app** | Yes, 3M+ stays, member rates | No (links out) | **No.** Only GetYourGuide tour links | **§11.3** |
+| Heart voting on ideas | Yes | No | No. Ratings apply only to Completed items; proposal voting is retired | §11.4 |
+| View-only tripmates | Yes | No | No. Trip roles are only `member` and `follower` | §11.4 |
+| Flight-number auto-fill | Yes | No | No lookup found | §11.4 |
+| Files tab, files on items | Yes | No | No | §11.4 |
+| Wishlist, undo/redo, rich-text notes, keyboard shortcuts | Yes | Mostly no | Partial (Undo on some lists only) | §11.4 |
+| eSIM, visa requirements, flight deals | Yes | No | No | §11.4 |
+
+**Conclusion.** Most of the visible gap is finished work that is switched off (§1, §3, §5), plus a free tier that charges for what competitors give away. The one structural gap is hotel booking. WanderBunnies' advantage is that a group can **book together and then split the cost automatically**. Pilot has no group expense splitting, so lead with this.
+
+### 11.2 Pricing and packaging (P0, mostly configuration)
+
+**Problem.** The free tier withholds features that both competitors offer free:
+- uploads and email import (free manual uploads are 0 per month, per `docs/tiers.md`)
+- maps
+- enough AI to try the product
+
+As long as that's true, the comparison pages win on price alone.
+
+**Fix.** These are proposed values; Bryan decides (§11.6).
+
+1. **Free includes:** unlimited planning trips, maps, offline reading, email-forward import with a monthly cap (for example 10 imports), and a small AI allowance. Set this through the existing `tier_limits` and `tier_entitlements` rows and Admin > Billing. The `premium` flag description already says which parsing options are Premium-only is set there, so no code change is expected. Check the active-trip and traveler limits in `entitlementService.ts`, and update `docs/tiers.md`.
+2. **Premium keeps:** receipt scanning, bank import (Plaid, when released), unlimited AI, Gmail backfill, blog keepsake and exports, higher import caps, and automatic adding (§3.4).
+3. **Add or confirm an annual price** under the existing Stripe Product, near Stippl's (about $25–35 a year). Follow `docs/stripe-premium-subscriptions-checklist.md` §4, which already expects monthly and annual Prices under one Product.
+4. **Treat booking commission (§11.3) as the main free-tier revenue.** Report it separately from cost, per §6.1.
+5. **Order:** loosen the free tier only after §6.2 spend reservations and per-user caps are in place for the features being opened up. A larger free tier must not create unbounded LLM spend.
+
+**Tests.** Extend the entitlement tests for the new limit values, on Firestore emulator and pg-mem. Check that free users see readable allowances before work starts (§0.4).
+
+### 11.3 Hotel booking (P1 links, then P2 in-app booking)
+
+WanderBunnies does not need to become a travel agency. There are three levels:
+
+| Level | What travelers see | Who takes payment and handles support | Effort | Our revenue |
+| --- | --- | --- | --- | --- |
+| **H1: affiliate links** | "Find a stay" opens a hotel site pre-filled with destination, dates and group size | The hotel site | Small, about 2–3 weeks | Share of the site's commission (via Stay22, about 30% of it) |
+| **H2: in-app booking through liteAPI (Nuitee)** | Search, choose a room and pay inside WanderBunnies | liteAPI's payment SDK takes the card; we handle first-line support | Medium, about 6–10 weeks | Our own markup (liteAPI default 10%) |
+| Direct OTA APIs (Booking.com Demand, Expedia Rapid) | Same as H2 | Us, under the OTA's contract | Large, and approval is gated | Higher |
+
+**Recommendation:** ship H1, measure it, and build H2 only if travelers actually click through. Direct OTA APIs are out of scope. Booking.com Demand API needs Managed Affiliate status, a signed contract and an Account Manager; Expedia Rapid needs a product compliance review. Neither fits current volume.
+
+#### H1: affiliate links (P1)
+
+Reuse the GetYourGuide pattern (`services/getYourGuideAffiliateService.ts`, `config/getYourGuide.ts`, `routes/getYourGuideRoutes.ts`, `app/utils/getYourGuideLinks.ts`). It already has signed short-lived link descriptors, host and path allowlists, and a required disclosure.
+
+1. **Provider.** Stay22 is preferred: one integration covers Booking.com, Expedia, Hotels.com, Vrbo and others, and approval is easy. Joining Booking.com's affiliate program directly is the alternative; it pays more per booking but covers one site.
+   - Configure everything through `getEnvValue()`: `STAYS_AFFILIATE_PROVIDER`, `STAYS_AFFILIATE_PARTNER_ID`, `STAYS_DEEP_LINK_BASE_URL`, `STAYS_ALLOWED_HOSTS`.
+   - Use only the provider's documented deep-link parameters; don't guess them.
+2. **Server.**
+   - Add `server/src/config/stays.ts` and `server/src/services/stayAffiliateService.ts`.
+   - Add `POST /api/stays/search-link` (authenticated). It takes `tripId` plus either a `lodgingId` or a night range. It checks membership and builds the target URL **from trip data on the server**: destination or lodging city, check-in and check-out, adults from the trip's travelers, and rooms. Clients cannot supply a URL, so this is not an open redirect.
+   - It returns a descriptor token. `GET /api/stays/go/:token` verifies the token and redirects with a 302 to an allowlisted host only.
+   - The partner sub-id is an opaque per-click HMAC. Never send a user id, email or trip name to the partner.
+3. **Flag.** Add `stays_affiliate_links`, seeded off and added to `FAIL_CLOSED_FLAGS`, because it makes external contact (§6.2).
+4. **Client.**
+   - Add a pure helper, `app/utils/lodgingGaps.ts`, that lists trip nights not covered by any lodging (trip dates minus each lodging's `check_in_date` to `check_out_date`). Unit-test it for overlaps, same-day turnovers and month-only trips (which show no gaps).
+   - Show **Find a stay** on any lodging with status `Needed` in `LodgingTab.tsx`, and as a "No place to stay for May 3–6" row in the Overview day list.
+   - Label it as a partner link: "WanderBunnies may earn a commission." This matches §2.2: partner status never changes ranking.
+5. **Close the loop.**
+   - The confirmation email comes back through forwarding or manual upload (§3) and becomes a `Booked` lodging with `total_cost` and `refund_by`.
+   - Then show **Who's paying?**, pre-filled with the importer in `paid_by` and every traveler in `traveler_ids`. This uses the existing split in `app/utils/costs.ts` and `coveredBy.ts`; no new money logic is needed.
+   - `refund_by` feeds the planned `cancellation_deadline` reminder (§4.2).
+6. **Legal.** Add affiliate disclosure to `docs/legal` (terms and privacy) and to the link label, as US FTC rules require. App store rules: linking out to book a real-world service is allowed.
+7. **Measure.** Track clicks per active trip, and conversions from provider reports, by week. Record only aggregates; analytics consent rules apply. This is the gate for H2.
+
+**Tests.** Membership denial, unknown host, an expired or tampered token, no personal data in the outbound URL, flag-off, and Firestore emulator parity for any stored click counters.
+
+#### H2: in-app booking through liteAPI (P2, gated)
+
+**Gate (all required before work starts):**
+- H1 conversion data justifies the build.
+- A written review of liteAPI's commercial terms: merchant of record, chargebacks, refunds, payout timing.
+- A seller-of-travel check for California, Florida, Washington and Hawaii: confirm whether liteAPI acting as seller covers WanderBunnies.
+- A named support owner and process for cancellations and missing bookings.
+
+**Design:**
+1. **Provider adapter.** Add `server/src/apis/liteApi.ts` and `liteApiCallers.ts`, in the same style as the other `apis/` modules. Search, rates and prebook calls go through `reserveApiUsageOrThrow` with an absolute monthly cap (§6.2). Store the API key with the `_FILE` convention. Cache rates only as long as the provider's terms allow; default to no persistence.
+2. **Routes** (`server/src/routes/stayRoutes.ts`, mounted at `/api/stays`):
+   - `GET /search`: destination and dates, pre-filled from the trip.
+   - `GET /hotels/:id/rates`
+   - `POST /prebook`: locks the rate and returns the payment session.
+   - `POST /bookings`: requires `Idempotency-Key`, reusing the atomic idempotent-create helper from §5.3. A double tap or a retry after a timeout cannot book twice.
+   - `POST /bookings/:id/cancel`
+   - Every route checks trip membership and the `stays_in_app_booking` flag (fail-closed).
+3. **Payment.** Use liteAPI's payment SDK on web. Card data never touches WanderBunnies servers or logs, which keeps PCI scope off us. Native needs a compatibility spike (in-app browser or WebView, plus return-to-app handling) before it's promised. Hotel stays are real-world services, so app-store in-app purchase rules don't apply.
+4. **Data.** Add a `stay_bookings` table in Postgres and Firebase (pg-mem inherits it):
+   - provider booking id, `trip_id`, `lodging_id`, status, all-in price, currency, cancellation policy, `refund_by`, booker `user_id`, timestamps
+   - keep raw provider payloads only as long as needed
+   A confirmed booking creates or updates the `Lodging` with status `Booked` in the same transaction, or through a recoverable intent (§0.3). Status changes come from provider webhooks or polling, and update the lodging.
+5. **Experience.**
+   - Show the all-in price, including taxes and fees, before payment.
+   - Show the cancellation deadline in plain words.
+   - After booking: "Booked. Added to *Japan 2026*", followed by **Who's paying?** (as in H1).
+   - Group checkout with split payment is out of scope; one person pays, and the group splits the cost through the ledger.
+   - Configure the markup in Admin > Billing, with an audit log entry.
+6. **Tests.**
+   - prebook-then-price-change
+   - payment failure leaves no lodging
+   - idempotent retry
+   - provider cancel and refund
+   - webhook replay
+   - membership revoked between prebook and book
+   - Firestore emulator parity
+   - card data absent from logs and error capture
+
+**Not recommended:** Pilot's negotiated group rates and paid planning for organizations ($49 per attendee per night). That's a people-run service business, not a software feature.
+
+### 11.4 Smaller parity items (P1–P2, each its own PR)
+
+| # | Gap | Fix | Notes |
+| --- | --- | --- | --- |
+| 1 | **Heart voting on ideas** before booking | Add a separate `interest` vote on `Needed` and `Proposed` transfers, lodgings, activities and car rentals. Store it either as a vote kind or in its own table, so star ratings (`itemRatingService.ts`) and the thumbs-to-stars conversion are untouched. Show heart counts and sort the shortlist by them. Implement in Postgres and Firebase | Brings back a lighter form of the retired proposal voting, so it needs a decision (§11.6). `Lodging` and `Activity` still carry `netVotes`/`userVote`; reuse or remove those deliberately, don't leave both |
+| 2 | **View-only tripmates** | Add a `viewer` role next to `member` and `follower`. Pick it on invite; it can be changed by the owner. Every mutating trip route checks one helper (for example `ensureUserCanEditTrip`), applied route by route with a test per route. Hide receipts and files from viewers | Medium effort: touches every write route. Do it after the §3.4 membership checks so both use one helper |
+| 3 | **Flight-number auto-fill** | Add `server/src/apis/flightLookupApi.ts` (provider such as AeroDataBox, chosen after a terms and cost review). Look up by carrier, number and date to fill airports and times in `TransferEditingForm`. Cache per flight and date, cap the budget (§6.2), use a fail-closed flag. Manual entry always works | Also helps the import matcher (§3.4) with airports. Confirm whether connections and multi-leg flights are already modeled before adding a segment group |
+| 4 | **Files tab and files on items** | Add a `trip_files` table (both adapters) with an optional item reference. Store uploads in private Cloud Storage with signed URLs, reusing `blogStorageClient.ts`. Scan with the fail-closed scanner (§3.1 item 8) before anyone can open a file. Per-tier storage quota. Imported confirmations can attach their original PDF | Members only; hidden from viewers (#2) and followers |
+| 5 | **Destination wishlist** | Account-level list of places without a trip. "Plan this" opens the Quick Start wizard pre-filled | `Needed`/`Proposed` items already act as a trip shortlist |
+| 6 | **Undo for deletes everywhere** | Soft-delete with an Undo action that persists until dismissed, using one shared component for every item list. Some lists already have Undo | Never for settled payments (§3.4 rules) |
+| 7 | **Rich-text notes** | A small Markdown subset (headings, bold, lists, links) rendered without raw HTML. Show links as text with the domain visible | Same rule as imported links (§3.1 item 9) |
+| 8 | **Keyboard shortcuts (web)** | New item, search, next or previous day, undo. Listed in a help sheet; never override browser or screen-reader keys | Low priority |
+| 9 | **eSIM and entry requirements** | eSIM: an affiliate link (for example Airalo's partner program) shown per destination country, using the H1 descriptor and disclosure pattern. Entry requirements: link to the official government source for the traveler's nationality and destination. Don't store or rephrase requirement data ourselves (liability) | Low effort once H1 exists |
+| 10 | **Flight deals** | Deferred. Revisit after H1 shows whether partner links earn | — |
+
+### 11.5 Delivery order
+
+| Step | Scope | Depends on | Evidence before enabling |
+| --- | --- | --- | --- |
+| 1 | Release already-built features through their existing gates: maps (§1), email import (§3), offline (§5) | §7 lanes | §7 and §8 evidence, Firestore parity |
+| 2 | Pricing and packaging (§11.2) | §6.2 spend caps for anything opened to free | Entitlement tests; readable limits in the UI |
+| 3 | H1 affiliate links plus the "Who's paying?" step (§11.3) | Provider account; legal disclosure | Link and redirect security tests; partner reports flowing |
+| 4 | Parity items 1, 3, 4 (§11.4) | Decisions in §11.6 | Per-item tests, Firestore parity |
+| 5 | Parity items 2, 5–9 | #2 after the §3.4 membership helper | Per-item tests |
+| 6 | H2 in-app booking | H1 conversion data, legal and support gate | §11.3 H2 test list, named-device payment spike |
+
+### 11.6 Decisions needed (Bryan Duerk)
+
+1. **Free and Premium contents and the annual price** (§11.2).
+2. **Hotel-link provider:** Stay22 (broad coverage, smaller share) or Booking.com direct (larger share, one site).
+3. **Bring back voting** as hearts on ideas (§11.4 #1), knowing proposal voting was deliberately retired.
+4. **Add a `viewer` role** (§11.4 #2).
+5. **H2 go or no-go** after 8 weeks of H1 data.
 
 ## Sources and Verification Limits
 
@@ -816,4 +976,9 @@ assignment and extraction repositories, and notification service/routes were rev
 - [Google Maps Platform Service Specific Terms](https://cloud.google.com/maps-platform/terms/maps-service-terms) — consult the applicable regional/account terms and product rules; checked 2026-10-18. Upstream headers alone do not establish storage rights.
 - [Google Maps Platform pricing](https://developers.google.com/maps/billing-and-pricing/pricing) — verify applicable SKU/account tiers at activation; checked 2026-10-18. This plan does not guarantee a free native allowance.
 - [Mailgun route actions](https://documentation.mailgun.com/docs/mailgun/user-manual/receive-forward-store/receive-http) — inbound fields and provider acknowledgement/retry semantics; checked 2026-10-18.
+- [Pilot pricing](https://www.pilotplans.com/pricing) and [Pilot vs Stippl comparison](https://www.pilotplans.com/compare/stippl-alternative-feature-comparison): competitor marketing; the Stippl column is Pilot's claim. Checked 2026-11-05.
+- [liteAPI revenue and commission](https://docs.liteapi.travel/docs/revenue-management-and-commission): margin parameter (10% default), payout after checkout; checked 2026-11-05. No public startup rate card; confirm terms with sales.
+- [Stay22 FAQ](https://stay22.com/faq): partner list and payout timing; commission split (about 30%) is from third-party reviews, not Stay22's own page. Checked 2026-11-05.
+- [Booking.com Demand API prerequisites](https://developers.booking.com/demand/docs/getting-started/prerequisites): Managed Affiliate Partner contract required; checked 2026-11-05.
+- §11 repository facts (trip roles, missing flight lookup, printable itinerary, lodging vote fields, GetYourGuide descriptor pattern, tier limits) were checked against source on 2026-11-05.
 - [Google restricted scope verification](https://developers.google.com/identity/protocols/oauth2/production-readiness/restricted-scope-verification) — annual assessment for applicable restricted-data access, with documented exceptions; recheck before Gmail expansion.
