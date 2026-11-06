@@ -6,7 +6,7 @@ Optional product analytics and detailed diagnostics stay **off** (`analytics_col
 
 ## 0. Urgent (not analytics-specific)
 
-- [x] **Remove the unauthenticated login routes.** `POST /api/auth/email` and `POST /api/auth/oauth` issued a valid 30-day token for *any* email address, including admin tokens for the bootstrap admin emails. **Removed in code on October 8, 2026**, together with `handleLogin` in `server/src/auth.ts`. `server/__tests__/admin-bootstrap.test.ts` now asserts that all four paths (`/api/auth/*` and the `/api/web-auth/*` aliases) return 404 and issue no token, and the release gate checks the routes stay gone. **Production stays exposed until the §4 deploy:** the deployed build (`7355b79`) still has both routes, so deploy soon, independently of the analytics work. *Owner: Engineering.*
+- [x] **Remove the unauthenticated login routes.** `POST /api/auth/email` and `POST /api/auth/oauth` issued a valid 30-day token for *any* email address, including admin tokens for the bootstrap admin emails. **Removed in code on October 8, 2026**, together with `handleLogin` in `server/src/auth.ts`. `server/__tests__/admin-bootstrap.test.ts` now asserts that all four paths (`/api/auth/*` and the `/api/web-auth/*` aliases) return 404 and issue no token, and the release gate checks the routes stay gone. **Deployed:** the latest code, without these routes, is in production (confirmed by Bryan Duerk, 2026-11-06); the earlier exposed build was `7355b79`. *Owner: Engineering.*
 
 ## 1. Legal and sign-off
 

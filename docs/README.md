@@ -77,27 +77,28 @@ This is the main documentation index for the WanderBunnies Travel Itinerary App.
 - [Data Docs Index](data/README.md)
 - [Catalog Source Strategy](data/catalog_source_strategy.md)
 - [Future Attraction Data Sources](data/future-attraction-data-sources.md)
-- [Itinerary Generation Debug Plan](itinerary-generation-debug-plan.md)
+- [Itinerary Generation Debug Plan](implementation_plans/itinerary-generation-debug-plan.md)
 
 ## Architecture, Entitlements, and Roadmap Notes
 
 - [Implementation Plan: AI Trip Assistant](implementation_plans/implementation-plan-ai-assistant.md)
-- [Implementation Plan: Entitlements](implementation-plan-entitlements.md)
+- [Implementation Plan: Entitlements](implementation_plans/implementation-plan-entitlements.md)
 - [Implementation Plan: UX Remediation](implementation_plans/implementation-plan-ux-remediation.md)
 - [Implementation Plan: Wanderlog Competitive Analysis](implementation_plans/implementation-plan-wanderlog-competitive-analysis.md)
 - [Implementation Plan: Gap Closing (map, discovery, email import, dark features, offline)](implementation_plans/implementation-plan-gap-closing.md)
+- [Stay22 Integration Plan (hotel affiliate links, gap-closing §11.3 H1)](implementation_plans/stay22-integration-plan.md)
 - [Implementation Plan: Itinerary Narrative Depth & Validation](implementation_plans/itinerary-narrative-depth-and-validation.md)
 - [Implementation Plan: Itinerary Document Import](implementation_plans/itinerary-document-import.md)
-- [GetYourGuide Phase 0 Partner Contract](getyourguide-phase-0-contract.md)
-- [GetYourGuide Phase 2 Server Descriptor](getyourguide-phase-2.md)
-- [GetYourGuide Phase 3 Client CTA](getyourguide-phase-3.md)
-- [GetYourGuide Phase 4 Itinerary Integration](getyourguide-phase-4.md)
-- [GetYourGuide Phase 5 Partner API Enrichment](getyourguide-phase-5.md)
-- [GetYourGuide Phase 6 Operations and Rollout](getyourguide-phase-6.md)
+- [GetYourGuide Phase 0 Partner Contract](implementation_plans/getyourguide-phase-0-contract.md)
+- [GetYourGuide Phase 2 Server Descriptor](implementation_plans/getyourguide-phase-2.md)
+- [GetYourGuide Phase 3 Client CTA](implementation_plans/getyourguide-phase-3.md)
+- [GetYourGuide Phase 4 Itinerary Integration](implementation_plans/getyourguide-phase-4.md)
+- [GetYourGuide Phase 5 Partner API Enrichment](implementation_plans/getyourguide-phase-5.md)
+- [GetYourGuide Phase 6 Operations and Rollout](implementation_plans/getyourguide-phase-6.md)
 
 ## Root-Level Reference Notes
 
-- [Expense Tracking Notes](../EXPENSE_TRACKING.md)
+- [Expense Tracking Notes](implementation_plans/EXPENSE_TRACKING.md)
 - [Accounting Fixes](../Accounting_Fixes.md)
 - [Traits Reference](../traits_list.md)
 

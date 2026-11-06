@@ -1,124 +1,337 @@
-# Stay22 integration plan
+# Stay22 integration plan (provider-isolated hotel links)
 
-Date: November 5, 2026  
-Status: Proposed; this document does not activate an integration or publish legal changes.
+Date: November 5, 2026 (revised November 6, 2026)
+Status: Proposed. This document does not turn on an integration or publish legal changes.
+Parent plan: [implementation-plan-gap-closing.md §11.3 H1](implementation-plan-gap-closing.md#h1-affiliate-links-p1--stay22-integration-plan). That section summarizes this plan and links here.
+
+## 0. Decision and relationship to existing work
+
+**Provider decision (Bryan Duerk, 2026-11-06):** use Stay22 for now. The provider and the booking method may change later. The design therefore isolates them: Stay22 is one adapter behind a provider-neutral "stays" feature (§2). Changing providers, or moving from link-out to in-app booking (gap-closing H2), must not change placements, client code, routes, flags or data.
+
+This is the detailed plan for **H1: affiliate links** in the gap-closing plan's §11.3. Where the two disagreed, this plan decides:
+
+| Topic | Earlier §11.3 sketch | This plan | Reason |
+|---|---|---|---|
+| Routes | `POST /api/stays/search-link`, `GET /api/stays/go/:token` | `POST /api/affiliate/stays/descriptor`, `GET /api/affiliate/stays/go/:token` | Provider-neutral path, under the existing `/api/affiliate` mount |
+| Flags | `stays_affiliate_links` | `stays_partner_links` (feature) + `stays_provider_stay22` (provider) | Turn the feature off, or one provider off, independently |
+| Occupancy | Adults from all trip travelers | The lodging's own `traveler_ids` / `rooms` only; otherwise nothing | A group trip doesn't mean everyone shares one booking |
+| Partner sub-id | Opaque HMAC for each click | Fixed placement code (for example `lodging_needed`) | Partner reports can't be joined back to a traveler |
+
+These items stay as written in §11.3: the `lodgingGaps.ts` helper and its tests, the **Who's paying?** step after an imported booking, and the H2 gate.
 
 ## 1. Recommended scope
 
-Launch optional, clearly disclosed accommodation affiliate links in private trip planning. Start with explicit traveler clicks; consider an accommodation map later. Keep all Stay22 behavior behind a default-off master feature flag, with separate flags for later capabilities. Lodging tracking, itinerary generation, existing booking URLs, imports, and expense calculations must continue working without Stay22.
+Launch optional, clearly labeled accommodation search links in private trip planning, with Stay22 as the first provider. The traveler must click to start every handoff. Lodging tracking, itinerary generation, existing booking URLs, imports and expense calculations keep working with the feature off or with no provider configured.
 
-Stay22 currently advertises Allez links, Map, Lift link optimization, Nova, Spark, and Loop transportation monetization. Product names alone do not establish API access, supported parameters, native compatibility, or our commercial rights. Confirm those in partner documentation and a signed agreement before implementation. Source: [Stay22 product overview](https://www.stay22.com/).
+**Reuse the GetYourGuide pattern; don't build a second one.** The repo already has an affiliate pipeline:
 
-## 2. Where to use it
+- `server/src/config/getYourGuide.ts`: env config through `getEnvValue()`, host and path allowlists
+- `server/src/services/getYourGuideAffiliateService.ts`: signed, short-lived descriptor tokens
+- `server/src/routes/getYourGuideRoutes.ts`, mounted at `/api/affiliate`: a descriptor endpoint, a first-party 302 redirect, rate limits through `httpRateLimitService`, and a generic `404 AFFILIATE_LINK_UNAVAILABLE`
+- `app/utils/getYourGuideLinks.ts` and `app/components/GetYourGuideCta.tsx`: fetch the descriptor ahead of time, render nothing while it's unavailable, then open it with `window.open(..., 'noopener,noreferrer')` or `Linking.openURL`
 
-| Priority | Placement | Suggested experience | Conditions |
+First, move the parts that don't depend on any provider into shared `affiliateLinks` modules:
+- token signing and verification
+- allowlist checks
+- the redirect handler
+- the CTA shell with its disclosure slot
+
+That refactor is a separate PR and must keep the GetYourGuide tests green without changes.
+
+Stay22 markets several products (Allez deep links, Map, Lift, Nova, Spark, Loop). The MVP needs only an **Allez-style deep link**: a provider URL with our affiliate ID and search parameters, and no API key, script or server-to-server call. Confirm the exact URL format in partner documentation before coding; this plan doesn't specify it. Source: [Stay22 product overview](https://www.stay22.com/). Not re-verified for this revision.
+
+## 2. Provider and method isolation
+
+### 2.1 Layers
+
+| Layer | Knows about Stay22? | Contents |
+|---|---|---|
+| **Placements and UI** | No | Lodging tab empty state, `Needed` lodging dialog, later the Overview gaps row. Generic `FindStayCta` with generic disclosure |
+| **Stays feature service** | No | Access check, flags, `StaySearchContext` built from authorized trip data, provider selection, descriptor token, redirect |
+| **Provider adapter** | **Only here** | `server/src/services/stays/providers/stay22.ts` and its config. Turns a `StaySearchContext` into a URL; declares allowed hosts |
+
+### 2.2 Contracts (in `server/src/types.ts`)
+
+```ts
+type StayPlacement = 'lodging_empty' | 'lodging_needed' | 'lodging_proposed' | 'overview_gap';
+type StayMethod = 'link_out';           // later: 'in_app' (gap-closing H2)
+
+interface StaySearchContext {           // built on the server, after authorization
+  placement: StayPlacement;
+  location: { lat: number; lng: number } | { city: string } | { text: string };
+  checkIn?: string;                     // YYYY-MM-DD, local
+  checkOut?: string;
+  adults?: number;                      // only from the lodging's own travelers
+  rooms?: number;
+}
+
+interface StayLinkProvider {            // server only
+  id: string;                           // 'stay22'
+  displayName: string;                  // shown in legal text and admin, never needed by the client
+  method: StayMethod;
+  isConfigured(): boolean;
+  allowedHosts(): string[];
+  buildSearchUrl(ctx: StaySearchContext): URL | null;   // null = can't serve this context
+}
+```
+
+The client sees only `{ stays: { available: boolean; method: StayMethod } }` from `planning-capabilities`, and `{ token, expiresAt, method, disclosureRequired: true }` from the descriptor endpoint.
+
+### 2.3 Provider selection
+
+- `STAYS_LINK_PROVIDERS` is an ordered list, read through `getEnvValue()` (for example `stay22`, or later `booking,stay22`).
+- The first provider that is registered, configured, has its own flag on, and returns a URL for the context wins.
+- If none qualifies, the CTA is hidden; there is no broken link.
+- The registry is `server/src/services/stays/providers/index.ts`. Adding a provider means adding one file and one config entry there.
+
+### 2.4 Rules that keep the provider isolated
+
+1. **Provider-specific code lives only in the adapter.** The string `stay22` appears only in the adapter, its config, the registry, the flag seed, tests, and the legal pages. It never appears in client code, routes, placement codes or database fields. A test greps `app/` and fails if it finds the string.
+2. **No stored provider state.** The MVP stores no provider IDs, URLs or clicks. The token carries the provider `id` and expires in minutes. After a switch, old tokens 404 and the client fetches a new descriptor.
+3. **Metrics** may carry a low-cardinality `provider` label, needed for revenue reconciliation, next to `placement`. They never carry user, trip or URL data.
+4. **One shared contract test suite** runs against every registered provider, plus a fake provider used in route tests. It checks: a URL only on allowed hosts, HTTPS, none of the §6 forbidden fields, `null` for unsupported contexts, and deterministic output.
+5. **A change of method reuses the same pipeline.** H2 (in-app booking through liteAPI) would add `method: 'in_app'` providers that the same placements and `StaySearchContext` drive. The CTA branches on `method` (opening a booking sheet instead of a link). Placements, access rules and context building don't change.
+
+### 2.5 Switching providers (checklist)
+
+1. Get the new partner agreement and its URL documentation.
+2. Add `providers/<id>.ts`, its config and its seeded `stays_provider_<id>` flag (fail-closed), plus a contract test entry.
+3. Update the legal pages to name the new provider (§7) and publish them **before** switching.
+4. Change the order in `STAYS_LINK_PROVIDERS`. You can run both providers for a cohort first by putting the new one first and enabling its flag for that cohort.
+5. Turn off `stays_provider_stay22` and remove its config. Keep the Stay22 legal mention while commissions or reversals are outstanding.
+6. Reconcile final payouts from the old partner's reports.
+
+No client release or migration is needed.
+
+## 3. Where to use it
+
+| Priority | Placement | Experience | Conditions |
 |---|---|---|---|
-| MVP | Lodging tab empty state | “Find places to stay” using the selected destination and confirmed dates | Explicit click; preserve “Add lodging” and import actions |
-| MVP | Needed or Proposed lodging detail | “Search stays near this location” | Distinguish destination search from an exact-property offer; never invent a property match |
-| Next | Overview accommodation gaps | “Find a stay for these nights” for uncovered destination/date intervals | Compute gaps from active stays and local calendar dates; exclude Cancelled stays; ask the traveler to confirm gaps in multi-city or overnight-transfer trips |
-| Next | Itinerary base-stay section | Contextual lodging search for each overnight base | Use itinerary location/date data after generation; never make generation depend on Stay22 or imply that accommodation is reserved |
-| Later | Optional lodging map | Traveler opens a map around the chosen destination or base stay | Web first; explicit activation and required consent; separate from the existing trip-day map |
-| Later | Public destination guides or public trip blogs | A generic “Find stays in this destination” link or map | Respect publication permissions; never expose a private group's dates, lodging address, or future whereabouts |
-| Defer | Transportation and automatic link optimization | Evaluate Loop and Lift only after lodging launch | Separate scope, disclosures, tests, and child flags; retain existing airline and booking links |
+| MVP | Lodging tab empty state (`LodgingTab.tsx`, the "No lodging yet." branch) | "Find places to stay" for the trip destination and dates | Keep "Add lodging" and import as the main actions. Hidden for month-only trips with no dates, unless the provider returns a URL without dates |
+| MVP | `Needed` lodging detail, **both** dialog variants (`feature_standardized_item_dialogs` on and off, `LodgingTab.tsx` ~481/~508) | "Search stays near here" using the lodging's `lat`/`lng` or `geoCity`, else the trip destination | A search around a place, never an offer for that exact property |
+| MVP (optional) | `Proposed` lodging detail | Same, as a secondary action | — |
+| Next | Overview: nights without a stay | "No place to stay for May 3–6 · Find a stay" | Needs `app/utils/lodgingGaps.ts`. Uses non-Cancelled lodgings and local calendar dates; travelers confirm gaps on multi-city trips and overnight transfers |
+| Later | Itinerary overnight locations | Search for each overnight location | No such surface exists today; generation must never depend on a stays provider |
+| Later | Embedded map (for example Stay22 Map) | Map around a destination | Its own flag, consent design and privacy review (§6). It's provider-specific, so it gets its own adapter capability and isn't assumed |
+| Later | Public blog / destination pages | Generic "Find stays in <destination>" | Never expose a private group's dates, address or future whereabouts |
+| Defer | Transportation, automatic link optimization | — | Separate scope and approval |
 
-Prefer planning moments with clear lodging intent. Suppress prompts for Completed/Cancelled items and fully covered past trips. For Booked lodging, preserve the original confirmation/provider URL; do not replace it with an affiliate link. Do not convert user-entered URLs automatically in the MVP. No popups, automatic redirects, or promotion inside receipts or expense reports.
+Don't show the CTA for Booked, Completed or Cancelled items, for trips in the past, or for followers (§5.3). Booked lodging keeps its original provider URL. No popups, automatic redirects, or promotion in receipts, expense reports, emails, the printable itinerary or exports.
 
-Suggested CTA disclosure, immediately beside the action: “Affiliate link: we may earn a commission if you book.” Do not promise identical prices or that commissions never affect ranking without verification. Explain any sponsored placement and keep relevance criteria independent of commission rates.
+**Disclosure** goes right next to the action and is provider-neutral: "Partner link: we may earn a commission if you book." The same wording as GetYourGuide keeps the app consistent. Don't claim "same price" or "no additional cost" unless every active provider confirms it (§7).
 
-## 3. Partner and commercial prerequisites
+## 4. Partner and commercial prerequisites (Stay22)
 
-Before enabling production, obtain written confirmation of web and native app authorization, private authenticated planning, AI itinerary placement, permitted destinations/parameters, approved branding, and product access. Obtain current technical docs rather than guessing URL formats or endpoints.
+Before production, get written confirmation of:
+- use in web and native apps, inside private signed-in planning
+- whether a placement may sit next to AI-generated content
+- the allowed parameters and destinations, and branding rules
+- which products we may use
 
-Legal review should address broad user-claim obligations (§3), indemnity and liability imbalance (§§10–11), unpaid-fee forfeiture (§12), data rights (§§7–8), competitive-use restrictions (§2), and terms taking precedence over Order Forms (§13). Seek a signed amendment that expressly overrides conflicting terms. Confirm commissions, attribution windows, reversals, payout thresholds/timing, reporting, termination, and ordinary service-monitoring permission. These are partner contract issues; updating our consumer terms does not resolve them. Source: [Stay22 Affiliate Partner Terms](https://www.stay22.com/terms), published version dated November 11, 2025.
+Get the current technical docs, and record them in `docs/implementation_plans/stay22-phase-0-contract.md`, modeled on `getyourguide-phase-0-contract.md`.
 
-Record the contracting operator/entity and approval owner. Do not assume the WanderBunnies brand is itself the contracting legal entity. Recheck terms and technical documentation at implementation and before launch.
+Legal review of the [Stay22 Affiliate Partner Terms](https://www.stay22.com/terms). These section references come from the version dated November 11, 2025; they weren't re-verified, so recheck at signing:
 
-## 4. Feature flags and shutdown behavior
+- obligations around user claims (§3)
+- indemnity and liability imbalance (§§10–11)
+- forfeiture of unpaid fees (§12)
+- data rights (§§7–8)
+- competitive-use restrictions (§2)
+- terms that take precedence over Order Forms (§13)
 
-Proposed flags, all seeded `enabled: false` in `server/config/feature-flags.yaml`:
+**Check that the terms allow switching or running another provider.** Competitive-use restrictions (§2) and termination terms must not stop a later switch or a dual-provider cohort.
 
-| Flag | Controls |
-|---|---|
-| `stay22_integration` | Master switch for every Stay22 surface, outbound handoff, script, map, API call, and optional job |
-| `stay22_lodging_links` | MVP accommodation search links; requires master |
-| `stay22_lodging_map` | Optional map; requires master and applicable consent |
-| `stay22_public_placements` | Public guide/blog placements; requires master and relevant link/map child |
-| `stay22_link_optimization` | Future automatic monetization; requires master; no MVP implementation |
-| `stay22_transportation` | Future transportation placements; requires master; no MVP implementation |
-
-Add each implemented flag to `FAIL_CLOSED_FLAGS` in `server/src/services/entitlementService.ts`. Missing rows must disable Stay22; preserve existing fail-open behavior for unrelated flags. Database values remain authoritative; changing YAML must not overwrite an admin's runtime choice. No admin bypass.
-
-Expose effective master-and-child availability through the existing `/api/auth/features` response, default client state to false, and pass props from `app/App.tsx`. Inspect response caching and cohort behavior before choosing rollout: user-specific eligibility must not enter a globally cached/public response. Reuse `featureCohorts.ts` only where the actual authenticated user is available. Public placements remain off in the MVP.
-
-The server independently checks flags at every handoff/provider endpoint. UI hiding alone is insufficient. On flag/configuration lookup failure, issue no provider call and return a controlled unavailable response. Follow the existing `EntitlementError`/402 contract where applicable; document the unavailable response separately.
-
-Turning the master off stops new handoffs within the current server flag cache window (up to 60 seconds), across all instances. Client refresh must hide controls and unmount embeds; check flags again when the app resumes. Document that an already opened third-party page cannot be recalled. Links in the app should request a fresh server-authorized handoff rather than store long-lived provider URLs that bypass shutdown. Do not emit affiliate links into emails, PDFs, or exports in the MVP.
-
-Published terms, privacy notices, user rights, and required deletion/security handling stay accessible when the feature is off. The flag controls integration behavior, not access to legal information.
+Also confirm commission rates, attribution windows, reversals, payout thresholds and timing, reporting, and termination, including whether unpaid fees survive termination (§12). Record which legal entity signs and who owns approval.
 
 ## 5. Technical design
 
-1. Add a small Stay22 service and, only if needed by approved documentation, an external API adapter under `server/src/apis/`. Read configuration with `getEnvValue()`; never place a secret in Expo/public configuration. Define validated handoff DTOs in `server/src/types.ts`.
-2. Propose `POST /api/stay22/handoff`, mounted in `server/src/app.ts`. Authenticate, authorize trip membership using established route helpers, check master/child eligibility, validate input, then construct an approved URL. Use Zod, bounded inputs, rate limits, and a strict HTTPS host allowlist. Never accept an arbitrary redirect destination or fetch user-supplied URLs.
-3. Send a typed context (trip ID and optional lodging/base-stay reference) to our server. Derive provider search fields only after authorization. A read-only follower must not gain access to private trip details through this endpoint. Confirm the intended member permissions before launch.
-4. Return a short-lived handoff result or one-time first-party token, depending on the supported navigation flow. On web, preserve the user gesture to avoid popup blocking; use a same-tab fallback. On native, open the approved external destination with `Linking`. Test iOS/Android rather than assuming iframe or WebView support.
-5. Keep the fetch helper with `app/tabs/lodging.ts`; place a reusable disclosed CTA in `app/components/`. Wire `LodgingTab.tsx` and the actual active lodging dialog path, including the standardized-dialog flag variant. Add Overview/itinerary placements only in subsequent phases.
-6. No database change is expected for MVP link generation. If durable handoff tokens, consent, or attribution records are required, specify retention, migrations, and facade/Postgres/Firebase implementations; verify memory-adapter coverage.
+### 5.1 Flags
 
-Opening a link must not create a lodging, set its status to Booked, alter a cost, or assert availability. A traveler can later add/import their confirmed booking through existing flows. Handle missing dates, ambiguous destination, expired sessions, and provider unavailability with a clear retry or editable search context.
+Seed both off in `server/config/feature-flags.yaml`, and add both to `FAIL_CLOSED_FLAGS` (`entitlementService.ts`) and `COHORT_FEATURES` (`featureCohorts.ts`):
+
+| Flag | Controls |
+|---|---|
+| `stays_partner_links` | The whole feature, for any provider |
+| `stays_provider_stay22` | Whether Stay22 may serve links |
+
+Effective availability is `stays_partner_links && (some provider in STAYS_LINK_PROVIDERS is configured with its flag on) && access === 'member'`. Add later flags (map, public placements) only in the PR that implements them. Admins don't bypass flags.
+
+### 5.2 Server
+
+1. **`server/src/services/stays/staySearchContext.ts`** (provider-neutral). Input: `{ tripId, lodgingId?, placement }`. Load the trip and lodging **after** `ensureUserInTrip`, then derive:
+   - location: lodging `lat`/`lng`, else `geoCity`, else `trip.destination`
+   - dates: the lodging's check-in and check-out, else the trip `startDate`/`endDate`
+   - occupancy: `traveler_ids.length` and `rooms` from the lodging only
+
+   The client never supplies these values.
+2. **`server/src/services/stays/stayLinkService.ts`** (provider-neutral):
+   - select the provider (§2.3) and call `buildSearchUrl`
+   - check the URL against that provider's `allowedHosts()` and HTTPS
+   - wrap `{ providerId, url, exp }` in a token using the shared affiliate token code
+3. **`server/src/services/stays/providers/stay22.ts`** plus `server/src/config/stays.ts`:
+   - `STAY22_AFFILIATE_ID`: public, but kept on the server so shutdown and allowlisting stay ours
+   - `STAY22_DEEP_LINK_BASE_URL`: validated HTTPS, no credentials or fragment
+   - `STAY22_ALLOWED_HOSTS`
+
+   No API key, and nothing in Expo or public config.
+4. **Routes** on the `/api/affiliate` router:
+   - `POST /api/affiliate/stays/descriptor` (authenticated). Strict Zod body `{ tripId: uuid, lodgingId?: string ≤64, placement }`. Steps in order: rate limit (`reserveRequestRateLimits`, per user per day), then `ensureUserInTrip`, then flags, then build the context, then the link. Returns `{ token, expiresAt, method: 'link_out', disclosureRequired: true }`.
+   - `GET /api/affiliate/stays/go/:token`. No session, because it's a browser navigation. Steps: verify the signature and expiry, check the feature flag **and** the token's provider flag again, re-check the host allowlist, rate limit per IP, then `302` with `Referrer-Policy: no-referrer`.
+   - Unavailable (flag off, no provider, lookup failure, bad token): `404 { error: 'AFFILIATE_LINK_UNAVAILABLE' }`, as GetYourGuide does. Don't use 402, which means a tier limit here.
+5. **The token goes in the path and is opaque.** The `app.ts` access logger writes `req.originalUrl`. Encrypt the token payload (AES-256-GCM, the `pushTokenCrypto.ts` pattern) or redact `/api/affiliate/*/go/*` in the logger. Apply the same fix to GetYourGuide's `?token=` route.
+6. **Capability.** `GET /api/trips/:id/planning-capabilities` returns `stays: { available, method }`. Don't use `/api/auth/features`: it has no user, so it can't apply cohorts or trip roles.
+7. **Metrics.** When the request carries analytics consent, call `incrementMetric('stays_partner_click', { placement, provider })`.
+
+### 5.3 Client
+
+- `app/utils/stayLinks.ts` (`requestStayDescriptor`, `openStayDescriptor`) and `app/components/FindStayCta.tsx`, built on the shared affiliate helpers. No provider name anywhere.
+- Fetch the descriptor when the CTA renders, and render nothing until a valid one arrives. The click then calls `window.open` synchronously inside the user gesture, so popup blockers don't stop it. If `window.open` returns `null`, navigate the same tab. Refetch after `expiresAt`.
+- On native, open with `Linking.openURL` (the system browser). Test on real iOS and Android devices.
+- Branch on `method`. Only `link_out` exists now; an unknown method renders nothing, so an older client stays safe after H2.
+- Wire into `LodgingTab.tsx` (empty state and both dialog variants), with the capability passed from `App.tsx`.
+
+### 5.4 Access and data
+
+- **Members only.** Followers never see the CTA and get a 404; the handoff discloses private dates and location to a third party.
+- **No schema change and no stored clicks.** That avoids Postgres/Firebase parity work; production runs only on Firestore. The rate limiter is the only persistent state touched, and it already works on both adapters.
+- **Opening a link never creates or changes a lodging, status or cost.** The confirmed booking comes back through manual entry, upload or forwarding, and then the gap-closing §11.3 **Who's paying?** step picks it up.
+- **Graceful failure.** Missing dates, an ambiguous destination, an expired descriptor or no available provider hide the CTA or show an editable retry, never a broken link.
 
 ## 6. Privacy and data boundaries
 
-Allowlist only provider-required search data: destination or accommodation-area coordinates, check-in/check-out dates, and traveler-confirmed aggregate occupancy if supported. Do not infer all group members are booking together. Do not send names, emails, birthdays, child identities, internal trip/group/user IDs, JWTs, confirmation numbers, private notes, expenses, or itinerary text. If ages are mandatory, assess that separately before supporting the flow.
+These rules apply to **every** provider adapter, and the shared contract tests enforce them.
 
-Use coarse placement codes for attribution, never identifiers encoding travelers or private trips. Suppress sensitive referrers with `Referrer-Policy`/`noreferrer` as appropriate and verify the actual redirect chain. Scrub search fields and full outbound URLs from logs, analytics, and error reporting.
+The outbound URL may contain only:
+- the provider's affiliate ID
+- a placement code
+- a location: coordinates, city or destination text
+- check-in and check-out dates
+- occupancy from the lodging itself
 
-The MVP loads no Stay22 script, iframe, pixel, preconnect, or prefetch before the traveler acts. Clicking an external link still exposes network/device information to its destination; explain this accurately. Stay22 describes visitor technical information and partner booking information in its [privacy policy](https://www.stay22.com/privacy).
+It must never contain:
+- names, emails or birthdays
+- children's ages or identities
+- internal trip, group, lodging or user IDs
+- JWTs
+- confirmation numbers
+- notes, expenses or itinerary text
 
-Before embedded maps or optimization, inventory cookies/storage, recipients, processing roles, retention, transfers, and opt-out behavior. Extend the existing consent model only with a correctly scoped choice; product analytics consent in `app/utils/privacyConsent.ts` is not automatic permission for affiliate advertising/tracking. Respect applicable browser privacy signals and regional rules. Unknown/declined consent must prevent optional provider loading. Withdrawal unmounts embeds and stops future optional collection. Review minor-account eligibility separately from the app's minimum account age.
+If a provider requires children's ages, don't support that flow without a separate review.
 
-## 7. Terms, privacy, and cookie updates
+**Redirect hygiene:**
+- Use `noopener,noreferrer` on web, and set `Referrer-Policy: no-referrer` on our 302.
+- Test the real redirect chain of each provider.
+- Scrub search fields and full outbound URLs from logs, analytics and Sentry.
 
-Deliver legal changes before feature activation, with accurate effective dates and version/change records. Counsel should adapt the draft below to verified integration behavior and applicable consumer law.
+The MVP loads no provider script, iframe, pixel, preconnect or prefetch. Opening the link exposes network and device information to the provider and the booking site; disclose this accurately. Stay22 describes its collection in its [privacy policy](https://www.stay22.com/privacy).
 
-### Consumer terms
+Any embedded map or tracking product needs its own consent design and review before it's built:
+- `app/utils/privacyConsent.ts` analytics consent doesn't cover affiliate tracking.
+- Unknown or declined consent blocks loading.
+- On iOS, an external browser handoff needs no ATT prompt, but an embedded tracker might.
 
-Update `app/public/terms.html` at its existing third-party services/links provisions. Confirm all served copies and deployment routes. Suggested draft:
+Recommendation: hide the CTA for accounts under 18 when a declared date of birth is available.
 
-> **Accommodation searches and affiliate links.** WanderBunnies may offer optional links or search tools through Stay22 and participating travel providers. We may receive a commission when you make an eligible booking through these links. Affiliate links are identified where they appear. Any payment, reservation, cancellation, change, or refund is governed by the terms of the provider with whom you book. WanderBunnies provides trip-planning tools and does not confirm a reservation merely because you view an offer, follow a link, or save a lodging in your itinerary. Before booking, verify the property's identity, dates, occupancy, total price, taxes, fees, availability, and cancellation conditions with the booking provider. Third-party offers can change. Nothing in this section limits rights or remedies that cannot lawfully be excluded.
+## 7. Terms, privacy and cookie updates
 
-Check that merchant-of-record and support descriptions match the actual partner flow. Separate WanderBunnies subscription cancellation from hotel-booking cancellation. Do not import Stay22's business indemnity or a prohibition on user claims into consumer terms. Do not describe a blanket waiver of privacy rights or guarantee rates/refunds.
+The legal pages already cover affiliate links for GetYourGuide. Extend them, and **name each active stays provider in one list** so a switch edits a single line in each document. Publish before turning on traffic, and before any provider switch.
 
-Determine whether material changes require notice or renewed acceptance under existing terms and applicable law. Use the existing account/version mechanism if available; record any needed implementation work rather than assuming signup consent covers new tracking.
+### Consumer terms (`app/public/terms.html`)
+
+In §7 "External services and affiliate links", add Stay22 and the booking sites it links to. Add these lodging points:
+- Bookings, payment, cancellation and refunds are governed by the booking provider.
+- Saving a lodging or following a link doesn't confirm a reservation.
+- Verify the property, dates, occupancy, total price, taxes, fees and cancellation terms before booking.
+- Offers can change.
+- Nothing limits rights that can't lawfully be excluded.
+
+**Fix a conflict.** §7 currently says commissions come "at no additional cost to you." Keep that only if every active provider confirms it; otherwise use "We may receive a commission if you make a qualifying booking."
+
+Also:
+- Keep cancelling a WanderBunnies subscription separate from cancelling a hotel booking.
+- Don't bring partner indemnity or user-claim terms into consumer terms.
 
 ### Privacy notice and cookies
 
-- Edit the canonical `docs/legal/privacy-policy.md`, including its version/effective/change metadata. Describe the actual Stay22 flow, data categories, purposes, recipients, legal basis, international transfers, retention, and rights/contact process. Distinguish Stay22 from the ultimate booking provider and confirm their respective processing roles.
-- Run `node scripts/build-legal-pages.mjs` to regenerate `app/public/privacy.html` and `server/src/legal/privacyPolicyHtml.ts`; verify with `--check`. Do not edit generated privacy outputs directly.
-- Update `app/public/cookies.html` and `app/public/privacy-choices.html` only to reflect technologies actually used. Publish applicable partner/processor disclosures and update mobile store privacy declarations where required.
-- Update `docs/legal-document-inputs.md` with verified partner facts and remaining decisions. Required legal disclosures remain published after rollback while retained data or historic bookings still make them relevant.
+- In `docs/legal/privacy-policy.md`, extend the existing "Affiliate and external-link data" row and the recipients list to the stays provider and the booking sites. Add lodging location, dates and occupancy to the data list, and update the version and change metadata.
+- Regenerate with `node scripts/build-legal-pages.mjs` and verify with `--check`. Don't hand-edit the generated outputs.
+- The link-only MVP likely needs no change to `cookies.html` or `privacy-choices.html`, because nothing is set on our origin. Confirm that, and revisit it for any embed.
+- Record verified partner facts in `docs/legal-document-inputs.md`.
 
 ## 8. Implementation sequence
 
-1. **Discovery and approval:** collect partner docs and contractual changes; document URL parameters, allowed platforms, data flows, responsibilities, and legal decisions. Owner: product/operator with legal review. Exit: scope and commercial/data conditions recorded.
-2. **Dark foundation:** implement disabled seeds, fail-closed gates, feature response/props, validated handoff, configuration checks, and mocked provider tests. Owner: backend/frontend. Exit: no Stay22 traffic with flags off, missing, or unavailable.
-3. **Legal and MVP:** prepare reviewed legal changes and disclosed Lodging CTAs; publish/version notices before activating traffic. Owner: product/legal/frontend. Exit: link-only web/native verification and acceptance criteria pass.
-4. **Limited rollout:** use supported authenticated cohort controls or an isolated deployment first; enable master plus links only. Monitor first-party failures and partner reporting manually. Owner: operator. Exit: stable flow and no unexpected collection/navigation behavior.
-5. **Expansion:** add gaps/base stays, then separately reviewed map/public placements. Automatic optimization and transportation require their own approved scope and consent design. Owner: product/engineering.
+1. **Discovery and approval** (owner: Bryan, with legal):
+   - Stay22 account and affiliate ID
+   - the §4 confirmations, including the right to switch
+   - `stay22-phase-0-contract.md`
+
+   *Exit:* a verified parameter list and accepted terms.
+2. **Shared affiliate refactor.** Extract the token, allowlist, redirect and CTA-shell code from GetYourGuide, and make the token opaque in the path. *Exit:* GetYourGuide tests unchanged and green on pg-mem and the Firestore emulator.
+3. **Provider-neutral stays foundation:**
+   - contracts, context builder, link service, registry
+   - a fake test provider and the shared contract test suite
+   - routes, flags, the capability field
+
+   *Exit:* no URL is produced with flags off or missing, no provider, or a failing lookup.
+4. **Stay22 adapter.** Config, URL builder, allowlist, contract-suite pass. *Exit:* the adapter passes with real documented parameters.
+5. **Client and legal.** `FindStayCta`, Lodging tab wiring for both dialog variants, terms and privacy updates. *Exit:* web plus real iOS and Android checks pass, and the legal pages are published.
+6. **Limited rollout.** Turn the flags on for an admin cohort, then everyone. Watch for redirect 404s and 429s, and check partner reporting by hand. *Exit:* two weeks stable, with clicks visible in Stay22 reports.
+7. **Expansion.** `lodgingGaps.ts` and the Overview row. The 8-week H2 go/no-go uses these numbers.
 
 ## 9. Verification and acceptance criteria
 
-- Backend tests cover master off, child off, missing rows, lookup errors, misconfiguration, no admin bypass, unauthorized trip access, hostile URLs, and invalid dates. Assert zero provider calls in every denied case.
-- Frontend tests cover hidden controls until flags resolve, local disclosure, both dialog variants, existing booking URLs, and no status/cost mutation. Existing lodging creation/import/editing remains usable with Stay22 disabled.
-- Web network inspection confirms zero Stay22 requests before interaction, no sensitive referrer/analytics leakage, correct navigation, and graceful popup/provider failures. Native checks verify external opening and no embedded dependency.
-- Future map tests cover no consent, withdrawal, privacy signals, stale clients, and master-off unmounting. Public-placement tests prove no private data disclosure.
-- Test shutdown across cache expiry and app resume. Previously opened third-party pages are explicitly outside the shutdown guarantee.
-- Run focused server/frontend suites, appropriate TypeScript checks, legal-page tests, and `node scripts/build-legal-pages.mjs --check` after implementation. This planning-only change does not require application tests.
+- **Contract suite**, run for every provider and the fake:
+  - HTTPS only, on allowed hosts only
+  - none of the §6 forbidden fields, checked against a fixture trip that has names, notes and IDs
+  - `null` for unsupported contexts
+  - deterministic output
+- **Server**, on pg-mem **and** `JEST_DB_PROVIDER=firebase`:
+  - feature flag off, provider flag off, missing rows, lookup throws, provider not configured, empty provider list
+  - provider fallback order
+  - no admin bypass
+  - non-member and follower get 404
+  - tampered or expired token, and a token for a provider that has since been disabled
+  - invalid or missing dates, month-only trip
+  - rate limit
+  - flag turned off between descriptor and redirect gives 404
+- **Isolation:** a test fails if `app/` contains `stay22`.
+- **Client:**
+  - CTA hidden until capabilities resolve, and when unavailable
+  - disclosure shown next to the CTA
+  - both dialog variants
+  - never shown for Booked, Completed or Cancelled lodging, or for followers
+  - an unknown `method` renders nothing
+  - a click changes no lodging, status or cost
+  - popup-blocked fallback
+- **Manual:**
+  - zero provider requests before the click
+  - no referrer leakage
+  - our access logs contain no readable destination or dates
+  - real devices open the system browser
+- **Shutdown and switch:**
+  - turning off either flag makes the redirect 404 within 60 s
+  - the CTA hides on the next capabilities fetch
+  - changing `STAYS_LINK_PROVIDERS` takes effect without a client release
+- **Final checks:** `tsc` in both packages, legal-page tests, `node scripts/build-legal-pages.mjs --check`.
 
-## 10. Measurement, operations, and open decisions
+## 10. Measurement, operations and open decisions
 
-Measure aggregate eligible views/clicks only through the existing consent-aware analytics path; do not add a separate tracking bypass. Use partner reports for commissions, reversals, and payouts without promising booking-level attribution unsupported by the contract. Review revenue alongside broken handoffs, complaints, and lodging-task completion. Avoid synthetic vendor monitoring unless expressly authorized by Stay22.
+**Measurement:**
+- clicks by placement and provider, through the consent-aware metric
+- commissions, reversals and payouts from partner reports only
+- review revenue alongside broken handoffs, complaints, and whether travelers go on to add a lodging
+- monitoring our own redirect is fine; synthetic monitoring of the partner needs their permission
 
-Rollback: disable `stay22_integration`, confirm backend denial and client refresh, remove/unmount provider resources, retain legal/history records, and investigate before re-enabling. Review partner terms periodically and reconcile unpaid commissions. Never retry background vendor work after shutdown.
+**Rollback:** turn off `stays_partner_links`, which hides the feature for every provider, or turn off `stays_provider_<id>`, which falls back to the next provider or hides the CTA. Keep the legal pages. No background vendor work exists to cancel.
 
-Open decisions before coding: approved Stay22 product and docs; exact handoff/navigation design; legal contracting entity and contract changes; web/native scope; consent and minor-account policy; allowed occupancy fields; tier availability (recommend all tiers initially); cohort support; and whether any durable data is necessary. No credentials, new vendor services, or production activation are part of this plan document.
+**Open decisions:**
+
+1. Stay22 account, affiliate ID, and confirmation of the deep-link parameters (blocks step 4).
+2. The contracting entity, and whether to seek a contract amendment (including the switching rights in §4).
+3. Occupancy: send the lodging's own traveler count and rooms (recommended), or leave it to the provider page?
+4. Minor accounts: hide the CTA for travelers under 18 (recommended)?
+5. Tier availability: all tiers (recommended; this is free-tier revenue per gap-closing §11.2.4).
+6. Whether the "no additional cost" wording in the terms survives (§7).
+7. `Proposed` lodging placement in the MVP, or later?
+
+No credentials, new vendor services or production activation are part of this plan document.
