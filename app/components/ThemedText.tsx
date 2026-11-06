@@ -27,7 +27,7 @@ export const ThemedText = forwardRef<Text, ThemedTextProps>(function ThemedText(
   // The provider wraps the Text rather than its children, so the Text's own children stay exactly as written.
   return (
     <InsideText.Provider value>
-      <Text ref={ref} {...rest} style={nested && !tone ? style : [themeStyle('components_ThemedText_1', { color: color }, _styleTheme), style]} />
+      <Text ref={ref} {...rest} style={nested && !tone ? style : [themeStyle('components_ThemedText_1', { color: color, link: tone === 'link' }, _styleTheme), style]} />
     </InsideText.Provider>
   );
 });

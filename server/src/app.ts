@@ -280,8 +280,17 @@ app.post('/api/auth/exchange', (req, res) => {
 });
 
 app.get('/api/auth/google/callback', async (req, res, next) => {
+  const rawState = typeof req.query.state === 'string' ? req.query.state : undefined;
+  const state = rawState ? decodeOAuthState(rawState) : null;
+  if (rawState && !state) {
+    redirectToLoginWithError(req, res, webUrl, 'google_callback_failed');
+    return;
+  }
+  const redirectUri = state?.redirectUri && isRedirectUriAllowed(state.redirectUri, webUrl)
+    ? state.redirectUri
+    : undefined;
   passport.authenticate('google', { session: false }, async (err: any, user: any) => {
-    if (err || !user) return res.redirect('/login?auth_error=google_failed');
+    if (err || !user) return redirectToLoginWithError(req, res, webUrl, 'google_login_failed');
     try {
       await ensureDefaultGroupForUser(user.id, user.email);
       await ensureCurrentUserTier(user.id, getSeededTierForEmail(user.email));
@@ -290,9 +299,13 @@ app.get('/api/auth/google/callback', async (req, res, next) => {
       const role = await getUserRole(user.id);
       const token = createToken({ userId: user.id, email: user.email, provider: user.provider, role });
       const authCode = createRedirectTokenExchangeCode({ token, requirePasswordSetup: requiresPasswordSetup });
+      if (redirectUri) {
+        res.redirect(appendAuthCodeToRedirect(redirectUri, authCode));
+        return;
+      }
       res.redirect(`/login?auth_code=${encodeURIComponent(authCode)}`);
     } catch (e) {
-      res.redirect('/login?auth_error=post_login_failed');
+      redirectToLoginWithError(req, res, webUrl, 'google_post_login_failed');
     }
   })(req, res, next);
 });

@@ -49,7 +49,7 @@ describe('shared dialog layouts', () => {
     expect(overlay.props.style).toContain(styles.modalOverlay);
     expect(flattenStyle(overlay.props.style)).toMatchObject({
       position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-      justifyContent: 'flex-start', alignItems: 'center',
+      justifyContent: 'center', alignItems: 'center',
     });
     expect(overlay.props.accessibilityViewIsModal).toBe(true);
     expect(overlay.props.accessibilityLabel).toBe('Layout Check');

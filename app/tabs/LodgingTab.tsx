@@ -27,6 +27,7 @@ import { ItemRating } from '../components/StarRating';
 import EditableDataGrid, { type GridCellError, type GridColumn } from '../components/EditableDataGrid';
 import { ITINERARY_STATUSES } from '../utils/itineraryStatus';
 import { fixedTableColumn } from '../utils/tableColumns';
+import { scrollClearanceStyle, usePageScrollClearance } from '../contexts/PageScrollClearanceContext';
 
 type LodgingTabProps = {
   backendUrl: string;
@@ -91,6 +92,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
   featureTapToEditTables = true,
 }) => {
   const _styleTheme = useStyleTheme();
+  const scrollClearance = usePageScrollClearance();
   const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const { isPhoneLayout } = useLayoutBreakpoints();
   const [selectedLodging, setSelectedLodging] = useState<Lodging | null>(null);
@@ -382,7 +384,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
       </View>
       {gridMessage ? <Text style={styles.helperText}>{gridMessage}</Text> : null}
 
-      <ScrollView style={themeStyle('tabs_LodgingTab_16', {  }, (theme ?? _styleTheme))} contentContainerStyle={themeStyle('tabs_LodgingTab_17', {  }, (theme ?? _styleTheme))}>
+      <ScrollView style={themeStyle('tabs_LodgingTab_16', {  }, (theme ?? _styleTheme))} contentContainerStyle={[themeStyle('tabs_LodgingTab_17', {  }, (theme ?? _styleTheme)), scrollClearanceStyle(scrollClearance)]}>
       {tableEditing ? <>
         <HorizontalTableScroll style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
           <EditableDataGrid rows={sortedGridRows} columns={gridColumns} disabled={gridSaving} cellErrors={gridErrors} stagedDeleteIds={gridDeleteIds} onCellChange={changeGridCell} onDeleteRow={toggleGridDelete} onUndo={undoGridChange} onRedo={redoGridChange} sortKey={lodgingSort.key} sortDirection={lodgingSort.direction} onSort={sortLodgingTable} styles={styles} theme={theme} />

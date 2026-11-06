@@ -29,7 +29,7 @@ import PendingExpenseLogoutDialog from './components/PendingExpenseLogoutDialog'
  */
 import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, AppState, Image, Linking, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useColorScheme } from 'react-native';
-import { SafeAreaView as NativeSafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView as NativeSafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import Constants from 'expo-constants';
@@ -210,13 +210,14 @@ import { fixedTableColumn } from './utils/tableColumns';
 import { exportCsv } from './utils/csvExport';
 import type { PresenceUser } from '../packages/messaging/src/types';
 import { isTimeFormat, setTimeFormatPreference } from './utils/timeFormat';
+import { PAGE_FAB_CLEARANCE, PageScrollClearanceContext } from './contexts/PageScrollClearanceContext';
 
 const WEB_DOCUMENT_TITLE = 'WanderBunnies | Collaborative Trip Planner';
 
 WebBrowser.maybeCompleteAuthSession();
 
 const TOP_BANNER_ICON = require('./assets/wanderbunnies-reference.png');
-type SafeAreaViewCompatProps = React.ComponentProps<typeof View>;
+type SafeAreaViewCompatProps = React.ComponentProps<typeof View> & { edges?: Array<'top' | 'right' | 'bottom' | 'left'> };
 const SafeAreaView = NativeSafeAreaView as unknown as React.ComponentType<SafeAreaViewCompatProps>;
 
 // GroupInvite + PendingTripShareInvite now live in app/types/invites.ts so
@@ -3430,14 +3431,19 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     </ScrollView>
   );
 
+  // A bounded page scrolls inside itself, so the room for the floating chat buttons goes at the end of its own
+  // scroll area (through the context) rather than as empty space under the page.
   const renderBoundedPage = (content: React.ReactNode) => (
     <View style={styles.pageViewport}>
-      <View style={[styles.pageViewportInner, iosSafariContentInsetStyle, showBottomTabs && activeTripId ? styles.pageViewportInnerFabClearance : null]}>{content}</View>
+      <View style={[styles.pageViewportInner, iosSafariContentInsetStyle]}>
+        <PageScrollClearanceContext.Provider value={showBottomTabs && activeTripId ? PAGE_FAB_CLEARANCE : 0}>{content}</PageScrollClearanceContext.Provider>
+      </View>
     </View>
   );
 
   // Phone navigation: Home · Itinerary · (+ Add) · Blog · Profile at the bottom of the screen.
   const showBottomTabs = Boolean(userToken) && isPhoneLayout && activePage !== 'create-trip';
+  const safeAreaInsets = useSafeAreaInsets();
   const canAddToTrip = Boolean(activeTripId) && !isFollowingMode && !offlineReadOnly;
   const canImportConfirmations = userRole === 'admin' || accountProfile.tierKey === 'premium' || accountProfile.tierKey === 'pro';
   const bottomTabAddOptions: AddOption[] = canAddToTrip
@@ -3470,11 +3476,12 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   };
 
   const mainWorkspace = (
-    <FloatingInsetContext.Provider value={showBottomTabs ? BOTTOM_TAB_BAR_HEIGHT : 0}>
+    <FloatingInsetContext.Provider value={showBottomTabs ? BOTTOM_TAB_BAR_HEIGHT + safeAreaInsets.bottom : 0}>
     <PresenceProvider activeTripId={activeTripId} userToken={userToken}>
       <ChatProvider activeTripId={activeTripId} userToken={userToken}>
     <KeyboardViewport testID="app-keyboard-viewport">
-    <SafeAreaView style={[styles.container, iosSafariSafeAreaStyle]}>
+    {/* With the tab bar shown, the bar itself covers the home-indicator area, so the bottom edge is left to it. */}
+    <SafeAreaView edges={showBottomTabs ? ['top', 'left', 'right'] : undefined} style={[styles.container, iosSafariSafeAreaStyle]}>
       <PendingExpenseLogoutDialog visible={pendingLogoutVisible} count={pendingExpenses.entries.length} busy={pendingLogoutBusy} error={pendingLogoutError}
         onCancel={() => setPendingLogoutVisible(false)}
         onSync={() => { setPendingLogoutVisible(false); pendingExpenses.syncNow(); }}
@@ -4652,6 +4659,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           addTitle={activePage === 'overview' ? 'Add to this day' : activeTrip?.name ? `Add to ${activeTrip.name}` : 'Add to trip'}
           onNavigate={(page) => requestPageChange(page as Page)}
           onChooseAdd={handleChooseAdd}
+          bottomInset={safeAreaInsets.bottom}
         />
       ) : null}
       <ChatOverlay

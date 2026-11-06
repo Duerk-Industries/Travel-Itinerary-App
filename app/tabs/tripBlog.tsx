@@ -64,6 +64,7 @@ import DropdownOptionButton from '../components/DropdownOptionButton';
 import { isTripActiveToday, localDateString } from '../utils/offlineTripCache';
 import { trimBlogNoteEnd } from '../utils/trimBlogNoteEnd';
 import { formatClockTime, formatTimeOfDay } from '../utils/timeFormat';
+import { scrollClearanceStyle, usePageScrollClearance } from '../contexts/PageScrollClearanceContext';
 
 // Re-exported for backward compatibility — app/tests/tripBlogMedia.test.ts and any other existing
 // consumer imports these names from this file; the actual implementations now live in
@@ -105,6 +106,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], t
     return () => clearTimeout(timer);
   }, []);
   const _styleTheme = useStyleTheme();
+  const scrollClearance = usePageScrollClearance();
   const theme = resolveStyleTheme(_providedTheme, _styleTheme);
   const { isPhoneLayout } = useLayoutBreakpoints();
   const { width: viewportWidth } = useWindowDimensions();
@@ -1344,7 +1346,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], t
       <ScrollView
         ref={scrollRef}
         style={themeStyle('tabs_tripBlog_6', {  }, (theme ?? _styleTheme))}
-        contentContainerStyle={themeStyle('tabs_tripBlog_7', {  }, (theme ?? _styleTheme))}
+        contentContainerStyle={[themeStyle('tabs_tripBlog_7', {  }, (theme ?? _styleTheme)), scrollClearanceStyle(scrollClearance)]}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
         showsVerticalScrollIndicator
