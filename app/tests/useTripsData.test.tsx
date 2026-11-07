@@ -184,6 +184,45 @@ describe('useTripsData', () => {
     );
   });
 
+  it('retries member loading after a temporary server failure and preserves it on refresh failure', async () => {
+    const fetchMock = global.fetch as jest.Mock;
+    fetchMock
+      .mockImplementationOnce(() => createJsonResponse([
+        { id: 'trip-1', groupId: 'group-1', name: 'Paris' },
+      ]))
+      .mockImplementationOnce(() => createJsonResponse({ error: 'Unavailable' }, false, 503))
+      .mockImplementationOnce(() => createJsonResponse([
+        { id: 'member-1', firstName: 'Alex', status: 'active' },
+      ]))
+      .mockRejectedValueOnce(new TypeError('Network request failed'));
+    const { result } = renderHook(() => useTripsDataHarness());
+    await act(async () => { await result.current.fetchTrips(); });
+    expect(result.current.groupMembers).toEqual([]);
+    await act(async () => { await result.current.fetchGroupMembersForActiveTrip(); });
+    expect(result.current.groupMembers[0]?.id).toBe('member-1');
+    await act(async () => { await result.current.fetchGroupMembersForActiveTrip(); });
+    expect(result.current.groupMembers[0]?.id).toBe('member-1');
+  });
+
+  it('ignores a failed roster request from a previously selected trip', async () => {
+    let rejectOldRequest!: (error: Error) => void;
+    const fetchMock = global.fetch as jest.Mock;
+    fetchMock.mockImplementation((url: string) => {
+      if (url.endsWith('/api/trips')) return createJsonResponse([
+        { id: 'trip-1', groupId: 'group-1', name: 'Paris' },
+        { id: 'trip-2', groupId: 'group-2', name: 'Rome' },
+      ]);
+      if (url.includes('/group-1/')) return new Promise((_resolve, reject) => { rejectOldRequest = reject; });
+      return createJsonResponse([{ id: 'member-2', firstName: 'Sam', status: 'active' }]);
+    });
+    const { result } = renderHook(() => useTripsDataHarness());
+    await act(async () => { await result.current.fetchTrips(); });
+    await act(async () => { result.current.setActiveTripId('trip-2'); });
+    await waitFor(() => expect(result.current.groupMembers[0]?.id).toBe('member-2'));
+    await act(async () => { rejectOldRequest(new Error('Old request failed')); });
+    expect(result.current.groupMembers[0]?.id).toBe('member-2');
+  });
+
   it('creates a trip and refreshes the trip list through the shared client flow', async () => {
     const fetchMock = global.fetch as jest.Mock;
     fetchMock

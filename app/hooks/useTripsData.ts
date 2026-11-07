@@ -75,6 +75,11 @@ export const useTripsData = ({
   const [trips, setTrips] = useState<Trip[]>([]);
   const [groupMembers, setGroupMembers] = useState<GroupMemberOption[]>([]);
   const suppressedGroupMemberFetchesRef = useRef<Map<string, string>>(new Map());
+  // Responses from a previous trip/session must not replace the current roster.
+  const memberContext = `${backendUrl}:${userToken}:${activeTripId}:${isFollowingMode}:${offlineMode}`;
+  const memberContextRef = useRef(memberContext);
+  memberContextRef.current = memberContext;
+  const memberRequestRef = useRef(0);
 
   const clearGroupMembers = useCallback(() => {
     setGroupMembers((current) => (current.length ? [] : current));
@@ -174,27 +179,33 @@ export const useTripsData = ({
       return [];
     }
 
+    const requestId = ++memberRequestRef.current;
+    const isCurrentRequest = () => memberContextRef.current === memberContext && memberRequestRef.current === requestId;
     try {
       const data = await requestJson<any[]>(`${backendUrl}/api/groups/${groupId}/members`, {
         token: userToken,
       });
+      if (!isCurrentRequest()) return [];
       suppressedGroupMemberFetchesRef.current.delete(groupId);
       const normalized = dedupeMembersByIdentity((Array.isArray(data) ? data : []).map(normalizeGroupMember));
       const visibleMembers = normalized.filter((member) => member.status !== 'removed');
       setGroupMembers(visibleMembers);
       return visibleMembers;
     } catch (error) {
+      if (!isCurrentRequest()) return [];
       if (error instanceof ApiClientError && error.status === 401) {
         onUnauthorized?.();
-      } else if (error instanceof ApiClientError) {
+      } else if (error instanceof ApiClientError && (error.status === 403 || error.status === 404)) {
         const message = String(error.message ?? `status ${error.status}`);
         suppressedGroupMemberFetchesRef.current.set(groupId, message);
         console.warn(`[groups] suppressing repeated member fetch for group=${groupId}: ${message}`);
       }
-      clearGroupMembers();
+      // Keep a loaded roster on transient failures and allow the next refresh to retry.
+      if (error instanceof ApiClientError && [401, 403, 404].includes(error.status)) clearGroupMembers();
       return [];
     }
   }, [
+    memberContext,
     activeTripId,
     backendUrl,
     clearGroupMembers,
@@ -209,7 +220,8 @@ export const useTripsData = ({
 
   useEffect(() => {
     suppressedGroupMemberFetchesRef.current.clear();
-  }, [activeTripId]);
+    clearGroupMembers();
+  }, [memberContext, clearGroupMembers]);
 
   useEffect(() => {
     if (offlineMode) return;
