@@ -160,6 +160,7 @@ Use the [current application and operator guides](README.md#current-application-
 - [R1: blog public visibility discovery](implementation_plans/r1-blog-visibility-discovery.md)
 - [R2: consistent trip-currency totals](implementation_plans/r2-currency-totals.md)
 - [Stay22 implementation plan](implementation_plans/stay22-implementation-plan.md)
+- [Stay22 Phase 0 partner contract record](implementation_plans/stay22-phase-0-contract.md)
 - [Stay22 integration plan (provider-isolated hotel links)](implementation_plans/stay22-integration-plan.md)
 
 ## implementation_plans/itinerary_improvement

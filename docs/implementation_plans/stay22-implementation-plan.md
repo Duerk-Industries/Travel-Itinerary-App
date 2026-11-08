@@ -1,7 +1,7 @@
 # Stay22 implementation plan
 
 Date: 2026-11-08
-Status: Ready to start. PRs 1–3 need no partner account; PR 4 needs the Phase 0 contract record.
+Status: Ready to start. Phase 0 record: [stay22-phase-0-contract.md](stay22-phase-0-contract.md) (link format verified 2026-11-08; commercial and legal items open). PRs 1–4 can be built now; the rollout waits on the open items.
 Design: [Stay22 integration plan](stay22-integration-plan.md) (what and why). This document covers **how**: the PRs, files, tests and rollout, in order.
 Parent: [gap-closing §11.3 H1](implementation-plan-gap-closing.md#h1-affiliate-links-p1--stay22-integration-plan)
 
@@ -15,7 +15,7 @@ Travelers get a **Find places to stay** partner link on the Lodging tab. It open
 | PR 1 | Extract the shared affiliate core from GetYourGuide (no behavior change) | No | ~2 days |
 | PR 2 | Provider-neutral stays layer, flags, routes and capability, with a fake provider | No | ~3 days |
 | PR 3 | Client: `FindStayCta` and Lodging tab wiring (renders nothing while the flags are off) | No | ~3 days |
-| PR 4 | Stay22 adapter and provider contract tests | **Yes** | ~1 day |
+| PR 4 | Stay22 adapter and provider contract tests | Link format only (verified) | ~1 day |
 | PR 5 | Terms and privacy updates | Facts from Phase 0 | ~1 day plus review |
 | Rollout | Test environment, admin cohort, everyone | Yes | ~2 weeks of observation |
 | Next | Overview "nights without a stay" row (`lodgingGaps.ts`) | No | ~2 days |
@@ -33,14 +33,14 @@ These came from reading the code. The design plan has been updated to match.
 
 ## Phase 0: partner prerequisites (owner: Bryan Duerk)
 
-Nothing here is code. It blocks PR 4 and the rollout, not PRs 1–3.
+Nothing here is code. **Recorded in [stay22-phase-0-contract.md](stay22-phase-0-contract.md).** The public link format is verified there, so PR 4 isn't blocked; the rollout is, until that record's open items are resolved.
 
-- [ ] Stay22 partner account; record the affiliate ID (`aid`).
-- [ ] Documented deep-link format: base URL, parameter names for location (coordinates, address or city), check-in, check-out, adults, rooms, and a campaign/sub-id for the placement code. Record the allowed hosts, including every redirect hop.
-- [ ] Written confirmation of use in web **and** native apps, inside signed-in private planning, and of the right to switch or add a provider ([design §4](stay22-integration-plan.md#4-partner-and-commercial-prerequisites-stay22)).
-- [ ] Terms review: the user-claims, indemnity, fee-forfeiture, data-rights, competitive-use and precedence sections. Commission rate, attribution window and payout terms recorded.
+- [ ] Stay22 partner account; record the affiliate ID (`aid`). *(Open item 1)*
+- [x] Documented deep-link format: base URL, parameters, campaign rule and allowed host. *(Verified 2026-11-08 from public docs; there's no rooms parameter. Confirm the redirect chain in the test environment.)*
+- [ ] Written confirmation of use in web **and** native apps *(the terms include mobile apps; in-app attribution and private-page use are open items 3–4)*, inside signed-in private planning, and of the right to switch or add a provider ([design §4](stay22-integration-plan.md#4-partner-and-commercial-prerequisites-stay22)).
+- [ ] Terms review: the user-claims, indemnity, fee-forfeiture, data-rights, competitive-use and precedence sections *(summarized in the record; counsel review is open item 6)*. Commission rate, attribution window and payout terms recorded *(not published; open item 2)*.
 - [ ] Whether "no additional cost to you" is true for Stay22 bookings (decides the terms wording in PR 5).
-- [ ] Write `docs/implementation_plans/stay22-phase-0-contract.md`, modeled on [getyourguide-phase-0-contract.md](getyourguide-phase-0-contract.md), with the above and the date checked.
+- [x] Write `docs/implementation_plans/stay22-phase-0-contract.md` *(done 2026-11-08; update it as the open items close)*.
 
 **Exit:** the contract record exists, with a parameter list that PR 4's fixtures can use verbatim.
 
@@ -220,7 +220,7 @@ The rate limiter writes to the database, so the Firestore run is required.
   - `id: 'stay22'`, `displayName: 'Stay22'`, `method: 'link_out'`
   - `isConfigured()` requires `STAY22_AFFILIATE_ID` and a valid `STAY22_DEEP_LINK_BASE_URL`
   - `allowedHosts()` comes from `STAY22_ALLOWED_HOSTS`, defaulting to the documented host(s)
-  - `buildSearchUrl(ctx)` maps the context to **only** the parameters recorded in the Phase 0 contract
+  - `buildSearchUrl(ctx)` maps the context to **only** the parameters in the record's [adapter mapping](stay22-phase-0-contract.md#adapter-mapping-pr-4-builds-exactly-this): `aid`, `lat`/`lng` or `address`, `checkin`/`checkout` (only when check-in is after today), `adults`, and `campaign` (the placement plus a fixed `wanderbunnies_app`)
   - the placement code goes in the campaign/sub-id parameter
   - returns `null` if the context has no location the provider accepts
 - **`server/src/config/stays.ts`:** add the three `STAY22_*` settings through `getEnvValue()`; list them in `server/.env.example` with placeholder values.

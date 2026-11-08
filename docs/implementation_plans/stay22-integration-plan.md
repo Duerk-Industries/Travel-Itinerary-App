@@ -129,7 +129,7 @@ Before production, get written confirmation of:
 - the allowed parameters and destinations, and branding rules
 - which products we may use
 
-Get the current technical docs, and record them in `docs/implementation_plans/stay22-phase-0-contract.md`, modeled on `getyourguide-phase-0-contract.md`.
+Get the current technical docs, and record them in [stay22-phase-0-contract.md](stay22-phase-0-contract.md). The public link format and a terms summary were recorded there on 2026-11-08; the account-specific items remain open.
 
 Legal review of the [Stay22 Affiliate Partner Terms](https://www.stay22.com/terms). These section references come from the version dated November 11, 2025; they weren't re-verified, so recheck at signing:
 
