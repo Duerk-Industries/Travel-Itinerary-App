@@ -87,6 +87,10 @@ Authentication, trip membership and server RBAC remain authoritative. Admin visi
 
 Expense splitting and coverage rollups run in `app/utils/costs.ts` and `coveredBy.ts`; server validation has a mirrored coverage helper. Keep both coverage implementations synchronized. Participant and payer selectors use active group members; an empty roster affects both controls. Test trip switches and refresh failures when changing roster loading.
 
+## Client data caching
+
+The app shell now supplies an account/environment/session-scoped TanStack Query client. Packing lists use persistent cached viewing and background revalidation; other screens retain existing fetch paths until migrated. See [shared screen caching](client-data-cache.md) for policies, encrypted native persistence, invalidation and migration instructions.
+
 ## Delivery boundaries
 
 Web assets are exported with `npm --prefix app run export:web`. Express can serve static SPA assets, and hosted web delivery also uses Firebase Hosting. `npm run build` builds the backend, not every client artifact. Native releases go through EAS/store workflows and cannot be rolled back by a web/API traffic switch. [Deployment](production-deployment-guide.md) and [rollout testing](operations/rollout-testing.md) cover the different release paths.

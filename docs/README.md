@@ -99,6 +99,8 @@ Start with these maintained guides. Implementation plans below capture design in
 
 ## Architecture and feature references
 
+- [Shared screen data caching](client-data-cache.md)
+
 - [Current application architecture](architecture.md)
 - [Activity/lodging import-export architecture](activity-lodging-import-export-architecture.md)
 - [Trip-blog social architecture](trip-blog-social-architecture.md)

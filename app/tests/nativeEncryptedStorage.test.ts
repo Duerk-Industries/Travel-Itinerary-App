@@ -201,3 +201,17 @@ it('resumes the native transactional queue after suspension and abandoned-lease 
   expect(send.mock.calls.map(call => (call as unknown as [typeof entry])[0].args.operationKey)).toEqual(['stable', 'stable-two']);
   expect(await store.read(key)).toEqual([]);
 });
+
+it('encrypts disposable screen caches and erases their ciphertext/key without touching pending work', async () => {
+  const cache = await import('../cache/screenCacheStorage.native');
+  const scope = 'wb.screen-cache.v1.server.owner';
+  await store.update(key, () => [entry]);
+  await cache.write(scope, JSON.stringify({ items: ['Passport'] }));
+  expect(await cache.read(scope)).toContain('Passport');
+  expect(await AsyncStorage.getItem(scope)).toBeNull();
+  const before = keys.size;
+  await cache.remove(scope);
+  expect(keys.size).toBe(before - 1);
+  expect(await store.read(key)).toEqual([entry]);
+  await expect(cache.remove(key)).rejects.toThrow('Invalid read cache scope');
+});

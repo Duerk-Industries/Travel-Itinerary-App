@@ -1,3 +1,5 @@
+import { ScreenCacheProvider } from './cache/ScreenCacheProvider';
+import { clearScreenCache } from './cache/screenCache';
 import { amountInTripCurrency, formatMoney } from '../packages/domain/src/money';
 import IconText from './components/IconText';
 import { getStandaloneTheme, applyDocumentLayout, buildStyles, rootErrorStyles, themeStyle, getAppTheme, hitSlop } from './theme/theme';
@@ -1566,6 +1568,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   };
 
   const logout = useCallback(() => {
+    if (userId) void clearScreenCache({ userId, environment: backendUrl }).catch(() => undefined);
     offlineUnlockEpochRef.current += 1;
     setOfflineUnlocking(false);
     setLodgings([]);
@@ -1610,7 +1613,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     // PresenceProvider and ChatProvider reset their state automatically when
     // userToken or activeTripId becomes null after clearSession().
     void clearSessionAsync();
-  }, [clearSessionState, clearTripsData, offlineOwner, userEmail, userId]);
+  }, [backendUrl, clearSessionState, clearTripsData, offlineOwner, userEmail, userId]);
   const [pendingLogoutBusy, setPendingLogoutBusy] = useState(false);
   const [pendingLogoutError, setPendingLogoutError] = useState<string | null>(null);
   const [pendingLogoutVisible, setPendingLogoutVisible] = useState(false);
@@ -4726,6 +4729,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   );
 
   return (
+    <ScreenCacheProvider userId={userId} environment={backendUrl} token={userToken}>
     <CalendarPreferenceContext.Provider value={accountProfile.calendarPreference ?? 'google'}>
     <ThemeProvider theme={theme}>
     <NavigationContainer
@@ -4826,6 +4830,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     </NavigationContainer>
     </ThemeProvider>
     </CalendarPreferenceContext.Provider>
+    </ScreenCacheProvider>
   );
 };
 

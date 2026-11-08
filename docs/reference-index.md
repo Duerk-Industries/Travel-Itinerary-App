@@ -17,6 +17,8 @@ Use the [current application and operator guides](README.md#current-application-
 
 ## General guides
 
+- [Shared screen data cache](client-data-cache.md)
+
 - [Activity and Lodging CSV Import/Export Architecture](activity-lodging-import-export-architecture.md)
 - [Admin reference](admin.md)
 - [AI Capture, Evaluation & Improvement Plan](ai-capture-eval-plan.md)

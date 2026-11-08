@@ -1,8 +1,11 @@
+import { useScreenQuery, ScreenRequestError } from '../cache/useScreenQuery';
+import type { QueryKey } from '@tanstack/react-query';
+import type { PackingListItem, PackingListTraveler, PackingListV2Trip, PackingPresetPreference } from '../../server/src/types';
 import IconText from './IconText';
 import { packingListPrintCss, themeStyle, getAppTheme, type AppTheme } from '../theme/theme';
 
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useColorScheme } from 'react-native';
 import HorizontalTableScroll from './HorizontalTableScroll';
 import PackingListMatrix from './PackingListMatrix';
@@ -10,20 +13,19 @@ import SelectField, { type SelectFieldOption } from './SelectField';
 
 import { normalizePackingLabel } from '../utils/packingListNormalize';
 
-export type PackingItem = {
-  id: string;
-  category: string;
-  label: string;
-  position: number;
-  packedBy?: string[];
-  isCategory?: boolean;
+export type PackingItem = PackingListItem & { packedBy?: string[]; isCategory?: boolean };
+type PackingResponse = Partial<PackingListV2Trip> & { preferences?: Pick<PackingPresetPreference, 'presetKeys'> };
+const isPackingResponse = (value: unknown): value is PackingResponse => {
+  if (!value || typeof value !== 'object') return false;
+  const data = value as Record<string, unknown>;
+  const item = (entry: unknown) => Boolean(entry && typeof entry === 'object' &&
+    typeof (entry as PackingListItem).id === 'string' && typeof (entry as PackingListItem).label === 'string');
+  const groupsValid = Array.isArray(data.groups) && data.groups.every(group => group && typeof group.label === 'string' && Array.isArray(group.items) && group.items.every(item));
+  const itemsValid = Array.isArray(data.items) && data.items.every(item);
+  return (data.groups === undefined ? itemsValid : groupsValid) &&
+    (data.travelers === undefined || (Array.isArray(data.travelers) && data.travelers.every(traveler => traveler && typeof traveler.id === 'string' && typeof traveler.name === 'string')));
 };
-
-type Traveler = {
-  id: string;
-  name: string;
-  email?: string | null;
-};
+type Traveler = PackingListTraveler;
 
 type Props = {
   backendUrl: string;
@@ -127,12 +129,12 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
   const _styleTheme = useStyleTheme();
   const colorScheme = useColorScheme();
   const theme = providedTheme ?? getAppTheme('auto', colorScheme);
+  const [hasLoaded, setHasLoaded] = useState(false);
   const [items, setItems] = useState<PackingItem[]>([]);
   const [travelers, setTravelers] = useState<Traveler[]>([]);
   const [draftItems, setDraftItems] = useState<PackingItem[]>([]);
   const [pendingFocusId, setPendingFocusId] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [v2, setV2] = useState(false);
@@ -141,6 +143,7 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
   const [tripPresetKeys, setTripPresetKeys] = useState<string[]>([]);
   const [sources, setSources] = useState<PackingSource[]>([]);
   const [currentTravelerId, setCurrentTravelerId] = useState<string | null>(null);
+  const pendingChecks = useRef(new Set<string>());
   const userPresetRequestQueue = useRef<Promise<void>>(Promise.resolve());
 
   const url = endpointFor(variant, backendUrl, tripId);
@@ -227,27 +230,50 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
       ? ((data.manualItems ?? data.groups.find((group: any) => group.kind === 'trip_manual')?.items ?? []) as PackingItem[])
       : nextItems.filter((item: PackingItem) => !item.isCategory));
     setTravelers(data.travelers ?? []);
+    setHasLoaded(true);
   };
 
-  const load = useCallback(async () => {
-    if (!canLoad) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(url, { headers });
+  const cached = useScreenQuery<PackingResponse>({
+    queryKey: ['packing', variant, tripId ?? 'account'],
+    enabled: canLoad,
+    paused: editMode || saving,
+    policy: variant === 'admin' ? 'sensitive' : 'trip',
+    validate: isPackingResponse,
+    fetcher: async signal => {
+      const res = await fetch(url, { headers, signal });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error ?? 'Unable to load packing list');
-      applyResponse(data);
-    } catch (err: any) {
-      setError(err.message ?? 'Unable to load packing list');
-    } finally {
-      setLoading(false);
+      if (!res.ok) throw new ScreenRequestError(data?.error ?? 'Unable to load packing list', res.status);
+      return data;
+    },
+  });
+  const mutationError = (message: string, status: number) => {
+    if ([401, 403].includes(status)) {
+      cached.forget();
+      setItems([]); setDraftItems([]); setTravelers([]); setSources([]); setPresets([]); setHasLoaded(false);
     }
-  }, [canLoad, headers, url]);
-
+    return new ScreenRequestError(message, status);
+  };
+  const runPackingWrite = <T,>(operation: () => Promise<T>) => cached.runWrite(operation,
+    variant === 'trip' ? [] : [['packing'] as QueryKey]);
+  const loading = cached.isFetching;
+  const load = cached.refresh;
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (cached.data && !editMode && !saving && !cached.isWriting) applyResponse(cached.data);
+    if (cached.error) setError(cached.error.message);
+
+    if (cached.error instanceof ScreenRequestError && [401, 403, 404].includes(cached.error.status)) {
+      setItems([]); setDraftItems([]); setTravelers([]); setSources([]); setPresets([]);
+    }
+  }, [cached.data, cached.error, cached.isWriting, editMode, saving]);
+  useEffect(() => {
+    if (cached.data && !cached.error) setError(null);
+  }, [cached.data, cached.error]);
+  const commitResponse = (data: PackingResponse) => {
+    if (!isPackingResponse(data)) throw new Error('The server returned an invalid packing list.');
+    cached.publish(data);
+    applyResponse(data);
+    setError(null);
+  };
 
   const groupedItems = useMemo(() => {
     const source = [...(editMode ? draftItems : items)].sort(comparePackingItems);
@@ -296,7 +322,7 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
     setDraftItems((prev) => [item, ...prev].map((entry, pos) => (themeStyle('components_PackingListTable_10', { entry: entry, pos: pos }, (theme ?? _styleTheme)))));
   };
 
-  const persistItems = async (nextDraftItems: PackingItem[], closeEditor: boolean) => {
+  const persistItems = (nextDraftItems: PackingItem[], closeEditor: boolean) => runPackingWrite(async () => {
     setSaving(true);
     setError(null);
     try {
@@ -309,15 +335,15 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
         body: JSON.stringify({ items: payload, preferences: { presetKeys: selectedPresetKeys }, reason: 'Updated packing list defaults' }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error ?? 'Unable to save packing list');
-      applyResponse(data);
+      if (!res.ok) throw mutationError(data?.error ?? 'Unable to save packing list', res.status);
+      commitResponse(data);
       if (closeEditor) setEditMode(false);
     } catch (err: any) {
       setError(err.message ?? 'Unable to save packing list');
     } finally {
       setSaving(false);
     }
-  };
+  });
 
   const save = async () => {
     await persistItems(draftItems, true);
@@ -335,20 +361,20 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
     }
     setSaving(true);
     setError(null);
-    void fetch(`${backendUrl}/api/account/packing-list/${encodeURIComponent(item.id)}`, { method: 'DELETE', headers })
+    void runPackingWrite(() => fetch(`${backendUrl}/api/account/packing-list/${encodeURIComponent(item.id)}`, { method: 'DELETE', headers })
       .then(async (res) => {
         const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data?.error ?? 'Unable to remove packing item');
-        applyResponse(data);
+        if (!res.ok) throw mutationError(data?.error ?? 'Unable to remove packing item', res.status);
+        commitResponse(data);
       })
       .catch((err: any) => {
         setError(err.message ?? 'Unable to remove packing item');
         void load();
       })
-      .finally(() => setSaving(false));
+      .finally(() => setSaving(false)));
   };
 
-  const enqueueUserPresetSave = (presetKey: string): void => {
+  const enqueueUserPresetSave = (presetKey: string): Promise<void> => {
     userPresetRequestQueue.current = userPresetRequestQueue.current
       .catch(() => undefined)
       .then(async () => {
@@ -357,7 +383,7 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
           headers,
         });
         const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data?.error ?? 'Unable to add preset');
+        if (!res.ok) throw mutationError(data?.error ?? 'Unable to add preset', res.status);
         // The server assigns fresh ids to every item on every write (see
         // replaceUserPackingPreferencesV2), not just the newly-added preset's
         // items. Without applying the response here, every existing item's id
@@ -365,15 +391,16 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
         // the background — so a later delete-by-id call silently 404s and
         // gets "undone" by its own reload. Sync local state with what the
         // server actually stored so ids stay valid for later edits/deletes.
-        applyResponse(data);
+        commitResponse(data);
       })
       .catch((err: any) => {
         setError(err.message ?? 'Unable to add preset');
         void load();
       });
+    return userPresetRequestQueue.current;
   };
 
-  const addPreset = async (presetKey: string) => {
+  const addPreset = (presetKey: string) => runPackingWrite(async () => {
     if (!isTrip) {
       if (presetKey === 'general') return;
       const preset = presets.find((candidate) => candidate.key === presetKey);
@@ -401,29 +428,29 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
       setDraftItems(merged);
       setSelectedPresetKeys(['general']);
       setEditMode(true);
-      enqueueUserPresetSave(presetKey);
+      await enqueueUserPresetSave(presetKey);
       return;
     }
     try {
       const res = await fetch(`${url}/presets`, { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ presetKey }) });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error ?? 'Unable to add preset');
-      applyResponse(data);
+      if (!res.ok) throw mutationError(data?.error ?? 'Unable to add preset', res.status);
+      commitResponse(data);
     } catch (err: any) {
       setError(err.message ?? 'Unable to add preset');
     }
-  };
+  });
 
-  const removePreset = async (presetKey: string) => {
+  const removePreset = (presetKey: string) => runPackingWrite(async () => {
     try {
       const res = await fetch(`${url}/presets/${encodeURIComponent(presetKey)}`, { method: 'DELETE', headers });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error ?? 'Unable to remove preset');
-      applyResponse(data);
+      if (!res.ok) throw mutationError(data?.error ?? 'Unable to remove preset', res.status);
+      commitResponse(data);
     } catch (err: any) {
       setError(err.message ?? 'Unable to remove preset');
     }
-  };
+  });
 
   const availableTripSources = useMemo<PackingSource[]>(() => {
     if (sources.length) return sources;
@@ -437,7 +464,7 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
     return presetSources;
   }, [presets, sources, tripPresetKeys]);
 
-  const toggleTripSource = async (source: PackingSource) => {
+  const toggleTripSource = (source: PackingSource) => runPackingWrite(async () => {
     try {
       const res = await fetch(`${url}/sources`, {
         method: 'PATCH',
@@ -445,12 +472,12 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
         body: JSON.stringify({ kind: source.kind, key: source.key, enabled: !source.active }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error ?? 'Unable to update packing list source');
-      applyResponse(data);
+      if (!res.ok) throw mutationError(data?.error ?? 'Unable to update packing list source', res.status);
+      commitResponse(data);
     } catch (err: any) {
       setError(err.message ?? 'Unable to update packing list source');
     }
-  };
+  });
 
   const printList = () => {
     const printableTitle = printTitle ?? title ?? 'Packing list';
@@ -475,46 +502,61 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
     setError('Printing is available from a web browser.');
   };
 
-  const togglePacked = async (item: PackingItem, traveler: Traveler) => {
-    if (!isTrip || editMode) return;
-    const currentlyPacked = item.packedBy?.includes(traveler.id) ?? false;
-    setItems((prev) =>
-      prev.map((entry) =>
-        entry.id === item.id
-          ? {
-              ...entry,
-              packedBy: currentlyPacked
-                ? (entry.packedBy ?? []).filter((id) => id !== traveler.id)
-                : Array.from(new Set([...(entry.packedBy ?? []), traveler.id])),
-            }
-          : entry
-      )
-    );
-    try {
-      const res = await fetch(`${url}/checks`, {
-        method: 'PATCH',
-        headers: { ...headers, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ itemId: item.id, travelerId: traveler.id, packed: !currentlyPacked }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data?.error ?? 'Unable to save packing checkmark');
+  const togglePacked = (item: PackingItem, traveler: Traveler) => {
+    const cell = `${item.id}:${traveler.id}`;
+    if (pendingChecks.current.has(cell)) return Promise.resolve();
+    pendingChecks.current.add(cell);
+    return runPackingWrite(async () => {
+      if (!isTrip || editMode) return;
+      const currentlyPacked = item.packedBy?.includes(traveler.id) ?? false;
+      setItems((prev) =>
+        prev.map((entry) =>
+          entry.id === item.id
+            ? {
+                ...entry,
+                packedBy: currentlyPacked
+                  ? (entry.packedBy ?? []).filter((id) => id !== traveler.id)
+                  : Array.from(new Set([...(entry.packedBy ?? []), traveler.id])),
+              }
+            : entry
+        )
+      );
+      try {
+        const res = await fetch(`${url}/checks`, {
+          method: 'PATCH',
+          headers: { ...headers, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ itemId: item.id, travelerId: traveler.id, packed: !currentlyPacked }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw mutationError(data?.error ?? 'Unable to save packing checkmark', res.status);
+        }
+        if (cached.data) {
+          const update = (entry: PackingItem) => entry.id !== item.id ? entry : {
+            ...entry, packedBy: currentlyPacked ? (entry.packedBy ?? []).filter(id => id !== traveler.id)
+              : Array.from(new Set([...(entry.packedBy ?? []), traveler.id])),
+          };
+          cached.publish(previous => ({ ...previous,
+            ...(Array.isArray(previous?.items) ? { items: previous.items.map(update) } : {}),
+            ...(Array.isArray(previous?.groups) ? { groups: previous.groups.map(group => ({ ...group, items: (group.items ?? []).map(update) })) } : {}),
+          }));
+        }
+      } catch (err: any) {
+        // Restore the exact cell optimistically changed above. Previously HTTP 4xx/5xx responses
+        // were treated as success, leaving a temporary checkmark that disappeared on navigation.
+        setItems((prev) => prev.map((entry) => {
+          if (entry.id !== item.id) return entry;
+          const packedBy = entry.packedBy ?? [];
+          return {
+            ...entry,
+            packedBy: currentlyPacked
+              ? Array.from(new Set([...packedBy, traveler.id]))
+              : packedBy.filter((id) => id !== traveler.id),
+          };
+        }));
+        setError(err?.message ?? 'Unable to save packing checkmark');
       }
-    } catch (err: any) {
-      // Restore the exact cell optimistically changed above. Previously HTTP 4xx/5xx responses
-      // were treated as success, leaving a temporary checkmark that disappeared on navigation.
-      setItems((prev) => prev.map((entry) => {
-        if (entry.id !== item.id) return entry;
-        const packedBy = entry.packedBy ?? [];
-        return {
-          ...entry,
-          packedBy: currentlyPacked
-            ? Array.from(new Set([...packedBy, traveler.id]))
-            : packedBy.filter((id) => id !== traveler.id),
-        };
-      }));
-      setError(err?.message ?? 'Unable to save packing checkmark');
-    }
+    }).finally(() => pendingChecks.current.delete(cell));
   };
 
   if (!canLoad) return null;
@@ -551,8 +593,11 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
           )}
         </View>
       </View>
-      {loading ? <Text style={[localStyles((theme ?? _styleTheme)).meta, themeStyle('components_PackingListTable_23', { theme: theme }, (theme ?? _styleTheme))]}>Loading...</Text> : null}
-      {error ? <Text style={[localStyles((theme ?? _styleTheme)).meta, themeStyle('components_PackingListTable_24', { theme: theme }, (theme ?? _styleTheme))]}>{error}</Text> : null}
+      {loading ? <Text style={[localStyles((theme ?? _styleTheme)).meta, themeStyle('components_PackingListTable_23', { theme: theme }, (theme ?? _styleTheme))]}>{cached.data ? 'Updating...' : 'Loading...'}</Text> : null}
+      {error ? <View>
+        <Text style={[localStyles((theme ?? _styleTheme)).meta, themeStyle('components_PackingListTable_24', { theme: theme }, (theme ?? _styleTheme))]}>{cached.data && cached.error ? `Showing saved list. ${error}` : error}</Text>
+        {!editMode ? <Pressable accessibilityRole="button" accessibilityLabel="Retry loading packing list" testID="packing-refresh" onPress={() => void load()}><Text style={localStyles((theme ?? _styleTheme)).buttonText}>Retry</Text></Pressable> : null}
+      </View> : null}
       {editMode ? (
         <Pressable
           style={[localStyles((theme ?? _styleTheme)).addButton, themeStyle('components_PackingListTable_25', { theme: theme }, (theme ?? _styleTheme))]}
@@ -658,7 +703,7 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
           ))}
         </View>
       </HorizontalTableScroll> : null}
-      {!editMode && isTrip ? (
+      {!editMode && isTrip && hasLoaded ? (
         <PackingListMatrix
           items={groupedItems.flatMap((group, groupIndex) => [{ id: `separator-${group.category}-${groupIndex}`, label: group.category, category: group.category, isCategory: true }, ...group.items])}
           travelers={orderedTravelers}
@@ -672,4 +717,11 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
 
 const localStyles = (_theme: import('../theme/theme').AppTheme) => themeStyle('components_PackingListTable_44', { StyleSheet: StyleSheet }, _theme);
 
-export default PackingListTable;
+const ScopedPackingListTable: React.FC<Props> = props => {
+  const session = useRef({ token: props.headers.Authorization, epoch: 0 });
+  if (session.current.token !== props.headers.Authorization) {
+    session.current = { token: props.headers.Authorization, epoch: session.current.epoch + 1 };
+  }
+  return <PackingListTable key={`${props.backendUrl}:${props.variant}:${props.tripId ?? ''}:${session.current.epoch}`} {...props} />;
+};
+export default ScopedPackingListTable;

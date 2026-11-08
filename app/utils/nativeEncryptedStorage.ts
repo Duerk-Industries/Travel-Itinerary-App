@@ -95,6 +95,16 @@ export const eraseNativeSnapshot = async (scope: string): Promise<void> => {
   await SecureStore.deleteItemAsync(keyId, options);
 };
 
+/** Disposable read caches have their own namespace; never erase offline edit queues. */
+export const eraseNativeReadCache = async (scope: string): Promise<void> => {
+  if (!scope.startsWith('wb.screen-cache.v1.')) throw new Error('Invalid read cache scope.');
+  const { directory, keyId } = await location(scope);
+  if ((await Files.getInfoAsync(`${directory}/store.db`)).exists) {
+    await SQLite.deleteDatabaseAsync('store.db', directory);
+  }
+  await SecureStore.deleteItemAsync(keyId, options);
+};
+
 /** Ciphertext only, never a key. Useful for preserving a lost-key queue, but
  * cannot recover its plaintext without the original device key. */
 export const exportNativeCiphertext = async (scope: string): Promise<string | null> => {
