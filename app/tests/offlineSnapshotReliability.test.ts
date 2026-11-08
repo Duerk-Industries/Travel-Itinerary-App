@@ -78,7 +78,7 @@ it('uses conditional bundles only with the same complete trip and cost projectio
   global.fetch = jest.fn(async () => ({ status: 304, ok: false })) as unknown as typeof fetch;
   const next = await downloadOfflineTripSnapshot({ trip: { id: 'trip', groupId: 'group' }, backendUrl: owner.environment, token: 'token', costTrackingAllowed: true, useBundle: true, previous });
   expect(next.flights).toEqual(snapshot.flights);
-  expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining('/bundle'), { headers: { Authorization: 'Bearer token', 'If-None-Match': '"version-1"' } });
+  expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining('/bundle'), { cache: 'no-store', headers: { Authorization: 'Bearer token', 'If-None-Match': '"version-1"' } });
   await expect(downloadOfflineTripSnapshot({ trip: { id: 'trip', groupId: 'group' }, backendUrl: owner.environment, token: 'token', costTrackingAllowed: false, useBundle: true, previous })).rejects.toThrow('Saved copy');
 });
 it('preserves the previous durable bundle and ETag on incomplete or failed refresh', async () => {
