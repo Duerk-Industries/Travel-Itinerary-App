@@ -8,7 +8,7 @@ describe('P0 external-work flags', () => {
   it('fails closed for missing mailbox/map-artifact/push flags and preserves unrelated fail-open behavior', async () => {
     const db = require('../src/db') as typeof import('../src/db');
     const service = require('../src/services/entitlementService') as typeof import('../src/services/entitlementService');
-    for (const key of ['feature_ingest_forwarded_mailbox', 'trip_blog_day_map_render', 'notifications_web_push']) {
+    for (const key of ['feature_ingest_forwarded_mailbox', 'trip_blog_day_map_render', 'notifications_web_push', 'planning_geocoding', 'planning_native_map']) {
       await db.poolClient().query('DELETE FROM feature_flags WHERE key=$1', [key]);
       service.clearFeatureFlagCacheForTesting();
       expect(await service.isFeatureEnabled(key)).toBe(false);

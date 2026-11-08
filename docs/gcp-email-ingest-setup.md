@@ -2,7 +2,7 @@
 
 This document covers the production setup for travel email ingest after deploying the API to Cloud Run.
 
-It is written for the current deployment flow in [scripts/deploy-api.ps1](/c:/Git/Tristan/Travel-Itinerary-App/scripts/deploy-api.ps1:1), which:
+It is written for the current deployment flow in [scripts/deploy-api.ps1](../scripts/deploy-api.ps1), which:
 
 - deploys the `server` source to Cloud Run
 - uploads non-secret values from `server/.env`

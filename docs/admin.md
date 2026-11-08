@@ -23,7 +23,7 @@ Email matching is case-insensitive and normalized before comparison. Bootstrap a
 |---|---|---|
 | Users | `/admin/users` | Search by email, name, or user ID; grant/revoke admin; change tiers with reason |
 | Tiers | `/admin/tiers` | View and edit tier limits and feature entitlements |
-| Features | `/admin/features` | Toggle feature flags with reason |
+| Features | `/admin/features` | Toggle feature flags with reason; edit user cohorts for flags that support them (`GET\|PUT /api/admin/features/:key/cohort`; see [cohort procedure](operations/manual-administration.md#limit-a-feature-to-a-cohort)) |
 | User Data | `/admin/user-data` | Aggregate user counts, trip counts, AI usage, token usage, and API-call summaries |
 | Audit Log | `/admin/audit-log` | Review who changed what and when |
 | Billing | `/admin/billing` | Manage Premium pricing, trial, grace period, tax, promotion codes, and checkout |

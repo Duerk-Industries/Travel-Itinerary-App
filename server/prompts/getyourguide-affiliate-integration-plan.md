@@ -10,7 +10,7 @@ is **suggestions, not a locked spec** — the exact GYG integration surface (API
 should be confirmed against GetYourGuide's current partner documentation/dashboard before implementation,
 since affiliate program mechanics and endpoints can change.
 
-Phase 0 verification is recorded in the [GetYourGuide Phase 0 Partner Contract](../../docs/getyourguide-phase-0-contract.md).
+Phase 0 verification is recorded in the [GetYourGuide Phase 0 Partner Contract](../../docs/implementation_plans/getyourguide-phase-0-contract.md).
 The public API guide currently documents a 130-calls/minute default with a five-minute block after exhaustion,
 but the account-specific quota and written content/caching terms take precedence.
 

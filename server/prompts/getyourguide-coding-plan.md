@@ -97,7 +97,7 @@ LLM tasks:
 - Verify the current GYG partner docs/dashboard: approved domains and paths, search-link eligibility,
   partner ID/API-key requirements, sub-ID rules, redirect restrictions, quotas, price/currency/locale rules,
   image/content rights, caching limits, disclosure language, and reporting fields.
-- Record those facts and their verification date in [the Phase 0 contract record](../../docs/getyourguide-phase-0-contract.md).
+- Record those facts and their verification date in [the Phase 0 contract record](../../docs/implementation_plans/getyourguide-phase-0-contract.md).
   Treat unknown facts as
   blockers for production, not assumptions.
 - Define configuration keys and defaults: feature flag, partner status, redirect TTL, per-itinerary CTA cap,

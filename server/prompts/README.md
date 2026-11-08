@@ -21,5 +21,5 @@ These prompt files support itinerary and content-generation flows on the server.
 ## Related Docs
 
 - [Project README](../../README.md)
-- [Itinerary Generation Debug Plan](../../docs/itinerary-generation-debug-plan.md)
+- [Itinerary Generation Debug Plan](../../docs/implementation_plans/itinerary-generation-debug-plan.md)
 - [Data Documentation](../../docs/data/README.md)

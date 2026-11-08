@@ -11,8 +11,8 @@ flags:
     enabled: false
     description: "Native MapLibre renderer; requires compatible EAS binary and named-device checks"
   planning_geocoding:
-    enabled: false
-    description: "Reviewed public catalog POI lookup via a configured self-hosted/contracted endpoint; no private addresses"
+    enabled: true
+    description: "Reviewed public catalog POI lookup via a configured self-hosted/contracted endpoint; no private addresses. Does nothing until the reviewed endpoint/policy config is set; missing row = off"
   planning_web_map:
     enabled: false
     description: "P1 on-device web map; enable after bundle and WebGL checks"

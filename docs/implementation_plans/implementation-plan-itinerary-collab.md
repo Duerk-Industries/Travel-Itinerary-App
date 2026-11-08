@@ -264,7 +264,7 @@ no new lookup endpoint is required. The create-detail route stores the returned
   - `checklist`: title + nested `<Checkbox>` rows; tapping a row toggles its `checked`
     state with optimistic UI
 - The existing inline "Day / Time / Activity / Cost" input row in
-  [itineraries.tsx:939-981](../app/tabs/itineraries.tsx) becomes the "Add a custom
+  `itineraries.tsx:939-981` (file since removed) becomes the "Add a custom
   activity" path — reachable from the popover as a fourth option, or kept as the
   default keyboard-driven add for power users.
 

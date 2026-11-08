@@ -51,9 +51,9 @@ Start with:
 
 - [Documentation Hub](docs/README.md)
 - [Test Plan](TEST_PLAN.md)
-- [Expense Tracking Notes](EXPENSE_TRACKING.md)
+- [Expense Tracking Notes](docs/implementation_plans/EXPENSE_TRACKING.md)
 - [Accounting Fixes](Accounting_Fixes.md)
-- [Entitlements Implementation Plan](docs/implementation-plan-entitlements.md)
+- [Entitlements Implementation Plan](docs/implementation_plans/implementation-plan-entitlements.md)
 - [Server Prompt Assets](server/prompts/README.md)
 
 ## Suggested GitHub Reading Order

@@ -22,7 +22,7 @@ A collaborative travel planning app ("Shared Trip Planner") that lets groups pla
   - Trip selection and page routing (tab-based, no navigation library)
   - Top-level data fetching and prop drilling into tabs
 - **`app/tabs/`** — one file per feature area. Each tab file bundles its UI component(s) and its own API fetch helpers together:
-  - `transfers.tsx`, `activities.tsx`, `lodging.tsx` / `LodgingTab.tsx`, `carRentals.tsx`, `itineraries.tsx`, `overview.tsx`, `dailyExpenses.tsx`, `ledger.tsx`, `tripDetails.tsx`, `account.tsx`, `traits.tsx`, `follow.tsx`, `following.tsx`, `createTripWizard.tsx`, `HomeTab.tsx`
+  - `transfers.tsx`, `activities.tsx`, `lodging.ts` / `LodgingTab.tsx`, `carRentals.ts`, `overview.tsx` (trip overview and itinerary days), `allTrips.tsx`, `dailyExpenses.tsx`, `ledger.tsx`, `account.tsx`, `traits.tsx`, `follow.tsx`, `following.tsx`, `createTripWizard.tsx`, `HomeTab.tsx`, `ingestion.tsx` (Imports), `tripBlog.tsx`, `AdminTab.tsx`
 - **`app/components/`** — shared UI components: `LodgingDetailsDialog`, `LodgingForm`, `ConfirmDialog`, `CostReportTable`, `TransferEditingForm`
 - **`app/utils/`** — pure logic helpers (no UI):
   - `costs.ts` / `coveredBy.ts` — expense splitting and coverage rollup (run client-side)
@@ -215,6 +215,7 @@ npx playwright test
 
 - Postgres schema changes require a migration (add SQL migration files alongside `db.postgres.ts`)
 - All new DB operations must be implemented in both `db.postgres.ts` and `db.firebase.ts` to keep adapters in sync
+- **Production runs on Firestore only.** A pg-mem pass is not enough: run affected server suites with `npm --prefix server run test:firestore -- <suites>`, and add any composite index a new Firestore query needs to `firestore.indexes.json` (guarded by `__tests__/firestoreIndexes.test.ts`)
 - The `DatabaseAdapter` type is inferred from `db.postgres.ts` — it is the source of truth for the interface
 
 ### Environment variables
@@ -241,9 +242,16 @@ npx playwright test
 
 ---
 
+## Documentation
+
+Start at `README.md`. Maintained guides: `docs/architecture.md`, `docs/configuration.md`, `TEST_PLAN.md`, `docs/operations/` (manual administration, feature activation, rollout testing). When behavior, configuration, flags or operator steps change, update the matching guide in the same change.
+
+- New or changed feature flags: update `server/config/feature-flags.yaml`, then run `npm run docs:flags` to regenerate `docs/feature-flag-inventory.md` (`npm run check:docs:flags` fails if it is stale). Add a row to `docs/operations/feature-activation.md` for any feature that ships switched off.
+- Privacy policy: edit `docs/legal/privacy-policy.md` only, then `npm run build:legal`.
+
 ## Key Conventions
 
-- **Naming:** files use camelCase for utilities (`formatDateLong.ts`), PascalCase for React components (`LodgingDetailsDialog.tsx`), camelCase for tab files (`tripDetails.tsx`)
+- **Naming:** files use camelCase for utilities (`formatDateLong.ts`), PascalCase for React components (`LodgingDetailsDialog.tsx`), camelCase for tab files (`overview.tsx`)
 - **Co-location:** each tab file owns its fetch logic — API calls are not centralized in a separate API layer
 - **GetYourGuide tours:** matched offline in `server/data/getyourguide-tours.json`, synced to `getyourguide_tours` at startup, and chosen per trip by exact activity name. See `server/data/trip-template-authoring/GETYOURGUIDE.md`
 - **Backward compatibility:** `/api/flights` is a permanent alias for `/api/transfers`; do not remove it

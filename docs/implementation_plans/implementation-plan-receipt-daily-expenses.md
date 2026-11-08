@@ -173,7 +173,7 @@ If the mapping is low confidence, default to `Other`.
 
 Provider guardrails belong in a separate document:
 
-- [Merchant Category Lookup API Guardrails](./merchant-category-lookup-guardrails.md)
+- [Merchant Category Lookup API Guardrails](../merchant-category-lookup-guardrails.md)
 
 ## App UI Changes
 

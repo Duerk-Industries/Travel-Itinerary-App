@@ -20,6 +20,12 @@ Reviewed against scripts and runner configuration on 2026-11-08. Run commands fr
 | Keyboard/selector browser regressions | `npx playwright test --config playwright.mobile-input.config.ts` | Mocked API at phone/desktop widths; separate config |
 | Native launch smoke | `npm run e2e:maestro` | Requires Maestro and a running emulator/device with the app installed |
 | All Maestro flows | `npm run e2e:maestro:all` | Device flows under `.maestro/` |
+| Server suites on Firestore | `npm --prefix server run test:firestore -- <suites>` | Needs a running Firestore emulator; see [Database variants](#database-variants). **Required for any database change**, because production runs on Firestore |
+| Firestore security rules | `npm --prefix server run test:firestore-rules` | Firestore and Auth emulators |
+| Firestore index guard | `npm --prefix server run test:single -- --runInBand __tests__/firestoreIndexes.test.ts` | Fails if a composite index that gap-closing or blog queries need is removed from `firestore.indexes.json` |
+| Legal pages in sync | `npm run check:legal` | Generated privacy HTML matches `docs/legal/privacy-policy.md` |
+| Flag inventory in sync | `npm run check:docs:flags` | `docs/feature-flag-inventory.md` matches the flag YAML and fail-closed/cohort lists |
+| Gap-closing evidence tooling | `npm run test:evidence:gap` | Tests the release evidence checker itself; the packet is filled by hand ([evidence runbook](docs/operations/gap-closing-evidence.md)) |
 
 Use `npm run test:app:all -- --runInBand` or `npm run test:server:all -- --runInBand` for a non-sharded full Jest run. `lint` currently invokes package type checks; it is not a separate comprehensive style/security scan. Inspect [CI](.github/workflows/ci.yml) for the checks run on pull requests. Separate push-triggered production deploy workflows do not wait for CI.
 
@@ -34,7 +40,9 @@ npm --prefix server run test:firestore -- __tests__/group-member-removal.test.ts
 npm --prefix server run test:firestore-rules
 ```
 
-The wrapper defaults to emulator `127.0.0.1:8080` and throwaway project `demo-server-tests`; `TEST_FIRESTORE_PROJECT` overrides the project. Firestore-rule tests have their own wrapper. Suites that seed raw SQL need Postgres/memory and cannot simply be assumed to run on Firestore.
+The wrapper defaults to emulator `127.0.0.1:8080` and throwaway project `demo-server-tests`; `TEST_FIRESTORE_PROJECT` overrides the project. Set `FIRESTORE_EMULATOR_HOST` if your emulator runs elsewhere. If you already keep development data in an emulator on 8080, start a separate one on spare ports for tests. Each test file starts from an empty emulator database.
+
+Firestore-rule tests have their own wrapper. Suites that seed raw SQL need Postgres or memory. Shared helpers in `server/__tests__/providerRows.ts` let a suite seed rows on either adapter; use them for new tests. The gap-closing suites all pass on both adapters. The [completion audit](docs/operations/gap-closing-remaining.md#continuation-firestore-parity-everything-that-runs-on-postgres-runs-on-firestore) lists them and the few known Firestore-only exceptions.
 
 For Postgres Jest, set `JEST_DB_PROVIDER=postgres` and a **disposable** `DATABASE_URL` in the test process. Test setup/cleanup writes data. Never use a production database. Memory tests do not cover hosted Firestore indexes, rules, credentials, storage or actual external-provider delivery. Use emulator and isolated deployed checks for changes to those paths.
 
@@ -65,7 +73,8 @@ Failures retain screenshots/traces in `test-results/`. Use `npx playwright show-
 | Membership/selectors | Roster load/failure/trip-switch regression, active/pending/removed members, activity participants + one payer, save/reopen on overview and Activities |
 | Expenses | Splits, coverage, currency totals and rounding; mirrored coverage validation; CSV/report and payer behavior |
 | Authorization/tiers/flags | Ordinary user vs admin; excluded cohort; denial response; no writes on denial; audit log; wait through cache TTL |
-| Schema/adapter | Targeted API tests, both adapters, migration/index/backfill in isolated target environment |
+| Schema/adapter | Targeted API tests on pg-mem **and** the Firestore emulator; index guard test; migration/index/backfill in isolated target environment |
+| Feature flags | `npm run check:docs:flags`; missing-row test for any new fail-closed flag; capability endpoint matches the route gate |
 | AI/imports | Quotas, retry/idempotency/duplicate behavior, invalid inputs, recorded provider/model, review/assign; one controlled provider check where applicable |
 | Billing/privacy | Signed webhook/cleanup behavior and entitlement reconciliation; use subsystem runbooks |
 | Web/native UI | Phone/desktop layout and keyboard/modal behavior; physical devices for native changes |
@@ -73,7 +82,7 @@ Failures retain screenshots/traces in `test-results/`. Use `npx playwright show-
 
 ## Manual rollout testing
 
-Follow the [rollout testing checklist](docs/operations/rollout-testing.md) for prerequisites, ordered actions, expected results, release evidence and rollback decisions. It includes ordinary-user checks, admin changes, participant/payer persistence, multi-user synchronization and native compatibility.
+Follow the [rollout testing checklist](docs/operations/rollout-testing.md) for prerequisites, ordered actions, expected results, release evidence and rollback decisions. When turning on a feature that is switched off, use the "Check" column in the [feature activation guide](docs/operations/feature-activation.md). It includes ordinary-user checks, admin changes, participant/payer persistence, multi-user synchronization and native compatibility.
 
 Feature flags are cached for up to 60 seconds; do not use an immediate click as the sole disablement assertion. The general entitlement service checks flags before tier entitlements; integration routes may use additional checks or response codes. Avoid hard-coding mutable tier limits in release expectations: inspect Admin → Tiers and record the tested values.
 

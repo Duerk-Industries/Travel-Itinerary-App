@@ -17,6 +17,8 @@ Prefer the [staged test-to-production path](../production-deployment-guide.md#de
 - [ ] Review schema changes, Firestore indexes/ACL backfills, worker settings and new secrets. Identify whether rollback remains compatible with the changed data.
 - [ ] Run `npm run typecheck`, relevant focused tests and `npm test`; record any excluded suites and why.
 - [ ] Run `npm --prefix app run export:web`, `npm run build` and `npm run test:e2e` for web/API release confidence. Use emulator/device checks for affected adapters/native features.
+- [ ] **Production runs on Firestore.** For any database change, run the affected server suites on the Firestore emulator (`npm --prefix server run test:firestore -- <suites>`). Run `npm --prefix server run test:firestore-rules` for rule changes. If `firestore.indexes.json` changed, deploy indexes with `scripts/deploy-firestore-indexes.ps1` and wait for them to build **before** the code that needs them goes live. A pg-mem pass alone isn't enough.
+- [ ] Run `npm run check:legal` and `npm run check:docs:flags` if legal pages or `feature-flags.yaml` changed.
 - [ ] For deployment changes, run the deploy/canary suites listed in the [test guide](../../TEST_PLAN.md) and the [dry-run commands](../production-deployment-guide.md#local-dry-runs).
 
 ## 3. Deploy to isolated test
@@ -58,6 +60,21 @@ Run additional feature checks only when enabled or affected; mark N/A explicitly
 - **Blog/notifications/storage:** verify visibility, authoring, upload and recipients; use [blog enablement](../trip-blog-enablement-runbook.md) and applicable operations guides.
 - **Analytics/privacy:** verify consent, kill switches and release evidence using the [analytics runbook](../analytics-runbook.md) and [manual follow-ups](../analytics-manual-followups.md).
 - **Native:** installed supported builds must still sign in, edit/save, open deep links and handle keyboard/storage/notification flows. Web/API rollback cannot undo a distributed store binary.
+
+### Turning on a built feature
+
+A release that only changes a flag still needs testing. Turning on a feature that is switched off is its own rollout:
+
+1. Do the feature's "before you enable" items in the [feature activation guide](feature-activation.md), in test first.
+2. In production, enable it for a cohort (yourself plus an ordinary account), run its "Check" column as a listed **and** an unlisted user, then widen.
+3. For gap-closing features (maps, discovery, imports, notifications, offline), record device, deployment, accessibility, performance and import-quality evidence in a packet:
+
+   ```powershell
+   npm run evidence:gap -- init .artifacts/gap-release/packet.json staging
+   npm run evidence:gap -- check .artifacts/gap-release/packet.json staging
+   ```
+
+   Every check starts pending, so the first `check` fails by design. See the [evidence runbook](gap-closing-evidence.md) for what each check needs.
 
 ## 5. Promote and verify production
 

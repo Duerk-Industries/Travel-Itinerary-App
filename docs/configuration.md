@@ -58,7 +58,7 @@ YAML defaults do not overwrite established live flag rows. This rule is specific
 
 ## Integration checklist
 
-Only configure the capabilities being exercised. Use the example file and the consuming service for exact keys/defaults.
+Production uses Firestore. Configure Postgres only for local work or tests. For the secrets, schedulers and flags each built-but-dark feature needs, see the [feature activation guide](operations/feature-activation.md). Only configure the capabilities being exercised. Use the example file and the consuming service for exact keys/defaults.
 
 | Capability | Main settings / guide |
 |---|---|

@@ -165,6 +165,9 @@ const flagCache = new Map<string, { enabled: boolean; expiresAt: number }>();
 const FLAG_CACHE_TTL_MS = 60_000;
 const FAIL_CLOSED_FLAGS = new Set([
   'planning_optimize_order',
+  // External geocoding contacts a provider and the native renderer needs a compatible binary;
+  // a missing row must never turn either on (planning_geocoding still also needs reviewed config).
+  'planning_geocoding', 'planning_native_map',
   'planning_web_map', 'planning_day_order', 'planning_auto_assign', 'planning_nearby', 'planning_locate_items', 'planning_trip_inspiration', 'planning_notifications', 'planning_structured_import', 'trip_bundle',
   'feature_ingest_forwarded_mailbox',
   'packing_lists_v2',

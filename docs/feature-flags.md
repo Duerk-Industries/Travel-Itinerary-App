@@ -30,7 +30,7 @@ This is the shared `assertCanUseFeature` order; individual routes may add integr
 
 ## Selected flags
 
-This table is a summary, not the complete inventory. See [`server/config/feature-flags.yaml`](../server/config/feature-flags.yaml), the consuming service, and Admin → Feature Flags for current defaults and live values.
+This table is a summary. The **[feature flag inventory](feature-flag-inventory.md)** lists all of them, with seed, missing-row behavior and cohort support. It is generated from `server/config/feature-flags.yaml`, `FAIL_CLOSED_FLAGS` and `COHORT_FEATURES`. After you change any of those, run `npm run docs:flags` (`npm run check:docs:flags` fails if the inventory is stale). Live values are only in Admin → Feature Flags. For the prerequisites and order to turn on built features, use the [feature activation guide](operations/feature-activation.md).
 
 | Flag | Meaning |
 |---|---|

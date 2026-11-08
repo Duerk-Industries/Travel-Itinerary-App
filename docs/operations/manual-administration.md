@@ -30,7 +30,25 @@ Bootstrap emails and the access model are in [Admin](../admin.md#access-model). 
 5. Verify both UI availability and backend enforcement. Most shared entitlement denials use HTTP 402 with `{ error, code }`; some intake/integration routes use 403. Check the route's expected contract.
 6. Confirm the audit row. To reverse, restore the prior value/cohort, wait for cache expiry and repeat the checks.
 
+To turn on a feature that is built but switched off (maps, Nearby, inbox, offline bundle, imports, automatic adding), follow its row in the [feature activation guide](feature-activation.md). It lists the secrets, schedulers and indexes each one needs first. The [flag inventory](../feature-flag-inventory.md) lists every flag with its seed, its missing-row behavior and whether it supports cohorts.
+
 Admins do not bypass flags. A flag can expose a path that still requires a tier, provider credentials or a separate environment switch. Disablement may prevent new intake without deleting queued work. Required disconnect, revocation and erasure must continue for bank imports. Inspect `STARTUP_FORCE_ENABLE_FEATURE_FLAGS` if a switch re-enables after restart.
+
+## Limit a feature to a cohort
+
+A cohort limits a flag to listed users, which lets you try a feature on yourself and a few accounts before everyone gets it. Only flags marked **Cohort** in the [flag inventory](../feature-flag-inventory.md) support this. The list is `COHORT_FEATURES` in `server/src/services/featureCohorts.ts`.
+
+1. Open Admin → Feature Flags and find the flag. Flags that support cohorts show a cohort editor under the switch.
+2. Enter the user IDs (up to 1,000), an **owner** (who is responsible for this rollout) and a **retire after** date in UTC, then save with a reason. API equivalent: `PUT /api/admin/features/:key/cohort` with `{ cohort: { userIds, owner, retireAfter }, reason }`.
+3. Turn the flag on. Both must hold: the global flag is on **and** the user is in the cohort.
+4. Wait 60 seconds. Check as a listed user (feature present) and as an unlisted user (feature absent, and the API denies it).
+5. To widen access, add users. To open it to everyone, remove the cohort (`cohort: null`). To stop it, turn the flag off; that applies to everyone regardless of the cohort.
+
+Rules worth knowing:
+- An **empty list** denies everyone.
+- An **expired or malformed** cohort also denies everyone. It never widens access.
+- Removing the cohort only widens access when the global flag is already on.
+- Review each cohort before its retire-after date; once that date passes, the cohort denies everyone, so either extend it or remove it.
 
 ## Manage AI routing and investigate a failed generation
 

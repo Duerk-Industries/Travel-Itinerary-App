@@ -11,8 +11,12 @@ Start with these maintained guides. Implementation plans below capture design in
 | Understand the running system | [Architecture](architecture.md) |
 | Configure local, test and hosted environments | [Configuration](configuration.md) |
 | Administer the application by hand | [Manual administration runbook](operations/manual-administration.md) and [admin reference](admin.md) |
+| Turn on a built feature that is switched off | [Feature activation guide](operations/feature-activation.md) |
+| Look up any feature flag | [Feature flag guide](feature-flags.md) and [complete flag inventory](feature-flag-inventory.md) (generated) |
 | Run automated checks | [Test guide](../TEST_PLAN.md) and [browser journeys](e2e-test-plan.md) |
-| Validate and record a release | [Rollout testing checklist](operations/rollout-testing.md) |
+| Validate and record a release | [Rollout testing checklist](operations/rollout-testing.md) and [release evidence runbook](operations/gap-closing-evidence.md) |
+| See what is built, off or planned | [Gap-closing status](implementation_plans/implementation-plan-gap-closing.md#status-at-a-glance-2026-11-06) |
+| All operator procedures | [Operations index](operations/README.md) |
 | Deploy, promote and recover | [Production deployment guide](production-deployment-guide.md) |
 | Complete external/manual prerequisites | [Analytics follow-ups](analytics-manual-followups.md), [ingestion rollout](ingestion-rollout.md), [blog enablement](trip-blog-enablement-runbook.md), [ACL backfill](security/firestore-acl-backfill-runbook.md) |
 

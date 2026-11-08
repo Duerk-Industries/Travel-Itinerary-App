@@ -32,6 +32,8 @@ Routes authorize account/group/trip access, apply feature and entitlement checks
 3. A Firestore emulator host selects Firebase.
 4. Cloud Run/GCP runtime markers select Firebase; other runtimes default to Postgres.
 
+**Production runs on Firestore** (Cloud Run selects the Firebase adapter). Postgres and pg-mem are used locally and in tests. Every data change must work on Firestore; see [Database variants](../TEST_PLAN.md#database-variants).
+
 `DatabaseAdapter` is derived from the Postgres implementation, excluding internal transaction/query helpers. Firebase must match that public contract. Postgres migrations and Firestore indexes/access backfills are separate operational concerns; a memory test pass does not validate Firestore queries or rules.
 
 ## API areas
@@ -53,11 +55,29 @@ Routes authorize account/group/trip access, apply feature and entitlement checks
 | `/api/internal/*` | Worker, billing, deploy and blog callbacks with their own authentication |
 | `/public/blog`, sitemap routes | Published blog output |
 
-See `app.ts` for exact mounts and each route file for validation. `/api/healthz` returns `ok`, `sha` and `revision`; outside E2E it is a liveness check, not a full database/provider readiness test. `/metrics` is the Prometheus route.
+Two more mounts aren't obvious from the table. `dataTransferRoutes` is mounted directly on `/api` and handles CSV/JSON import and export for activities, lodging, transfers, car rentals and day plans. `/api/admin/trip-templates` handles template administration. Real-time chat and presence use Socket.IO on the same HTTP port (`server/src/socket/`, shared types in `packages/messaging/`). See `app.ts` for exact mounts and each route file for validation. `/api/healthz` returns `ok`, `sha` and `revision`; outside E2E it is a liveness check, not a full database/provider readiness test. `/metrics` is the Prometheus route.
 
 ## Jobs, providers and collaboration
 
 AI routing/capture/evaluation code lives under `server/src/ai/`; provider/model selection can be managed through Admin → AI Operations. Itinerary orchestration and async jobs live under `services/`. Ingestion has intake, extraction, review, assignment and worker paths; its queue mode determines whether work runs in-process or through authenticated callbacks. Configured schedulers also handle retention, retries, billing reconciliation, notifications, blog reconciliation and catalogs. Inspect `index.ts` and the relevant worker before relying on restart recovery or multi-instance behavior.
+
+### Subsystems
+
+Many subsystems ship switched off behind flags. The [feature activation guide](operations/feature-activation.md) says how to turn each one on.
+
+| Subsystem | Main source | Flags (see [inventory](feature-flag-inventory.md)) | Reference |
+|---|---|---|---|
+| Maps (web, public, native) | `app/components/TripMap*.tsx`, `server/src/services/planningPointsService.ts`, `server/src/routes/staticMapRoutes.ts` (native stopgap) | `planning_web_map`, `planning_native_map`, `trip_day_map` | [Maps](operations/gap-closing-maps.md) |
+| Discovery and day planning | `nearbyPlacesService.ts`, `planningOperations.ts`, `packages/domain/src/dayOrder.ts` | `planning_nearby`, `planning_day_order`, `planning_optimize_order`, `planning_trip_inspiration` | [Day order and inspiration](operations/gap-closing-day-order-inspiration.md) |
+| Geocoding | `server/src/services/geocoder/`, `geocodingService.ts` | `planning_locate_items`, `planning_geocoding` | [Maps](operations/gap-closing-maps.md) |
+| Imports | `server/src/ingestion/` (intake, extraction, assignment, workers) | `feature_ingest_*`, `planning_structured_import`, `planning_auto_assign` | [Ingestion rollout](ingestion-rollout.md), [P0](operations/gap-closing-p0.md) |
+| Notifications | `notificationService.ts`, `notificationOutboxWorker.ts`, `planningNotificationScheduler.ts`; client `NotificationInbox.tsx` | `notifications_*`, `planning_notifications`, `activity_recap` | [P1](operations/gap-closing-p1.md) |
+| Offline | `planningBundleService.ts` (server bundle); `app/utils/offlineTripCache.ts`, `offlineSnapshotStorage.*`, `app/hooks/usePendingWrites.ts`, `app/public/sw.js` | `trip_bundle`; native build `NATIVE_ENCRYPTED_STORAGE` | [Native storage](operations/gap-closing-native-storage.md) |
+| Affiliate links | `getYourGuide*` config, service and routes (`/api/affiliate`); planned provider-neutral stays layer | `getyourguide_activity_suggestions` | [Stay22 plan](implementation_plans/stay22-integration-plan.md) |
+| Trip blog | `server/src/routes/blog*.ts`, `publicBlogRoutes.ts` | `trip_blog_*` | [Blog architecture](trip-blog-social-architecture.md) |
+| AI | `server/src/ai/`, itinerary services | `ai_*`, `itinerary_*` | [AI chapters](implementation_plans/Chapter_02_Core_AI_Platform_Architecture.md) |
+| Billing and bank import | `server/src/billing/`, `packages/plaid-transactions/` | `premium`, `expense_import_plaid*` | [Tiers](tiers.md), [subscriptions](stripe-premium-subscriptions-checklist.md) |
+| Chat and presence | `server/src/socket/`, `packages/messaging/` | — | [WebSockets and chat](websockets-and-chat.md) |
 
 Use [WebSockets and chat](websockets-and-chat.md), [blog architecture](trip-blog-social-architecture.md), [ingestion rollout](ingestion-rollout.md), and the [AI implementation chapters](implementation_plans/Chapter_02_Core_AI_Platform_Architecture.md) for subsystem detail. The chapters include design/planning material; the checked-in service and flags determine actual behavior.
 

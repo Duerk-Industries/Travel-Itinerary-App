@@ -32,7 +32,7 @@
 | Area | Source | What still blocks release |
 | --- | --- | --- |
 | §1 Maps (web, blog, public, recap, keepsake) | Built | Production flag change, named-device checks, native print, legacy-artifact retirement after the 2027-01-21 client cutoff |
-| §1.4 Optional geocoding | Built, off | Stays off by decision (§10.1 #1). Turning it on needs a reviewed endpoint and scheduler |
+| §1.4 Optional geocoding | Built; flag seeded on (2026-11-08) | Inert until a reviewed endpoint, policy and scheduler are configured (§10.1 #1) |
 | §1.5 Native map | Built, off | New EAS build and named-device evidence |
 | §1.6 Day order and optimize | Built, off | Environment rollout, usability, gesture checks on physical devices |
 | §2 Nearby, Add to day, Trips like this | Built, off | Rollout plus cold/warm latency measurement |
@@ -128,7 +128,7 @@ flowchart TD
 
   subgraph Server["API Server (Node.js / Express)"]
     API_Maps["Static map proxy (native stopgap)"]
-    API_Geo["Optional geocoding worker (off)"]
+    API_Geo["Optional geocoding worker<br/><i>needs reviewed endpoint</i>"]
     API_Disc["Discovery & traits ranker"]
     API_Aff["/api/affiliate<br/><i>signed descriptors + first-party redirect</i>"]
     API_Ingest["Ingestion & alias resolver"]
@@ -241,7 +241,7 @@ Use the existing app navigation and the simplified Imports view. Advanced automa
 **Remaining for §1:**
 1. **Artifact cleanup (§10.1 #2).** Inventory `blog_day_map_artifacts` and their readers, run a dry-run cleanup, then purge only what the terms rule out. Retire the render job, the flag and the table on all three adapters after the 2027-01-21 old-client cutoff.
 2. **Native.** Run the EAS build and named-device compatibility, gesture, attribution and low-memory checks. Retire the Google routes and key only after old clients fall below about 5% of sessions.
-3. **Geocoding (§1.4).** External lookup stays off (§10.1 #1). Activating it needs a reviewed endpoint and scheduler; no private address is ever sent.
+3. **Geocoding (§1.4).** `planning_geocoding` now seeds on and is fail-closed on a missing row (2026-11-08). No lookup happens until a reviewed endpoint, policy and scheduler are configured. Public catalog places only; no private address is ever sent.
 4. **Day order and optimize (§1.6).** Built: one ordering definition, checked `PUT /api/activities/day-order`, the optimizer, drag handles, pins, Move up/down. Remaining: environment rollout, an unfamiliar-user test and physical-device gesture checks. Directions API text stays gated by `attractions_transfer_directions_api` **and** `assertCanUseFeature`.
 5. **Attribution.** Keep MapLibre's attribution visible. Exported images carry "© OpenFreeMap © OpenMapTiles © OpenStreetMap contributors". Never crop Google's logo.
 
@@ -440,7 +440,7 @@ No claim of production readiness rests only on source review or seed defaults. C
 
 ### 10.1 Decisions recorded (2026-10-21, Bryan Duerk)
 
-1. **External geocoding.** Ship catalog, airport and manual coordinates. External geocoding stays off. Public Nominatim is not production infrastructure, and no private address goes to any external geocoder.
+1. **External geocoding.** Ship catalog, airport and manual coordinates. Public Nominatim is not production infrastructure, and no private address goes to any external geocoder. *Updated 2026-11-08 (Bryan Duerk):* the `planning_geocoding` flag seeds **on**, so public-catalog lookup starts once a reviewed endpoint and policy are configured; until then it does nothing. A missing database row means off.
 2. **Map artifacts and retirement.**
    - Stop new legacy artifact generation (`trip_blog_day_map_render` off).
    - Publish a client-support cutoff, then run an audited cleanup after a dry-run inventory.

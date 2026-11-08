@@ -33,6 +33,8 @@
     "migrate": "npm --prefix server run migrate",
     "build:legal": "node scripts/build-legal-pages.mjs",
     "check:legal": "node scripts/build-legal-pages.mjs --check",
+    "docs:flags": "node scripts/generate-flag-inventory.mjs",
+    "check:docs:flags": "node scripts/generate-flag-inventory.mjs --check",
     "sync:analytics-registry": "node scripts/sync-analytics-registry.mjs",
     "check:analytics-registry": "node scripts/sync-analytics-registry.mjs --check",
     "check:analytics-release": "node scripts/analytics-release-gate.mjs",

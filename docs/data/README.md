@@ -9,6 +9,6 @@ Back to the main docs hub: [Documentation Hub](../README.md)
 
 ## Related Docs
 
-- [Itinerary Generation Debug Plan](../itinerary-generation-debug-plan.md)
-- [Implementation Plan: Entitlements](../implementation-plan-entitlements.md)
+- [Itinerary Generation Debug Plan](../implementation_plans/itinerary-generation-debug-plan.md)
+- [Implementation Plan: Entitlements](../implementation_plans/implementation-plan-entitlements.md)
 - [Project README](../../README.md)
