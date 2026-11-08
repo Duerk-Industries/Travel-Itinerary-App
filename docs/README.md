@@ -116,6 +116,7 @@ Start with these maintained guides. Implementation plans below capture design in
 - [Implementation Plan: Wanderlog Competitive Analysis](implementation_plans/implementation-plan-wanderlog-competitive-analysis.md)
 - [Implementation Plan: Gap Closing (map, discovery, email import, dark features, offline)](implementation_plans/implementation-plan-gap-closing.md)
 - [Stay22 Integration Plan (hotel affiliate links, gap-closing §11.3 H1)](implementation_plans/stay22-integration-plan.md)
+- [Stay22 Implementation Plan (PRs, tests, rollout)](implementation_plans/stay22-implementation-plan.md)
 - [Implementation Plan: Itinerary Narrative Depth & Validation](implementation_plans/itinerary-narrative-depth-and-validation.md)
 - [Implementation Plan: Itinerary Document Import](implementation_plans/itinerary-document-import.md)
 - [GetYourGuide Phase 0 Partner Contract](implementation_plans/getyourguide-phase-0-contract.md)

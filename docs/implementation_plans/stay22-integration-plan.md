@@ -2,6 +2,7 @@
 
 Date: November 5, 2026 (revised November 6, 2026)
 Status: Proposed. This document does not turn on an integration or publish legal changes.
+Implementation: [Stay22 implementation plan](stay22-implementation-plan.md) (PRs, files, tests, rollout).
 Parent plan: [implementation-plan-gap-closing.md §11.3 H1](implementation-plan-gap-closing.md#h1-affiliate-links-p1--stay22-integration-plan). That section summarizes this plan and links here.
 
 ## 0. Decision and relationship to existing work
@@ -15,7 +16,7 @@ This is the detailed plan for **H1: affiliate links** in the gap-closing plan's 
 | Routes | `POST /api/stays/search-link`, `GET /api/stays/go/:token` | `POST /api/affiliate/stays/descriptor`, `GET /api/affiliate/stays/go/:token` | Provider-neutral path, under the existing `/api/affiliate` mount |
 | Flags | `stays_affiliate_links` | `stays_partner_links` (feature) + `stays_provider_stay22` (provider) | Turn the feature off, or one provider off, independently |
 | Occupancy | Adults from all trip travelers | The lodging's own `traveler_ids` / `rooms` only; otherwise nothing | A group trip doesn't mean everyone shares one booking |
-| Partner sub-id | Opaque HMAC for each click | Fixed placement code (for example `lodging_needed`) | Partner reports can't be joined back to a traveler |
+| Partner sub-id | Opaque HMAC for each click | Fixed placement code (for example `lodging_needs_booking`) | Partner reports can't be joined back to a traveler |
 
 These items stay as written in §11.3: the `lodgingGaps.ts` helper and its tests, the **Who's paying?** step after an imported booking, and the H2 gate.
 
@@ -46,14 +47,14 @@ Stay22 markets several products (Allez deep links, Map, Lift, Nova, Spark, Loop)
 
 | Layer | Knows about Stay22? | Contents |
 |---|---|---|
-| **Placements and UI** | No | Lodging tab empty state, `Needed` lodging dialog, later the Overview gaps row. Generic `FindStayCta` with generic disclosure |
+| **Placements and UI** | No | Lodging tab empty state, `Needs Booking`/`Proposed` lodging dialog, later the Overview gaps row. Generic `FindStayCta` with generic disclosure |
 | **Stays feature service** | No | Access check, flags, `StaySearchContext` built from authorized trip data, provider selection, descriptor token, redirect |
 | **Provider adapter** | **Only here** | `server/src/services/stays/providers/stay22.ts` and its config. Turns a `StaySearchContext` into a URL; declares allowed hosts |
 
 ### 2.2 Contracts (in `server/src/types.ts`)
 
 ```ts
-type StayPlacement = 'lodging_empty' | 'lodging_needed' | 'lodging_proposed' | 'overview_gap';
+type StayPlacement = 'lodging_empty' | 'lodging_needs_booking' | 'lodging_proposed' | 'overview_gap';
 type StayMethod = 'link_out';           // later: 'in_app' (gap-closing H2)
 
 interface StaySearchContext {           // built on the server, after authorization
@@ -108,7 +109,7 @@ No client release or migration is needed.
 | Priority | Placement | Experience | Conditions |
 |---|---|---|---|
 | MVP | Lodging tab empty state (`LodgingTab.tsx`, the "No lodging yet." branch) | "Find places to stay" for the trip destination and dates | Keep "Add lodging" and import as the main actions. Hidden for month-only trips with no dates, unless the provider returns a URL without dates |
-| MVP | `Needed` lodging detail, **both** dialog variants (`feature_standardized_item_dialogs` on and off, `LodgingTab.tsx` ~481/~508) | "Search stays near here" using the lodging's `lat`/`lng` or `geoCity`, else the trip destination | A search around a place, never an offer for that exact property |
+| MVP | `Needs Booking` lodging detail, **both** dialog variants (`feature_standardized_item_dialogs` on and off, `LodgingTab.tsx` ~481/~508) | "Search stays near here" using the lodging's `lat`/`lng` or `geoCity`, else the trip destination | A search around a place, never an offer for that exact property |
 | MVP (optional) | `Proposed` lodging detail | Same, as a secondary action | — |
 | Next | Overview: nights without a stay | "No place to stay for May 3–6 · Find a stay" | Needs `app/utils/lodgingGaps.ts`. Uses non-Cancelled lodgings and local calendar dates; travelers confirm gaps on multi-city trips and overnight transfers |
 | Later | Itinerary overnight locations | Search for each overnight location | No such surface exists today; generation must never depend on a stays provider |
@@ -178,9 +179,9 @@ Effective availability is `stays_partner_links && (some provider in STAYS_LINK_P
    - `POST /api/affiliate/stays/descriptor` (authenticated). Strict Zod body `{ tripId: uuid, lodgingId?: string ≤64, placement }`. Steps in order: rate limit (`reserveRequestRateLimits`, per user per day), then `ensureUserInTrip`, then flags, then build the context, then the link. Returns `{ token, expiresAt, method: 'link_out', disclosureRequired: true }`.
    - `GET /api/affiliate/stays/go/:token`. No session, because it's a browser navigation. Steps: verify the signature and expiry, check the feature flag **and** the token's provider flag again, re-check the host allowlist, rate limit per IP, then `302` with `Referrer-Policy: no-referrer`.
    - Unavailable (flag off, no provider, lookup failure, bad token): `404 { error: 'AFFILIATE_LINK_UNAVAILABLE' }`, as GetYourGuide does. Don't use 402, which means a tier limit here.
-5. **The token goes in the path and is opaque.** The `app.ts` access logger writes `req.originalUrl`. Encrypt the token payload (AES-256-GCM, the `pushTokenCrypto.ts` pattern) or redact `/api/affiliate/*/go/*` in the logger. Apply the same fix to GetYourGuide's `?token=` route.
+5. **The token goes in the path and is opaque.** The access logger writes `req.originalUrl`, so the token must not be readable. The shared token module already provides that: tokens are AES-256-GCM encrypted, as GetYourGuide's already are, so logs show only ciphertext. Stays tokens use their own HKDF-derived key.
 6. **Capability.** `GET /api/trips/:id/planning-capabilities` returns `stays: { available, method }`. Don't use `/api/auth/features`: it has no user, so it can't apply cohorts or trip roles.
-7. **Metrics.** When the request carries analytics consent, call `incrementMetric('stays_partner_click', { placement, provider })`.
+7. **Metrics.** A browser navigation can't carry an analytics-consent header. Instead, the client sends its consent state in the descriptor request, the token carries it, and the redirect calls `incrementMetric('stays_partner_click', { placement, provider })` only when it's true. GetYourGuide's header-based check never fires today; fix it the same way.
 
 ### 5.3 Client
 
@@ -266,7 +267,7 @@ Also:
    - `stay22-phase-0-contract.md`
 
    *Exit:* a verified parameter list and accepted terms.
-2. **Shared affiliate refactor.** Extract the token, allowlist, redirect and CTA-shell code from GetYourGuide, and make the token opaque in the path. *Exit:* GetYourGuide tests unchanged and green on pg-mem and the Firestore emulator.
+2. **Shared affiliate refactor.** Extract the token, allowlist, redirect and CTA-shell code from GetYourGuide, and move the token into the path. *Exit:* GetYourGuide tests unchanged and green on pg-mem and the Firestore emulator.
 3. **Provider-neutral stays foundation:**
    - contracts, context builder, link service, registry
    - a fake test provider and the shared contract test suite

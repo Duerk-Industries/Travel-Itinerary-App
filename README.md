@@ -94,7 +94,7 @@ See the [test guide](TEST_PLAN.md) for database variants, browser settings and w
 ### Plans and status
 
 - [Gap-closing plan](docs/implementation_plans/implementation-plan-gap-closing.md): maps, discovery, imports, notifications, offline (built), plus the pricing, hotel-booking and parity work still to do
-- [Stay22 integration plan](docs/implementation_plans/stay22-integration-plan.md): provider-isolated hotel links
+- [Stay22 integration plan](docs/implementation_plans/stay22-integration-plan.md) (design) and [implementation plan](docs/implementation_plans/stay22-implementation-plan.md) (PRs, tests, rollout): provider-isolated hotel links
 - [All implementation plans](docs/README.md#entitlements-and-implementation-plans)
 
 ### Privacy, security and compliance

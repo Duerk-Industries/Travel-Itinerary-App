@@ -255,7 +255,7 @@ Start at `README.md`. Maintained guides: `docs/architecture.md`, `docs/configura
 - **Co-location:** each tab file owns its fetch logic — API calls are not centralized in a separate API layer
 - **GetYourGuide tours:** matched offline in `server/data/getyourguide-tours.json`, synced to `getyourguide_tours` at startup, and chosen per trip by exact activity name. See `server/data/trip-template-authoring/GETYOURGUIDE.md`
 - **Backward compatibility:** `/api/flights` is a permanent alias for `/api/transfers`; do not remove it
-- **Itinerary status lifecycle:** `Needed → Proposed → Booked → Completed | Cancelled` — enforced by `server/src/utils/itineraryStatus.ts` and mirrored in `app/utils/itineraryStatus.ts`
+- **Itinerary status lifecycle:** `Proposed → Needs Booking → Booked → Completed | Cancelled` (legacy `Needed` normalizes to `Proposed`) — enforced by `server/src/utils/itineraryStatus.ts` and mirrored in `app/utils/itineraryStatus.ts`
 - **Ratings:** travelers rate Completed trip items (transfers, lodgings, activities, car rentals) from 1 to 5 stars via `itemVoteService.ts`. Earlier thumbs in `item_votes` count as 5 or 1 stars; proposal voting is retired
 
 ---
