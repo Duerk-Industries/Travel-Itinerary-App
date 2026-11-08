@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { screenFetch as fetch } from '../cache/screenFetch';
 import IconText from './IconText';
 import { resolveComponentTheme as resolveStyleTheme, themeStyle } from '../theme/theme';
 

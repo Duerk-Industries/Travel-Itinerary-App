@@ -1,3 +1,4 @@
+import { screenFetch as fetch } from '../cache/screenFetch';
 import { themeStyle } from '../theme/theme';
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React from 'react';
@@ -78,15 +79,7 @@ export const saveFollowPayloadsAsync = async (payloads: Record<string, InvitePay
   await writeAsync(followPayloadsKey, JSON.stringify(payloads));
 };
 
-export const fetchFollowedTripsApi = async (backendUrl: string, headers: Record<string, string>): Promise<FollowedTrip[]> => {
-  const res = await fetch(`${backendUrl}/api/trips/followed`, { headers });
-  if (res.status === 401) {
-    const err = new Error('Unauthorized');
-    (err as any).code = 'UNAUTHORIZED';
-    throw err;
-  }
-  if (!res.ok) return [];
-  const data = await res.json().catch(() => []);
+const normalizeFollowedTrips = (data: unknown): FollowedTrip[] => {
   if (!Array.isArray(data)) return [];
   return data
     .map((item: any) => ({
@@ -97,6 +90,19 @@ export const fetchFollowedTripsApi = async (backendUrl: string, headers: Record<
       todayDetails: Array.isArray(item.todayDetails) ? item.todayDetails : [],
     }))
     .filter((t) => t.tripId);
+};
+
+export const fetchFollowedTripsApi = async (backendUrl: string, headers: Record<string, string>, onCached?: (trips: FollowedTrip[]) => void): Promise<FollowedTrip[]> => {
+  const res = await fetch(`${backendUrl}/api/trips/followed`, { headers, onUnavailable: () => onCached?.([]), onCached: raw => onCached?.(normalizeFollowedTrips(raw)) });
+  if (res.status === 401) {
+    const err = new Error('Unauthorized');
+    (err as any).code = 'UNAUTHORIZED';
+    throw err;
+  }
+  if (!res.ok) return [];
+  const data = await res.json().catch(() => []);
+  if (!Array.isArray(data)) return [];
+  return normalizeFollowedTrips(data);
 };
 
 type FollowTabProps = {

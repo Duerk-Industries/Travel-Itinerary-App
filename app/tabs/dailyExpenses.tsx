@@ -1,3 +1,4 @@
+import { screenFetch as fetch } from '../cache/screenFetch';
 import { amountInTripCurrency, formatMoney, formatExpenseMoney } from '../../packages/domain/src/money';
 import IconText from '../components/IconText';
 import { useLayoutBreakpoints } from '../hooks/useLayoutBreakpoints';

@@ -56,7 +56,9 @@ test('does not restore expired data or persist sensitive views', async () => {
 test('logout waits for an in-flight storage write before erasing and blocks late persistence', async () => {
   const cache = create(); cache.start();
   let finish!: () => void;
-  const write = jest.spyOn(storage, 'write').mockImplementationOnce(() => new Promise<void>(resolve => { finish = resolve; }));
+  const write = jest.mocked(storage.write);
+  const implementation = write.getMockImplementation()!;
+  write.mockImplementationOnce(() => new Promise<void>(resolve => { finish = resolve; }));
   seed(cache, ['private']);
   await Promise.resolve(); await Promise.resolve();
   const cleared = clearScreenCache(owner);
@@ -65,7 +67,7 @@ test('logout waits for an in-flight storage write before erasing and blocks late
   expect(write).toHaveBeenCalledTimes(1);
   expect(await storage.read(screenCacheKey(owner))).toBeNull();
   expect(cache.client.getQueryData(key)).toBeUndefined();
-  write.mockRestore();
+  write.mockImplementation(implementation);
 });
 
 test('deduplicates concurrent reads and cancels a response before a newer save', async () => {
@@ -79,4 +81,15 @@ test('deduplicates concurrent reads and cancels a response before a newer save',
   await cache.client.cancelQueries({ queryKey: key });
   seed(cache, ['saved']); complete(['stale']); await reads;
   expect(cache.client.getQueryData(key)).toEqual(['saved']);
+});
+
+test('a large response cannot prevent smaller trip lists from being persisted', async () => {
+  const cache = create(); seed(cache, ['small']);
+  const large = ['http', '/api/trips/big/blog'];
+  cache.client.setQueryDefaults(large, { meta: { persist: true } });
+  cache.client.setQueryData(large, { body: 'x'.repeat(2_100_000) });
+  cache.persist(); await new Promise(resolve => setTimeout(resolve, 0));
+  const restored = create(); await restored.restore();
+  expect(restored.client.getQueryData(key)).toEqual(['small']);
+  expect(restored.client.getQueryData(large)).toBeUndefined();
 });

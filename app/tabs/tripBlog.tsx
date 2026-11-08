@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { screenFetch as fetch } from '../cache/screenFetch';
 import IconText from '../components/IconText';
 import { useLayoutBreakpoints } from '../hooks/useLayoutBreakpoints';
 import { themeFontFamilies, resolveComponentTheme as resolveStyleTheme, themeStyle } from '../theme/theme';
@@ -428,8 +429,11 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], t
     return points;
   }, [flights, lodgings, tours, carRentals]);
 
+  const blogReadScope = `${backendUrl}:${activeTripId}:${JSON.stringify(headers)}`;
+  const blogReadScopeRef = useRef(blogReadScope); blogReadScopeRef.current = blogReadScope;
   const load = async (nextCursor = null, silent = false) => {
     if (!activeTripId) return;
+    const isCurrent = () => blogReadScopeRef.current === blogReadScope;
     if (!silent) setLoading(true);
     try {
       // On a refresh (no cursor — e.g. after any mutation), re-request every day the user has
@@ -440,9 +444,18 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], t
       const params = new URLSearchParams({ limit: String(effectiveLimit) });
       if (nextCursor) params.set('cursor', nextCursor);
       const reactionEpochAtRequest = engagement.getMutationEpoch();
-      const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog?${params.toString()}`, { headers });
+      const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog?${params.toString()}`, { headers, isCurrent, onUnavailable: () => { if (isCurrent()) setBlog(null); },
+        onCached: data => {
+          if (!isCurrent() || nextCursor || editMode || !Array.isArray(data?.days)) return;
+          setBlog(data); engagement.seedFromBlog(data, reactionEpochAtRequest);
+          const last = data.days[data.days.length - 1];
+          setCursor(data.days.length >= effectiveLimit && last ? last.localDate : null);
+        },
+      });
+      if ([401, 402, 403, 404].includes(response.status) && isCurrent()) setBlog(null);
       if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || 'Unable to load the trip blog');
       const data = await response.json();
+      if (!isCurrent()) return;
       const days = Array.isArray(data.days) ? data.days : [];
       setBlog((current) => {
         if (!nextCursor || !current) return data;
@@ -455,9 +468,9 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], t
       const lastDay = days[days.length - 1];
       setCursor(days.length >= effectiveLimit && lastDay ? lastDay.localDate : null);
     } catch (error) {
-      if (!silent) alertMessage('Trip blog', error.message || 'Unable to load the trip blog');
+      if (!silent && isCurrent() && error.name !== 'AbortError') alertMessage('Trip blog', error.message || 'Unable to load the trip blog');
     } finally {
-      if (!silent) setLoading(false);
+      if (!silent && isCurrent()) setLoading(false);
     }
   };
 

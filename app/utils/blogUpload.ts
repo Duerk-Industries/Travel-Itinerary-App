@@ -1,3 +1,4 @@
+import { screenFetch as fetch } from '../cache/screenFetch';
 // Shared trip-blog media upload plumbing — used by both the in-tab "+ Photo/Video" button
 // (app/tabs/tripBlog.tsx) and the native "send to WanderBunnies" share-intent flow
 // (app/utils/incomingShare.ts / app/components/IncomingShareModal.tsx), so upload/init/complete

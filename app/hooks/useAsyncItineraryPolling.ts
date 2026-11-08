@@ -1,3 +1,4 @@
+import { screenFetch as fetch } from '../cache/screenFetch';
 import { useCallback, useRef, type Dispatch, type SetStateAction } from 'react';
 import { usePolling } from './usePolling';
 

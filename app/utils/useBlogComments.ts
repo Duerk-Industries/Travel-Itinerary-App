@@ -1,3 +1,5 @@
+import { useCachedViewScope } from '../cache/useCachedViewScope';
+import { screenFetch as fetch } from '../cache/screenFetch';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createIdempotencyKey } from './idempotencyKey';
 
@@ -37,6 +39,7 @@ const EMPTY_DAY_STATE: DayState = { comments: [], loading: false, error: null };
 // target") rather than patching local state by hand. Cached per dayDate so switching between an
 // already-open day and the lightbox doesn't refetch on every render.
 export function useBlogComments(backendUrl: string, headers: Record<string, string>, tripId: string | null) {
+  const isCurrentView = useCachedViewScope(JSON.stringify([backendUrl, tripId, headers]));
   const [byDay, setByDay] = useState<Record<string, DayState>>({});
   const tripIdRef = useRef(tripId);
   tripIdRef.current = tripId;
@@ -53,7 +56,9 @@ export function useBlogComments(backendUrl: string, headers: Record<string, stri
     if (!tripIdRef.current) return;
     setDayState(dayDate, { loading: true, error: null });
     try {
-      const response = await fetch(`${backendUrl}/api/trips/${tripIdRef.current}/blog/comments?dayDate=${encodeURIComponent(dayDate)}`, { headers });
+      const response = await fetch(`${backendUrl}/api/trips/${tripIdRef.current}/blog/comments?dayDate=${encodeURIComponent(dayDate)}`, { headers, isCurrent: isCurrentView,
+        onUnavailable: () => { if (isCurrentView()) setDayState(dayDate, { comments: [], loading: false, error: 'Comments are no longer available.' }); }, onCached: raw => { const data = raw as { comments?: BlogComment[] }; if (isCurrentView() && Array.isArray(data.comments)) setDayState(dayDate, { comments: data.comments }); },
+      });
       if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || 'Unable to load comments');
       const data = await response.json();
       setDayState(dayDate, { comments: Array.isArray(data.comments) ? data.comments : [], loading: false, error: null });
@@ -61,7 +66,7 @@ export function useBlogComments(backendUrl: string, headers: Record<string, stri
       setDayState(dayDate, { loading: false, error: error?.message || 'Unable to load comments' });
       throw error;
     }
-  }, [backendUrl, headers, setDayState]);
+  }, [backendUrl, headers, setDayState, isCurrentView]);
 
   const getDayState = useCallback((dayDate: string): DayState => byDay[dayDate] ?? EMPTY_DAY_STATE, [byDay]);
 

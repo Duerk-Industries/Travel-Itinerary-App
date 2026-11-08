@@ -1,3 +1,4 @@
+import { screenFetch as fetch } from '../cache/screenFetch';
 import { useEffect, useState } from 'react';
 import { DEFAULT_NEW_ITINERARY_STATUS, normalizeItineraryStatus } from '../utils/itineraryStatus';
 
@@ -26,7 +27,9 @@ export const useGetYourGuideTourLinks = (params: {
     let active = true;
     void (async () => {
       try {
-        const response = await fetch(`${backendUrl}/api/affiliate/getyourguide/trips/${encodeURIComponent(tripId)}/tours`, { headers });
+        const response = await fetch(`${backendUrl}/api/affiliate/getyourguide/trips/${encodeURIComponent(tripId)}/tours`, { headers, isCurrent: () => active,
+          onUnavailable: () => { if (active) setLinks({}); }, onCached: raw => { const data = raw as { links?: Record<string, ActivityTourLink> }; if (active && data.links) setLinks(data.links); },
+        });
         const data = response.ok ? await response.json() : null;
         if (active && data?.links) setLinks(data.links);
       } catch {

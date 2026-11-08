@@ -1,7 +1,9 @@
+import { useScreenReadPause } from '../cache/useScreenReadPause';
+import { screenFetch as fetch } from '../cache/screenFetch';
 import { resolveComponentTheme as resolveStyleTheme, themeStyle, type AppTheme } from '../theme/theme';
 
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 
 import DropdownOptionButton from '../components/DropdownOptionButton';
@@ -134,7 +136,7 @@ const AccountProfileManagement = ({
   activePage,
   accountProfile,
   plaidEnabled = false,
-  setAccountProfile,
+  setAccountProfile: applyAccountProfile,
   setUserToken,
   setUserName,
   setUserEmail,
@@ -155,6 +157,11 @@ const AccountProfileManagement = ({
   const { width, height } = useWindowDimensions();
   const { spacing } = theme;
   const isCompactDialog = width < 480 || height < 700;
+  const [profileDirty, setProfileDirty] = useState(false);
+  const setAccountProfile = useCallback<typeof applyAccountProfile>(value => {
+    setProfileDirty(true); applyAccountProfile(value);
+  }, [applyAccountProfile]);
+  useScreenReadPause(profileDirty);
   const [accountMessage, setAccountMessage] = useState<string | null>(null);
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: '',
@@ -328,6 +335,7 @@ const AccountProfileManagement = ({
       temperatureUnit: nextTemperatureUnit,
       timeFormat: isTimeFormat(updatedUser.timeFormat) ? updatedUser.timeFormat : accountProfile.timeFormat,
     });
+    setProfileDirty(false);
     setAccountMessage(activePage === 'account-preferences' ? 'Preferences updated' : 'Profile updated');
   };
 
@@ -353,6 +361,7 @@ const AccountProfileManagement = ({
       }
       const savedAddress = data.user?.homeAddress ?? homeAddress;
       setAccountProfile((prev) => ({ ...prev, homeAddress: savedAddress }));
+      setProfileDirty(profileDirty);
       setAccountMessage('Address updated');
     } catch (error) {
       Alert.alert((error as Error)?.message || 'Unable to save home address');
@@ -519,7 +528,7 @@ const AccountProfileManagement = ({
               themeStyle('tabs_AccountProfileManagement_3', {  }, (theme ?? _styleTheme)),
             ]}
             onPress={() => {
-              onChangeMapApp(opt.key);
+              setProfileDirty(true); onChangeMapApp(opt.key);
               setAccountProfile((p) => ({ ...p, mapPreference: opt.key }));
             }}
           >
@@ -553,7 +562,7 @@ const AccountProfileManagement = ({
               themeStyle('tabs_AccountProfileManagement_7', {  }, (theme ?? _styleTheme)),
             ]}
             onPress={() => {
-              onChangeAppearancePreference(opt.key);
+              setProfileDirty(true); onChangeAppearancePreference(opt.key);
               setAccountProfile((p) => ({ ...p, appearancePreference: opt.key }));
             }}
           >

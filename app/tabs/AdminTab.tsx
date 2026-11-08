@@ -1,3 +1,4 @@
+import { screenFetch as fetch } from '../cache/screenFetch';
 import IconText from '../components/IconText';
 import { resolveComponentTheme as resolveStyleTheme, themeStyle, getAppTheme as getStyleTheme, getAppTheme, type AppTheme } from '../theme/theme';
 

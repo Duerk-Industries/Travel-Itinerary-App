@@ -1,3 +1,4 @@
+import { screenFetch as fetch } from '../cache/screenFetch';
 // "Send to WanderBunnies" — receiving photos/videos shared from the phone's native share sheet
 // (Photos app, Files, etc.), the same way a traveler might "share to" a messaging app. The native
 // receiving side (iOS Share Extension / Android SEND intent-filters) is wired up via the

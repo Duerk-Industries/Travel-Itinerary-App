@@ -1,3 +1,4 @@
+import { screenFetch as fetch } from '../cache/screenFetch';
 export class ApiClientError extends Error {
   status: number;
   code?: string;
@@ -18,6 +19,9 @@ type RequestJsonOptions = {
   method?: string;
   signal?: AbortSignal;
   token?: string | null;
+  onCached?: (value: unknown) => void;
+  isCurrent?: () => boolean;
+  onUnavailable?: () => void;
 };
 
 const isPlainObjectBody = (value: unknown): value is Record<string, unknown> =>
@@ -59,6 +63,9 @@ export const requestJson = async <T>(url: string, options: RequestJsonOptions = 
     headers,
     body,
     signal: options.signal,
+    onCached: options.onCached,
+    isCurrent: options.isCurrent,
+    onUnavailable: options.onUnavailable,
   });
 
   const parsedBody = await parseResponseBody(response);

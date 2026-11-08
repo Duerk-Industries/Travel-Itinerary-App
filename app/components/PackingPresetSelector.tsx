@@ -1,3 +1,4 @@
+import { screenFetch as fetch } from '../cache/screenFetch';
 import { resolveComponentTheme as resolveStyleTheme, themeStyle } from '../theme/theme';
 
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
@@ -45,7 +46,9 @@ const PackingPresetSelector: React.FC<PackingPresetSelectorProps> = ({ backendUr
     let cancelled = false;
     const load = async () => {
       try {
-        const res = await fetch(`${backendUrl}/api/account/packing-list-presets`, { headers });
+        const res = await fetch(`${backendUrl}/api/account/packing-list-presets`, { headers, isCurrent: () => !cancelled,
+          onUnavailable: () => { if (!cancelled) { setPresets([]); setAvailable(false); } }, onCached: raw => { const data = raw as { presets?: PackingPreset[] }; if (!cancelled && Array.isArray(data.presets)) { setPresets(data.presets); setAvailable(true); } },
+        });
         if (res.status === 404) {
           if (!cancelled) setAvailable(false);
           return;

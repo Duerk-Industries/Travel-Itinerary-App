@@ -1,3 +1,4 @@
+import { screenFetch as fetch } from '../cache/screenFetch';
 import { Platform, Linking } from 'react-native';
 
 export type BillingPlanKey =

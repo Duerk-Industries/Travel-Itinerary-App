@@ -1,3 +1,4 @@
+import { screenFetch as fetch } from '../cache/screenFetch';
 import { Linking, Platform } from 'react-native';
 import {
   evaluateGetYourGuideCandidate,

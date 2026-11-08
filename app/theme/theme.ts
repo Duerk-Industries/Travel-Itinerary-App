@@ -416,6 +416,9 @@ const styleFactories = {
   // components/ActivityDescriptionGenerator.tsx
   components_ActivityDescriptionGenerator_1: (_theme: AppTheme, {  }: ThemeStyleValues): any => ({ gap: 8, marginVertical: 8 }),
   // components/ActivityEditForm.tsx
+  cache_ScreenCacheStatus_container: (theme: AppTheme): any => ({ backgroundColor: theme.colors.surfaceMuted, padding: 10 }),
+  cache_ScreenCacheStatus_text: (theme: AppTheme): any => ({ color: theme.colors.text }),
+  cache_ScreenCacheStatus_link: (theme: AppTheme): any => ({ color: theme.colors.link }),
   components_ActivityEditForm_1: (_theme: AppTheme, { theme }: ThemeStyleValues): any => ({
     paddingHorizontal: 10,
     paddingVertical: 6,

@@ -1,3 +1,4 @@
+import { screenFetch as fetch } from '../cache/screenFetch';
 type ExchangeRateResult = {
   rate: number;
   date: string;

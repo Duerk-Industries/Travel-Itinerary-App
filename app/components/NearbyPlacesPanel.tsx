@@ -1,3 +1,4 @@
+import { screenFetch as fetch } from '../cache/screenFetch';
 import { themeStyle } from '../theme/theme';
 import { useAppTheme as useStyleTheme, useAppTheme } from '../theme/ThemeContext';
 import React, { useEffect, useRef, useState } from 'react';
@@ -43,7 +44,9 @@ export default function NearbyPlacesPanel({ tripId, date, center, backendUrl, he
     setLoading(true); setError(null);
     const params = new URLSearchParams({ tripId, offset: String(offset), ...(query ? { area: query } : center ? { lat: String(center.lat), lng: String(center.lng) } : {}) });
     try {
-      const response = await fetch(`${backendUrl}/api/activities/nearby?${params}`, { headers });
+      const response = await fetch(`${backendUrl}/api/activities/nearby?${params}`, { headers, isCurrent: () => scopeRef.current === requestScope,
+        onUnavailable: () => { if (scopeRef.current === requestScope) { setPlaces([]); setNextOffset(null); } }, onCached: raw => { const data = raw as { places?: NearbyPlace[]; nextOffset?: number }; if (!offset && scopeRef.current === requestScope && Array.isArray(data.places)) { setPlaces(data.places); setNextOffset(data.nextOffset ?? null); } },
+      });
       const data = await response.json();
       if (!response.ok || !Array.isArray(data.places)) throw new Error(data.error || 'Nearby could not load.');
       if (scopeRef.current !== requestScope) return;

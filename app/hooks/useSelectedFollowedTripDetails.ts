@@ -37,7 +37,10 @@ export const useSelectedFollowedTripDetails = ({
       try {
         const data = await requestJson<any>(
           `${backendUrl}/api/trips/${selectedFollowedTripId}`,
-          { token: userToken }
+          { token: userToken, isCurrent: () => !cancelled,
+            onUnavailable: () => { if (!cancelled) setSelectedFollowedTripDetails(null); },
+            onCached: raw => { const saved = raw as Trip; if (!cancelled && saved?.id) setSelectedFollowedTripDetails(saved); },
+          }
         );
         if (cancelled) return;
         if (data?.id) {

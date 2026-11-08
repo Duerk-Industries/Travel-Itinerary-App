@@ -89,7 +89,7 @@ Expense splitting and coverage rollups run in `app/utils/costs.ts` and `coveredB
 
 ## Client data caching
 
-The app shell now supplies an account/environment/session-scoped TanStack Query client. Packing lists use persistent cached viewing and background revalidation; other screens retain existing fetch paths until migrated. See [shared screen caching](client-data-cache.md) for policies, encrypted native persistence, invalidation and migration instructions.
+The app shell now supplies an account/environment/session-scoped TanStack Query client. Packing lists use declarative cached queries; trip items, financial views, directories, itineraries, blogs and supporting fetch-based screens use the shared response bridge with guarded cached callbacks. Sensitive authorization, admin, billing and bank-import reads stay fresh and unpersisted. See [shared screen caching](client-data-cache.md) for policies, encrypted native persistence, invalidation and migration instructions.
 
 ## Delivery boundaries
 

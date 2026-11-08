@@ -1,3 +1,4 @@
+import { screenFetch as fetch } from '../cache/screenFetch';
 import { parsePlanToDetails, type ParsedItineraryDetail } from './itineraryParser';
 
 type TransferMode = 'Flight' | 'Public Transit' | 'Private Transfer' | 'Train' | 'Bus' | 'Private' | 'Ferry' | 'Other';

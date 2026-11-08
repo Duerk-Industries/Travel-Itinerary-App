@@ -65,3 +65,24 @@ test('cancels a stale read before an online write and publishes only confirmed r
   expect(view.result.current.data).toEqual(['saved']);
   view.unmount();
 });
+
+test('the shared stale notice can retry a failed imperative screen read and update its mounted view', async () => {
+  const { useScreenCache } = await import('../cache/ScreenCacheProvider');
+  const { screenFetch } = await import('../cache/screenFetch');
+  const hook = renderHook(() => useScreenCache(), { wrapper });
+  await waitFor(() => expect(hook.result.current?.ready).toBe(true));
+  global.fetch = jest.fn()
+    .mockResolvedValueOnce(new Response(JSON.stringify([{ id: 'saved' }]), { status: 200 }))
+    .mockResolvedValueOnce(new Response(JSON.stringify({ error: 'Unavailable' }), { status: 503 }))
+    .mockResolvedValueOnce(new Response(JSON.stringify([{ id: 'fresh' }]), { status: 200 }));
+  const apply = jest.fn();
+  await act(async () => {
+    await screenFetch('test/api/activities?tripId=retry-test', { headers: { Authorization: 'Bearer session' }, onCached: apply });
+    await screenFetch('test/api/activities?tripId=retry-test', { headers: { Authorization: 'Bearer session' }, onCached: apply });
+  });
+  await waitFor(() => expect(hook.result.current?.stale).toBe(true));
+  act(() => { hook.result.current?.refresh(); });
+  await waitFor(() => expect(apply).toHaveBeenLastCalledWith([{ id: 'fresh' }]));
+  await waitFor(() => expect(hook.result.current?.stale).toBe(false));
+  hook.unmount();
+});

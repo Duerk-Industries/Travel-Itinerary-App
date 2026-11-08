@@ -1,3 +1,4 @@
+import { screenFetch as fetch } from '../cache/screenFetch';
 import IconText from './IconText';
 import { themeStyle } from '../theme/theme';
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
@@ -26,7 +27,9 @@ export default function ImportSuggestionReview({ backendUrl, headers, onConfirme
     if (lock.current === scope) return;
     lock.current = scope; setBusy(true); setNotice(''); setFailures([]);
     try {
-      const response = await fetch(`${backendUrl}/api/ingestion/review-suggestions${after ? `?after=${encodeURIComponent(after)}` : ''}`, { headers });
+      const response = await fetch(`${backendUrl}/api/ingestion/review-suggestions${after ? `?after=${encodeURIComponent(after)}` : ''}`, { headers, isCurrent: () => current.current === scope,
+        onUnavailable: () => { if (current.current === scope) setPreview(null); }, onCached: raw => { if (!after && current.current === scope && raw && typeof raw === 'object') setPreview({ ...raw, scope } as typeof preview); },
+      });
       const body = await response.json(); if (!response.ok) throw new Error(body.error || 'Matching bookings could not load.');
       if (current.current !== scope) return;
       setPreview({ ...body, scope }); setSelected(new Set());

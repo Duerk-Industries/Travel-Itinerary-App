@@ -1,3 +1,4 @@
+import { screenFetch as fetch } from '../cache/screenFetch';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 export type BlogReactionEmoji = 'heart' | 'laugh' | 'wow' | 'fire' | 'clap' | 'thanks';

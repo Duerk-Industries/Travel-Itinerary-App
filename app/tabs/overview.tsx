@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { screenFetch as fetch } from '../cache/screenFetch';
 import { formatMoney } from '../../packages/domain/src/money';
 import ActivitySummaryCard from '../components/ActivitySummaryCard';
 import IconText from '../components/IconText';
@@ -745,6 +746,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
 
   useEffect(() => {
+    let current = true;
     const loadItinerary = async () => {
       if (cachedItinerary !== undefined && itineraryReload === 0) {
         setItineraryDetails((cachedItinerary?.details ?? []) as ItineraryDetail[]);
@@ -761,7 +763,15 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       }
       setItineraryLoading(true);
       try {
-        const res = await fetch(`${backendUrl}/api/itineraries`, { headers });
+        const res = await fetch(`${backendUrl}/api/itineraries`, { headers, isCurrent: () => current,
+          onUnavailable: () => { if (current) { setItineraryDetails([]); setItineraryId(null); setItineraryPlanMarkdown(null); } },
+          onCached: raw => {
+            if (!current || !Array.isArray(raw)) return;
+            const latest = raw.filter(record => record.tripId === trip?.id).sort((a, b) =>
+              new Date(b.updatedAt ?? b.createdAt ?? 0).getTime() - new Date(a.updatedAt ?? a.createdAt ?? 0).getTime())[0];
+            if (latest) { setItineraryId(latest.id); setItineraryPlanMarkdown(latest.planMarkdown ?? null); }
+          },
+        });
         if (!res.ok) {
           setItineraryDetails([]);
           setItineraryId(null);
@@ -769,6 +779,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           return;
         }
         const data = await res.json();
+        if (!current) return;
         const records = (Array.isArray(data) ? data : []).filter((i) => i.tripId === trip.id);
         if (!records.length) {
           setItineraryDetails([]);
@@ -784,22 +795,25 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         const latest = [...records].sort((a, b) => recordTs(b) - recordTs(a))[0];
         setItineraryId(latest.id ?? null);
         setItineraryPlanMarkdown(typeof latest.planMarkdown === 'string' && latest.planMarkdown.trim() ? latest.planMarkdown : null);
-        const detailsRes = await fetch(`${backendUrl}/api/itineraries/${latest.id}/details`, { headers });
+        const detailsRes = await fetch(`${backendUrl}/api/itineraries/${latest.id}/details`, { headers, isCurrent: () => current,
+          onUnavailable: () => { if (current) setItineraryDetails([]); },
+          onCached: raw => { if (current && Array.isArray(raw)) setItineraryDetails(raw); },
+        });
         if (!detailsRes.ok) {
           setItineraryDetails([]);
           return;
         }
         const details = await detailsRes.json();
+        if (!current) return;
         setItineraryDetails(Array.isArray(details) ? details : []);
       } catch {
-        setItineraryDetails([]);
-        setItineraryId(null);
-        setItineraryPlanMarkdown(null);
+        // Preserve the saved itinerary on network/cancellation errors; denied responses clear it above.
       } finally {
-        setItineraryLoading(false);
+        if (current) setItineraryLoading(false);
       }
     };
     loadItinerary();
+    return () => { current = false; };
   }, [backendUrl, cachedItinerary, headers, trip?.id, itineraryReload]);
 
   useEffect(() => {

@@ -1,3 +1,4 @@
+import { screenFetch as fetch } from '../cache/screenFetch';
 import { singlePayerIds } from '../utils/payerSelection';
 import type { PlanningCoordinates } from '../../server/src/types';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
@@ -133,13 +134,21 @@ export const fetchCarRentalsForTrip = async (params: {
   backendUrl: string;
   activeTripId: string | null;
   token?: string | null;
+  onCached?: (items: CarRental[]) => void;
+  isCurrent?: () => boolean;
+  freshOnly?: boolean;
+  onUnavailable?: () => void;
 }): Promise<CarRental[]> => {
-  const { backendUrl, activeTripId, token } = params;
+  const { backendUrl, activeTripId, token, onCached, isCurrent, freshOnly, onUnavailable } = params;
   if (!activeTripId || !token) return [];
   const res = await fetch(`${backendUrl}/api/car-rentals?tripId=${activeTripId}`, {
     headers: { Authorization: `Bearer ${token}` },
+    ...(freshOnly ? { cache: 'no-store' as const } : {}),
+    isCurrent,
+    onUnavailable: () => { if (onUnavailable) onUnavailable(); else onCached?.([]); },
+    onCached: raw => { if (Array.isArray(raw)) onCached?.(raw.map(normalizeCarRentalFromApi)); },
   });
-  if (!res.ok) throw new Error('Unable to load trip details');
+  if (!res.ok) { if ([401, 402, 403, 404].includes(res.status)) (onUnavailable ? onUnavailable() : onCached?.([])); throw new Error('Unable to load trip details'); }
   const data = await res.json();
     if (!Array.isArray(data)) throw new Error('Invalid trip details response');
   return Array.isArray(data) ? data.map((item) => normalizeCarRentalFromApi(item)) : [];

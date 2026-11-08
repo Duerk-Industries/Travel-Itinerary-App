@@ -1,3 +1,5 @@
+import { useScreenReadPause } from '../cache/useScreenReadPause';
+import { screenFetch as fetch } from '../cache/screenFetch';
 import { themeStyle } from '../theme/theme';
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -146,7 +148,9 @@ export function TraitsTab<T extends TraitRecord>({
   const [promptTraits, setPromptTraits] = useState(() => normalizePromptTraits(storedPromptProfile.profile));
   const [customInterest, setCustomInterest] = useState('');
 
+  const [demographicsDirty, setDemographicsDirty] = useState(false);
   const promptTraitsDigest = useMemo(() => serializePromptTraits(storedPromptProfile.profile), [storedPromptProfile.profile]);
+  useScreenReadPause(demographicsDirty || serializePromptTraits(promptTraits) !== promptTraitsDigest);
   useEffect(() => {
     setPromptTraits(normalizePromptTraits(storedPromptProfile.profile));
   }, [promptTraitsDigest]);
@@ -242,6 +246,7 @@ export function TraitsTab<T extends TraitRecord>({
     }).catch(() => undefined);
     await fetchTraitProfile();
     await fetchTraits();
+    setDemographicsDirty(false);
     Alert.alert('Traits saved');
   };
 
@@ -255,7 +260,7 @@ export function TraitsTab<T extends TraitRecord>({
           placeholder="Age"
           keyboardType="numeric"
           value={traitAge}
-          onChangeText={(text: string) => setTraitAge(text.replace(/[^0-9]/g, ''))}
+          onChangeText={(text: string) => { setDemographicsDirty(true); setTraitAge(text.replace(/[^0-9]/g, '')); }}
         />
         <View style={styles.traitGrid}>
           {[
@@ -269,7 +274,7 @@ export function TraitsTab<T extends TraitRecord>({
               <TouchableOpacity
                 key={opt.key}
                 style={[styles.traitChip, selected && styles.traitChipSelected]}
-                onPress={() => setTraitGender(opt.key as typeof traitGender)}
+                onPress={() => { setDemographicsDirty(true); setTraitGender(opt.key as typeof traitGender); }}
               >
                 <Text style={[styles.traitChipText, selected && styles.traitChipTextSelected]}>{opt.label}</Text>
               </TouchableOpacity>

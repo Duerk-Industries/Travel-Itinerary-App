@@ -14,7 +14,7 @@ export const downloadOfflineTripSnapshot = async (params: {
   const tripId = encodeURIComponent(trip.id);
   if (params.useBundle) {
     const previous = params.previous?.tripId === trip.id && params.previous.bundleCostTracking === costTrackingAllowed ? params.previous : undefined;
-    const response = await fetch(`${backendUrl}/api/trips/${tripId}/bundle`, { headers: {
+    const response = await fetch(`${backendUrl}/api/trips/${tripId}/bundle`, { cache: 'no-store', headers: {
       Authorization: `Bearer ${token}`, ...(previous?.bundleEtag ? { 'If-None-Match': previous.bundleEtag } : {}),
     } });
     if (response.status === 304) {
@@ -33,7 +33,7 @@ export const downloadOfflineTripSnapshot = async (params: {
     if (response.status !== 404) throw new Error('Saved trip download failed');
   }
   const fetchValue = async (path: string): Promise<unknown> => {
-    const response = await fetch(`${backendUrl}${path}`, { headers: { Authorization: `Bearer ${token}` } });
+    const response = await fetch(`${backendUrl}${path}`, { cache: 'no-store', headers: { Authorization: `Bearer ${token}` } });
     if (!response.ok) throw new Error('Saved trip download failed');
     return response.json();
   };
@@ -63,10 +63,10 @@ export const downloadOfflineTripSnapshot = async (params: {
   };
   const [groupMembers, flights, lodgings, tours, carRentals, expenses, payments, coveredBy, itinerary] = await Promise.all([
     fetchList(`/api/groups/${encodeURIComponent(trip.groupId)}/members`),
-    fetchFlightsForTrip({ backendUrl, activeTripId: trip.id, token }),
-    fetchLodgingsApi(backendUrl, trip.id, token),
-    fetchActivitiesForTrip({ backendUrl, activeTripId: trip.id, token }),
-    fetchCarRentalsForTrip({ backendUrl, activeTripId: trip.id, token }),
+    fetchFlightsForTrip({ backendUrl, activeTripId: trip.id, token, freshOnly: true }),
+    fetchLodgingsApi(backendUrl, trip.id, token, { freshOnly: true }),
+    fetchActivitiesForTrip({ backendUrl, activeTripId: trip.id, token, freshOnly: true }),
+    fetchCarRentalsForTrip({ backendUrl, activeTripId: trip.id, token, freshOnly: true }),
     costTrackingAllowed ? fetchList(`/api/expenses?tripId=${tripId}`) : Promise.resolve([]),
     costTrackingAllowed ? fetchList(`/api/payments?tripId=${tripId}`) : Promise.resolve([]),
     fetchRecord(`/api/trips/${tripId}/covered-by`), fetchItinerary(),

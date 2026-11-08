@@ -1,3 +1,4 @@
+import { screenFetch as fetch } from '../cache/screenFetch';
 import { themeStyle } from '../theme/theme';
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import React, { useEffect, useRef, useState } from 'react';
@@ -24,7 +25,9 @@ export default function TripsLikeThis({ tripId, date, backendUrl, headers, onAdd
   const load = async (requestScope: string) => {
     const request = ++sequence.current;
     try {
-      const response = await fetch(`${backendUrl}/api/trips/${encodeURIComponent(tripId)}/similar-trips`, { headers });
+      const response = await fetch(`${backendUrl}/api/trips/${encodeURIComponent(tripId)}/similar-trips`, { headers, isCurrent: () => current.current === requestScope && request === sequence.current,
+        onUnavailable: () => { if (current.current === requestScope) setResult(null); }, onCached: (body: any) => { if (current.current === requestScope && request === sequence.current) setResult({ scope: requestScope, trips: Array.isArray(body.trips) ? body.trips : [] }); },
+      });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || 'Trips like this could not load.');
       if (current.current === requestScope && request === sequence.current) setResult({ scope: requestScope, trips: Array.isArray(body.trips) ? body.trips : [] });

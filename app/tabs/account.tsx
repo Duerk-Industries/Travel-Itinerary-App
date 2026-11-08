@@ -1,3 +1,5 @@
+import { areScreenReadsPaused } from '../cache/screenSession';
+import { screenFetch as fetch } from '../cache/screenFetch';
 import { themeStyle, getAppTheme } from '../theme/theme';
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
 import { isCalendarApp } from '../utils/calendarEvents';
@@ -106,8 +108,9 @@ export const fetchAccountProfile = async ({
     const mapPreference = isMapApp(data.mapPreference) ? data.mapPreference : undefined;
     const appearancePreference = isAppearancePreference(data.appearancePreference) ? data.appearancePreference : undefined;
     const temperatureUnit = normalizeTemperatureUnit(data.temperatureUnit);
-    if (mapPreference && setMapPreference) setMapPreference(mapPreference);
-    if (appearancePreference && setAppearancePreference) setAppearancePreference(appearancePreference);
+    const preserveDraft = areScreenReadsPaused(backendUrl, token);
+    if (!preserveDraft && mapPreference && setMapPreference) setMapPreference(mapPreference);
+    if (!preserveDraft && appearancePreference && setAppearancePreference) setAppearancePreference(appearancePreference);
     setAccountProfile((prev) => ({
       firstName: data.firstName ?? '',
       lastName: data.lastName ?? '',
@@ -119,6 +122,10 @@ export const fetchAccountProfile = async ({
       appearancePreference: appearancePreference ?? prev.appearancePreference ?? 'auto',
       temperatureUnit,
       timeFormat: isTimeFormat(data.timeFormat) ? data.timeFormat : undefined,
+      ...(preserveDraft ? { firstName: prev.firstName, lastName: prev.lastName, email: prev.email,
+        homeAddress: prev.homeAddress, preferredAirport: prev.preferredAirport, mapPreference: prev.mapPreference,
+        calendarPreference: prev.calendarPreference, appearancePreference: prev.appearancePreference,
+        temperatureUnit: prev.temperatureUnit, timeFormat: prev.timeFormat } : {}),
       entitlements: data.entitlements ?? prev.entitlements,
       tierKey: data.tierKey ?? prev.tierKey,
       premiumEnabled: typeof data.premiumEnabled === 'boolean' ? data.premiumEnabled : prev.premiumEnabled,
@@ -141,8 +148,11 @@ interface FetchFamilyRelationshipsParams {
 export const fetchFamilyRelationships = async ({ backendUrl, token, setFamilyRelationships }: FetchFamilyRelationshipsParams) => {
   if (!token) return;
   try {
-    const res = await fetch(`${backendUrl}/api/account/family`, { headers: { Authorization: `Bearer ${token}` } });
-    if (!res.ok) return;
+    const res = await fetch(`${backendUrl}/api/account/family`, { headers: { Authorization: `Bearer ${token}` },
+      onCached: raw => { if (Array.isArray(raw)) setFamilyRelationships(raw); },
+      onUnavailable: () => setFamilyRelationships([]),
+    });
+    if (!res.ok) { if ([401, 402, 403, 404].includes(res.status)) setFamilyRelationships([]); return; }
     const data = await res.json();
     setFamilyRelationships(data);
   } catch {
@@ -159,8 +169,11 @@ interface FetchFellowTravelersParams {
 export const fetchFellowTravelers = async ({ backendUrl, token, setFellowTravelers }: FetchFellowTravelersParams) => {
   if (!token) return;
   try {
-    const res = await fetch(`${backendUrl}/api/account/fellow-travelers`, { headers: { Authorization: `Bearer ${token}` } });
-    if (!res.ok) return;
+    const res = await fetch(`${backendUrl}/api/account/fellow-travelers`, { headers: { Authorization: `Bearer ${token}` },
+      onCached: raw => { if (Array.isArray(raw)) setFellowTravelers(raw); },
+      onUnavailable: () => setFellowTravelers([]),
+    });
+    if (!res.ok) { if ([401, 402, 403, 404].includes(res.status)) setFellowTravelers([]); return; }
     const data = await res.json();
     setFellowTravelers(data);
   } catch {

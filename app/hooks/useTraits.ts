@@ -1,4 +1,5 @@
-import { useCallback, useState } from 'react';
+import { areScreenReadsPaused } from '../cache/screenSession';
+import { useCallback, useRef, useState } from 'react';
 import { type Trait } from '../tabs/traits';
 import { requestJson } from '../utils/apiClient';
 
@@ -26,6 +27,8 @@ type UseTraitsParams = {
  * (login + refresh effects) keep their behavior.
  */
 export const useTraits = ({ backendUrl, userToken }: UseTraitsParams) => {
+  const scope = `${backendUrl}:${userToken}`;
+  const scopeRef = useRef(scope); scopeRef.current = scope;
   const [traits, setTraits] = useState<Trait[]>([]);
   const [newTraitName, setNewTraitName] = useState('');
   const [selectedTraitNames, setSelectedTraitNames] = useState<Set<string>>(new Set());
@@ -36,7 +39,11 @@ export const useTraits = ({ backendUrl, userToken }: UseTraitsParams) => {
   const fetchTraits = useCallback(async (): Promise<void> => {
     if (!userToken) return;
     try {
-      const data = await requestJson<Trait[]>(`${backendUrl}/api/traits`, { token: userToken });
+      const data = await requestJson<Trait[]>(`${backendUrl}/api/traits`, { token: userToken,
+        onUnavailable: () => { if (scopeRef.current === scope) { setTraits([]); setSelectedTraitNames(new Set()); } },
+        onCached: raw => { if (scopeRef.current === scope && !areScreenReadsPaused(backendUrl, userToken) && Array.isArray(raw)) { setTraits(raw); setSelectedTraitNames(new Set(raw.map((trait: Trait) => trait.name))); } },
+      });
+      if (scopeRef.current !== scope || areScreenReadsPaused(backendUrl, userToken)) return;
       const list = Array.isArray(data) ? data : [];
       setTraits(list);
       setSelectedTraitNames(new Set(list.map((t) => t.name)));
@@ -52,6 +59,7 @@ export const useTraits = ({ backendUrl, userToken }: UseTraitsParams) => {
         `${backendUrl}/api/traits/profile/demographics`,
         { token: userToken }
       );
+      if (scopeRef.current !== scope || areScreenReadsPaused(backendUrl, userToken)) return;
       const data = raw ?? {};
       if (data.age != null) setTraitAge(String(data.age));
       if (isTraitGender(data.gender)) setTraitGender(data.gender);

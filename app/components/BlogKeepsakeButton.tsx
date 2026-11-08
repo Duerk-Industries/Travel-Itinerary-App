@@ -1,3 +1,4 @@
+import { screenFetch as fetch } from '../cache/screenFetch';
 import IconText from './IconText';
 import { keepsakeLoadingHtml, themeStyle } from '../theme/theme';
 

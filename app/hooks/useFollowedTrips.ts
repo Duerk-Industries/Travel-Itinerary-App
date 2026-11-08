@@ -127,7 +127,7 @@ export const useFollowedTrips = ({
       try {
         const trips = await fetchFollowedTripsApi(backendUrl, {
           Authorization: `Bearer ${authToken}`,
-        });
+        }, setFollowedTrips);
         setFollowedTrips(trips);
         return trips;
       } catch (err) {

@@ -1,3 +1,4 @@
+import { screenFetch as fetch } from '../cache/screenFetch';
 import { withoutHotelPlaceholder } from '../utils/lodgingPlaceholder';
 import { singlePayerIds } from '../utils/payerSelection';
 import type { PlanningCoordinates } from '../../server/src/types';
@@ -207,11 +208,15 @@ export const createLodgingDraftForTrip = (params: {
   });
 };
 
-export const fetchLodgingsApi = async (backendUrl: string, activeTripId: string, token: string): Promise<Lodging[]> => {
+export const fetchLodgingsApi = async (backendUrl: string, activeTripId: string, token: string, cache: { onCached?: (items: Lodging[]) => void; isCurrent?: () => boolean; freshOnly?: boolean; onUnavailable?: () => void } = {}): Promise<Lodging[]> => {
   const res = await fetch(`${backendUrl}/api/lodgings?tripId=${activeTripId}`, {
     headers: { Authorization: `Bearer ${token}` },
+    ...(cache.freshOnly ? { cache: 'no-store' as const } : {}),
+    isCurrent: cache.isCurrent,
+    onUnavailable: () => { if (cache.onUnavailable) cache.onUnavailable(); else cache.onCached?.([]); },
+    onCached: raw => { if (Array.isArray(raw)) cache.onCached?.(raw.map(normalizeLodgingFromApi)); },
   });
-  if (!res.ok) throw new Error('Unable to load trip details');
+  if (!res.ok) { if ([401, 402, 403, 404].includes(res.status)) (cache.onUnavailable ? cache.onUnavailable() : cache.onCached?.([])); throw new Error('Unable to load trip details'); }
   const data = await res.json();
     if (!Array.isArray(data)) throw new Error('Invalid trip details response');
   return (data as any[]).map(normalizeLodgingFromApi);

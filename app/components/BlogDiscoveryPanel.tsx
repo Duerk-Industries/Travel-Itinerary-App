@@ -1,3 +1,5 @@
+import { useCachedViewScope } from '../cache/useCachedViewScope';
+import { screenFetch as fetch } from '../cache/screenFetch';
 import { resolveComponentTheme as resolveStyleTheme, themeStyle } from '../theme/theme';
 
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
@@ -37,6 +39,7 @@ const BlogDiscoveryPanel: React.FC<Props> = ({ backendUrl, headers, tripId, sear
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState('');
+  const isCurrentView = useCachedViewScope(`${backendUrl}:${tripId}:${query}:${JSON.stringify(headers)}`);
   // "Rate this place": a thumb and a written note, saved together.
   const [rating, setRating] = useState<{ key: string; stars: number | null; note: string } | null>(null);
   if (!searchEnabled && !placesEnabled) return null;
@@ -46,7 +49,9 @@ const BlogDiscoveryPanel: React.FC<Props> = ({ backendUrl, headers, tripId, sear
     setBusy('search'); setNotice('');
     try {
       const suffix = cursor ? `&cursor=${encodeURIComponent(cursor)}` : '';
-      const response = await fetch(`${backendUrl}/api/trips/${tripId}/blog/search?q=${encodeURIComponent(query.trim())}${suffix}`, { headers });
+      const response = await fetch(`${backendUrl}/api/trips/${tripId}/blog/search?q=${encodeURIComponent(query.trim())}${suffix}`, { headers,
+        isCurrent: isCurrentView, onUnavailable: () => { if (isCurrentView()) { setResults([]); setNextCursor(null); } }, onCached: raw => { const data = raw as { results?: any[]; nextCursor?: string }; if (!cursor && Array.isArray(data.results)) { setResults(data.results); setNextCursor(data.nextCursor ?? null); } },
+      });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || 'Unable to search');
       setResults((current) => cursor ? [...current, ...(data.results || [])] : (data.results || []));
@@ -60,7 +65,9 @@ const BlogDiscoveryPanel: React.FC<Props> = ({ backendUrl, headers, tripId, sear
     if (busy) return;
     setBusy('places'); setNotice('');
     try {
-      const response = await fetch(`${backendUrl}/api/trips/${tripId}/blog/places`, { headers });
+      const response = await fetch(`${backendUrl}/api/trips/${tripId}/blog/places`, { headers,
+        isCurrent: isCurrentView, onUnavailable: () => { if (isCurrentView()) setPlaces([]); }, onCached: raw => { const data = raw as { places?: any[] }; if (Array.isArray(data.places)) setPlaces(data.places); },
+      });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || 'Unable to load places');
       setPlaces(data.places || []);

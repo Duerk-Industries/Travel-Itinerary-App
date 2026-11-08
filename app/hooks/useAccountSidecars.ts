@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { fetchFamilyRelationships, fetchFellowTravelers, type FellowTraveler } from '../tabs/account';
 
 type UseAccountSidecarsParams = {
@@ -18,6 +18,8 @@ type UseAccountSidecarsParams = {
  * be in state), mirroring the prior inline behavior.
  */
 export const useAccountSidecars = ({ backendUrl, userToken }: UseAccountSidecarsParams) => {
+  const scope = `${backendUrl}:${userToken}`;
+  const scopeRef = useRef(scope); scopeRef.current = scope;
   const [familyRelationships, setFamilyRelationships] = useState<any[]>([]);
   const [fellowTravelers, setFellowTravelers] = useState<FellowTraveler[]>([]);
 
@@ -26,7 +28,7 @@ export const useAccountSidecars = ({ backendUrl, userToken }: UseAccountSidecars
       fetchFamilyRelationships({
         backendUrl,
         token: token ?? userToken,
-        setFamilyRelationships,
+        setFamilyRelationships: value => { if (scopeRef.current === scope) setFamilyRelationships(value); },
       }),
     [backendUrl, userToken]
   );
@@ -36,7 +38,7 @@ export const useAccountSidecars = ({ backendUrl, userToken }: UseAccountSidecars
       fetchFellowTravelers({
         backendUrl,
         token: token ?? userToken,
-        setFellowTravelers,
+        setFellowTravelers: value => { if (scopeRef.current === scope) setFellowTravelers(value); },
       }),
     [backendUrl, userToken]
   );

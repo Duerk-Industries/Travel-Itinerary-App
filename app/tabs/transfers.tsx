@@ -1,3 +1,4 @@
+import { screenFetch as fetch } from '../cache/screenFetch';
 import { formatMoney, amountInTripCurrency } from '../../packages/domain/src/money';
 import IconText from '../components/IconText';
 import { useLayoutBreakpoints } from '../hooks/useLayoutBreakpoints';
@@ -480,17 +481,29 @@ export const fetchFlightsForTrip = async ({
   backendUrl,
   activeTripId,
   token,
+  onCached,
+  isCurrent,
+  freshOnly,
+  onUnavailable,
 }: {
   backendUrl: string;
   activeTripId: string | null;
   token?: string | null;
+  onCached?: (items: Flight[]) => void;
+  isCurrent?: () => boolean;
+  freshOnly?: boolean;
+  onUnavailable?: () => void;
 }): Promise<Flight[]> => {
   if (!activeTripId || !token) return [];
   try {
     const res = await fetch(`${backendUrl}/api/transfers?tripId=${activeTripId}`, {
       headers: { Authorization: `Bearer ${token}` },
+    ...(freshOnly ? { cache: 'no-store' as const } : {}),
+    isCurrent,
+    onUnavailable: () => { if (onUnavailable) onUnavailable(); else onCached?.([]); },
+    onCached: raw => { if (Array.isArray(raw)) onCached?.(raw.map(normalizeFlightFromApi)); },
     });
-    if (!res.ok) throw new Error('Unable to load trip details');
+    if (!res.ok) { if ([401, 402, 403, 404].includes(res.status)) (onUnavailable ? onUnavailable() : onCached?.([])); throw new Error('Unable to load trip details'); }
     const data = await res.json();
     if (!Array.isArray(data)) throw new Error('Invalid trip details response');
     return (data as any[]).map((f) => normalizeFlightFromApi(f));

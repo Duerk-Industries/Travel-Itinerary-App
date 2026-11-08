@@ -1,3 +1,4 @@
+import { screenFetch as fetch } from '../cache/screenFetch';
 import { useScreenQuery, ScreenRequestError } from '../cache/useScreenQuery';
 import type { QueryKey } from '@tanstack/react-query';
 import type { PackingListItem, PackingListTraveler, PackingListV2Trip, PackingPresetPreference } from '../../server/src/types';
@@ -254,7 +255,8 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
     return new ScreenRequestError(message, status);
   };
   const runPackingWrite = <T,>(operation: () => Promise<T>) => cached.runWrite(operation,
-    variant === 'trip' ? [] : [['packing'] as QueryKey]);
+    variant === 'trip' ? [] : variant === 'user' ? [['packing', 'trip'] as QueryKey]
+      : [['packing', 'trip'] as QueryKey, ['packing', 'user'] as QueryKey]);
   const loading = cached.isFetching;
   const load = cached.refresh;
   useEffect(() => {

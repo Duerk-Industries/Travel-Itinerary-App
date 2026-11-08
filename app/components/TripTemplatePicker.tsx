@@ -1,3 +1,4 @@
+import { screenFetch as fetch } from '../cache/screenFetch';
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import Modal from './KeyboardAwareModal';
@@ -110,7 +111,9 @@ const TripTemplatePicker: React.FC<Props> = ({ backendUrl, headers, selectedLoca
     if (!query) return undefined;
     (async () => {
       try {
-        const res = await fetch(`${backendUrl}/api/trip-templates?${query}`, { headers });
+        const res = await fetch(`${backendUrl}/api/trip-templates?${query}`, { headers, isCurrent: () => !cancelled,
+          onUnavailable: () => { if (!cancelled) setTemplates([]); }, onCached: (raw: any) => { if (!cancelled && Array.isArray(raw.templates)) setTemplates(raw.templates); },
+        });
         if (!res.ok) return;
         const data = await res.json().catch(() => ({}));
         if (!cancelled && Array.isArray(data.templates)) setTemplates(data.templates);

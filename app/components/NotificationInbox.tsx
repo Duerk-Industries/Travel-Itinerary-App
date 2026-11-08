@@ -1,3 +1,4 @@
+import { screenFetch as fetch } from '../cache/screenFetch';
 import IconText from './IconText';
 import { ThemedText as Text } from './ThemedText';
 import { themeStyle } from '../theme/theme';

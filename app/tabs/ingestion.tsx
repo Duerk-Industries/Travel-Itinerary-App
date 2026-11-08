@@ -1,3 +1,4 @@
+import { screenFetch as fetch } from '../cache/screenFetch';
 import IconText from '../components/IconText';
 import { resolveComponentTheme as resolveStyleTheme, themeStyle, type AppTheme } from '../theme/theme';
 
@@ -183,8 +184,17 @@ const IngestionTab: React.FC<IngestionTabProps> = ({
     const requestScope = scope; setLoading(true); setError(null);
     try {
       const responses = await Promise.all([
-        fetch(`${backendUrl}/api/ingestion/config`, { headers }), fetch(`${backendUrl}/api/ingestion/review-items`, { headers }),
-        fetch(`${backendUrl}/api/ingestion/jobs`, { headers }), fetch(`${backendUrl}/api/ingestion/assignment/trips`, { headers }),
+        fetch(`${backendUrl}/api/ingestion/config`, { headers }), fetch(`${backendUrl}/api/ingestion/review-items`, { headers, isCurrent: () => scopeRef.current === requestScope,
+          onUnavailable: () => { if (scopeRef.current === requestScope) setItems([]); },
+          onCached: raw => { const data = raw as { items?: ReviewItem[] }; if (scopeRef.current === requestScope && Array.isArray(data.items)) setItems(data.items); },
+        }),
+        fetch(`${backendUrl}/api/ingestion/jobs`, { headers, isCurrent: () => scopeRef.current === requestScope,
+          onUnavailable: () => { if (scopeRef.current === requestScope) setJobs([]); },
+          onCached: raw => { const data = raw as { jobs?: ImportJob[] }; if (scopeRef.current === requestScope && Array.isArray(data.jobs)) setJobs(data.jobs); },
+        }), fetch(`${backendUrl}/api/ingestion/assignment/trips`, { headers, isCurrent: () => scopeRef.current === requestScope,
+          onUnavailable: () => { if (scopeRef.current === requestScope) setTrips([]); },
+          onCached: raw => { const data = raw as { trips?: Trip[] }; if (scopeRef.current === requestScope && Array.isArray(data.trips)) setTrips(data.trips.map(trip => ({ id: trip.id, name: trip.name }))); },
+        }),
       ]);
       if (!responses[0]!.ok) throw new Error('Import settings unavailable');
       const [settings, queue, recent, choices] = await Promise.all(responses.map(response => response.ok ? response.json() : Promise.resolve({})));

@@ -81,6 +81,11 @@ export const useTripsData = ({
   memberContextRef.current = memberContext;
   const memberRequestRef = useRef(0);
 
+  const directoryContext = `${backendUrl}:${userToken}:${offlineMode}`;
+  const directoryContextRef = useRef(directoryContext);
+  directoryContextRef.current = directoryContext;
+  const directoryCurrent = () => directoryContextRef.current === directoryContext;
+
   const clearGroupMembers = useCallback(() => {
     setGroupMembers((current) => (current.length ? [] : current));
   }, []);
@@ -110,12 +115,17 @@ export const useTripsData = ({
       try {
         const data = await requestJson<GroupView[]>(
           `${backendUrl}/api/groups?sort=${sort ?? groupSort}`,
-          { token: userToken }
+          { token: userToken, isCurrent: directoryCurrent,
+            onUnavailable: () => { if (directoryCurrent()) setGroups([]); },
+            onCached: raw => { if (directoryCurrent() && Array.isArray(raw)) setGroups(raw.map(normalizeGroup)); },
+          }
         );
         const normalized = (Array.isArray(data) ? data : []).map(normalizeGroup);
+        if (!directoryCurrent()) return [];
         setGroups(normalized);
         return normalized;
       } catch (error) {
+        if (directoryCurrent() && error instanceof ApiClientError && [401, 402, 403, 404].includes(error.status)) setGroups([]);
         handleRequestError(error);
         return [];
       }
@@ -133,8 +143,16 @@ export const useTripsData = ({
       }
 
       try {
-        const data = await requestJson<Trip[]>(`${backendUrl}/api/trips`, { token: authToken });
+        const data = await requestJson<Trip[]>(`${backendUrl}/api/trips`, { token: authToken, isCurrent: directoryCurrent,
+          onUnavailable: () => { if (directoryCurrent()) setTrips([]); },
+          onCached: raw => {
+            if (!directoryCurrent() || !Array.isArray(raw)) return;
+            setTrips(raw);
+            setActiveTripId(current => current ?? loadLastActiveTripId(userEmail ?? null) ?? raw[0]?.id ?? null);
+          },
+        });
         const normalized = Array.isArray(data) ? data : [];
+        if (!directoryCurrent()) return [];
         setTrips(normalized);
         setActiveTripId((currentTripId) => {
           const preferredTripId = currentTripId ?? loadLastActiveTripId(userEmail ?? null);
@@ -148,6 +166,7 @@ export const useTripsData = ({
         });
         return normalized;
       } catch (error) {
+        if (directoryCurrent() && error instanceof ApiClientError && [401, 402, 403, 404].includes(error.status)) setTrips([]);
         handleRequestError(error);
         return [];
       }

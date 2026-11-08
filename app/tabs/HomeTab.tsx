@@ -1,3 +1,4 @@
+import { screenFetch as fetch } from '../cache/screenFetch';
 import IconText from '../components/IconText';
 import { themeStyle } from '../theme/theme';
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
@@ -150,7 +151,10 @@ const HomeTab: React.FC<HomeTabProps> = ({
       try {
         const res = await fetch(
           `${backendUrl}/api/itinerary/images?location=${encodeURIComponent(location)}&day=home`,
-          { headers }
+          { headers, isCurrent: () => isMounted,
+            onUnavailable: () => { if (isMounted) setHeroImage(null); },
+            onCached: raw => { const data = raw as { url?: string }; if (isMounted) setHeroImage(data.url ?? null); },
+          }
         );
         if (!res.ok) {
           if (isMounted) setHeroLoading(false);

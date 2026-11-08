@@ -1,3 +1,4 @@
+import { screenFetch as fetch } from '../cache/screenFetch';
 import IconText from '../components/IconText';
 import { themeStyle } from '../theme/theme';
 import { useAppTheme as useStyleTheme } from '../theme/ThemeContext';
@@ -163,19 +164,27 @@ const FollowingTab: React.FC<FollowingTabProps> = ({
       return;
     }
     let active = true;
+    setDetail(null);
     setNewComment('');
     setCommentError('');
+    let denied = false;
+    const unavailable = () => { if (active) { denied = true; setDetail(null); setError('This trip is no longer available. Refresh your trips.'); } };
+    let saved: Partial<FollowedTripDetail> = { flights: [], lodgings: [], tours: [], itineraries: [], itineraryDetailsById: {}, comments: [], activity: [] };
+    const preview = (part: Partial<FollowedTripDetail>) => {
+      saved = { ...saved, ...part };
+      if (active && !denied && saved.trip) setDetail(current => ({ ...(current ?? saved), ...part } as FollowedTripDetail));
+    };
     const load = async () => {
       setLoading(true);
       setError('');
       try {
         const [tripRes, flightsRes, lodgingsRes, toursRes, activityRes, commentsRes] = await Promise.all([
-          fetch(`${backendUrl}/api/trips/${selectedTripId}`, { headers }),
-          fetch(`${backendUrl}/api/transfers?tripId=${encodeURIComponent(selectedTripId)}`, { headers }),
-          fetch(`${backendUrl}/api/lodgings?tripId=${encodeURIComponent(selectedTripId)}`, { headers }),
-          fetch(`${backendUrl}/api/activities?tripId=${encodeURIComponent(selectedTripId)}`, { headers }),
-          fetch(`${backendUrl}/api/trips/${selectedTripId}/activity?limit=30&group=true`, { headers }),
-          fetch(`${backendUrl}/api/trips/${selectedTripId}/comments`, { headers }),
+          fetch(`${backendUrl}/api/trips/${selectedTripId}`, { headers, isCurrent: () => active && !denied, onUnavailable: unavailable, onCached: raw => preview({ trip: raw as FollowedTripDetail['trip'] }) }),
+          fetch(`${backendUrl}/api/transfers?tripId=${encodeURIComponent(selectedTripId)}`, { headers, isCurrent: () => active && !denied, onUnavailable: unavailable, onCached: raw => preview({ flights: Array.isArray(raw) ? raw : [] }) }),
+          fetch(`${backendUrl}/api/lodgings?tripId=${encodeURIComponent(selectedTripId)}`, { headers, isCurrent: () => active && !denied, onUnavailable: unavailable, onCached: raw => preview({ lodgings: Array.isArray(raw) ? raw : [] }) }),
+          fetch(`${backendUrl}/api/activities?tripId=${encodeURIComponent(selectedTripId)}`, { headers, isCurrent: () => active && !denied, onUnavailable: unavailable, onCached: raw => preview({ tours: Array.isArray(raw) ? raw : [] }) }),
+          fetch(`${backendUrl}/api/trips/${selectedTripId}/activity?limit=30&group=true`, { headers, isCurrent: () => active && !denied, onUnavailable: unavailable, onCached: raw => preview({ activity: Array.isArray((raw as any).events) ? (raw as any).events : [] }) }),
+          fetch(`${backendUrl}/api/trips/${selectedTripId}/comments`, { headers, isCurrent: () => active && !denied, onUnavailable: unavailable, onCached: raw => preview({ comments: Array.isArray((raw as any).comments) ? (raw as any).comments : [] }) }),
         ]);
         if ([tripRes, flightsRes, lodgingsRes, toursRes, activityRes, commentsRes].some((res) => res.status === 401)) {
           onRequireLogin();
@@ -213,7 +222,7 @@ const FollowingTab: React.FC<FollowingTabProps> = ({
             itineraryDetailsById[id] = Array.isArray(details) ? details : [];
           })
         );
-        if (!active) return;
+        if (!active || denied) return;
         setDetail({
           trip,
           flights: Array.isArray(flights) ? flights : [],
@@ -225,7 +234,7 @@ const FollowingTab: React.FC<FollowingTabProps> = ({
           activity: Array.isArray(activityRaw?.events) ? activityRaw.events : [],
         });
       } catch (err) {
-        if (!active) return;
+        if (!active || denied) return;
         setDetail(null);
         setError((err as Error).message || 'Unable to load followed trip');
       } finally {

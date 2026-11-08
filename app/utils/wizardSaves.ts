@@ -1,3 +1,4 @@
+import { screenFetch as fetch } from '../cache/screenFetch';
 import { TRANSFER_TYPES, buildFlightPayload, type Flight, type FlightEditDraft, type TransferType } from '../tabs/transfers';
 import { buildLodgingPayload, type Lodging, type LodgingDraft } from '../tabs/lodging';
 import { type CarRental, normalizeCarRentalFromApi } from '../tabs/carRentals';

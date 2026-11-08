@@ -1,3 +1,4 @@
+import { screenFetch as fetch } from '../cache/screenFetch';
 import { createIdempotencyKey } from './idempotencyKey';
 import { formatStarMarks } from './votes';
 

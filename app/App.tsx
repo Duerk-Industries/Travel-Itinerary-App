@@ -1,3 +1,6 @@
+import { areScreenReadsPaused, subscribeScreenReadResume } from './cache/screenSession';
+import ScreenCacheStatus from './cache/ScreenCacheStatus';
+import { screenFetch as fetch } from './cache/screenFetch';
 import { ScreenCacheProvider } from './cache/ScreenCacheProvider';
 import { clearScreenCache } from './cache/screenCache';
 import { amountInTripCurrency, formatMoney } from '../packages/domain/src/money';
@@ -2065,46 +2068,55 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     }
   };
 
+  const tripReadScope = `${backendUrl}:${userToken}:${activeTripId}:${isFollowingMode}:${offlineReadOnly}:${costTrackingAllowed}:${activePage}`;
+  const tripReadScopeRef = useRef(tripReadScope);
+  tripReadScopeRef.current = tripReadScope;
+  useEffect(() => {
+    if (offlineReadOnly) return;
+    setFlights([]); setLodgings([]); setTours([]); setCarRentals([]); setExpenses([]); setTripPayments([]);
+  }, [backendUrl, userToken, activeTripId, isFollowingMode, offlineReadOnly]);
+
   // Fetch flights for the active trip; normalize paidBy casing.
   const fetchFlights = useCallback(async (token?: string) => {
     if (offlineReadOnly) return;
-    if (!activeTripId) {
-      setFlights([]);
-      return;
-    }
+    const isCurrent = () => tripReadScopeRef.current === tripReadScope;
+    const canApply = () => isCurrent() && !areScreenReadsPaused(backendUrl, token ?? userToken);
+    if (!activeTripId || !(token ?? userToken)) { setFlights([]); return; }
     try {
-      const data = await fetchFlightsForTrip({
-        backendUrl,
-        activeTripId,
-        token: token ?? userToken,
-      });
-      setFlights(data);
-    } catch {
-      setFlights([]);
-    }
-  }, [activeTripId, backendUrl, offlineReadOnly, userToken]);
+      const data = await fetchFlightsForTrip({ backendUrl, activeTripId, token: token ?? userToken,
+        onCached: items => { if (canApply()) setFlights(items); },
+        onUnavailable: () => { if (isCurrent()) setFlights([]); }, isCurrent });
+      if (canApply()) setFlights(data);
+    } catch { /* Cached/current data remains visible on transient failure or cancellation. */ }
+  }, [activeTripId, backendUrl, offlineReadOnly, userToken, tripReadScope]);
 
   // Fetch lodgings for the active trip; normalize nullable fields.
   const fetchLodgings = useCallback(async (token?: string) => {
     if (offlineReadOnly) return;
-    if (!activeTripId || !(token ?? userToken)) {
-      setLodgings([]);
-      return;
-    }
-    const data = await fetchLodgingsApi(backendUrl, activeTripId, (token ?? userToken) as string);
-    setLodgings(data);
-  }, [activeTripId, backendUrl, offlineReadOnly, userToken]);
+    const isCurrent = () => tripReadScopeRef.current === tripReadScope;
+    const canApply = () => isCurrent() && !areScreenReadsPaused(backendUrl, token ?? userToken);
+    if (!activeTripId || !(token ?? userToken)) { setLodgings([]); return; }
+    try {
+      const data = await fetchLodgingsApi(backendUrl, activeTripId, (token ?? userToken)!, {
+        onCached: items => { if (canApply()) setLodgings(items); },
+        onUnavailable: () => { if (isCurrent()) setLodgings([]); }, isCurrent });
+      if (canApply()) setLodgings(data);
+    } catch { /* Cached/current data remains visible on transient failure or cancellation. */ }
+  }, [activeTripId, backendUrl, offlineReadOnly, userToken, tripReadScope]);
 
   // Fetch tours for the active trip; normalize string fields.
   const fetchTours = useCallback(async (token?: string) => {
     if (offlineReadOnly) return;
-    if (!activeTripId || !(token ?? userToken)) {
-      setTours([]);
-      return;
-    }
-    const data = await fetchActivitiesForTrip({ backendUrl, activeTripId, token: token ?? userToken });
-    setTours(data);
-  }, [activeTripId, backendUrl, offlineReadOnly, userToken]);
+    const isCurrent = () => tripReadScopeRef.current === tripReadScope;
+    const canApply = () => isCurrent() && !areScreenReadsPaused(backendUrl, token ?? userToken);
+    if (!activeTripId || !(token ?? userToken)) { setTours([]); return; }
+    try {
+      const data = await fetchActivitiesForTrip({ backendUrl, activeTripId, token: token ?? userToken,
+        onCached: items => { if (canApply()) setTours(items); },
+        onUnavailable: () => { if (isCurrent()) setTours([]); }, isCurrent });
+      if (canApply()) setTours(data);
+    } catch { /* Cached/current data remains visible on transient failure or cancellation. */ }
+  }, [activeTripId, backendUrl, offlineReadOnly, userToken, tripReadScope]);
 
   useEffect(() => {
     if (!pendingActivityRecap || pendingActivityRecap.tripId !== activeTripId) return;
@@ -2144,59 +2156,54 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 
   const fetchCarRentals = useCallback(async (token?: string) => {
     if (offlineReadOnly) return;
-    if (!activeTripId || !(token ?? userToken)) {
-      setCarRentals([]);
-      return;
-    }
-    const data = await fetchCarRentalsForTrip({ backendUrl, activeTripId, token: token ?? userToken });
-    setCarRentals(data);
-  }, [activeTripId, backendUrl, offlineReadOnly, userToken]);
+    const isCurrent = () => tripReadScopeRef.current === tripReadScope;
+    const canApply = () => isCurrent() && !areScreenReadsPaused(backendUrl, token ?? userToken);
+    if (!activeTripId || !(token ?? userToken)) { setCarRentals([]); return; }
+    try {
+      const data = await fetchCarRentalsForTrip({ backendUrl, activeTripId, token: token ?? userToken,
+        onCached: items => { if (canApply()) setCarRentals(items); },
+        onUnavailable: () => { if (isCurrent()) setCarRentals([]); }, isCurrent });
+      if (canApply()) setCarRentals(data);
+    } catch { /* Cached/current data remains visible on transient failure or cancellation. */ }
+  }, [activeTripId, backendUrl, offlineReadOnly, userToken, tripReadScope]);
 
   const fetchExpenses = useCallback(async (token?: string, options?: { costTrackingAllowed?: boolean }) => {
     if (offlineReadOnly) return;
     const authToken = token ?? userToken;
-    const canUseCostTracking = options?.costTrackingAllowed ?? costTrackingAllowed;
-    if (!activeTripId || !authToken || isFollowingMode || !canUseCostTracking) {
-      setExpenses([]);
-      return;
-    }
+    const allowed = options?.costTrackingAllowed ?? costTrackingAllowed;
+    const isCurrent = () => tripReadScopeRef.current === tripReadScope;
+    const canApply = () => isCurrent() && !areScreenReadsPaused(backendUrl, token ?? userToken);
+    if (!activeTripId || !authToken || isFollowingMode || !allowed) { setExpenses([]); return; }
     try {
-      const res = await fetch(`${backendUrl}/api/expenses?tripId=${activeTripId}`, {
-        headers: { Authorization: `Bearer ${authToken}` },
+      const response = await fetch(`${backendUrl}/api/expenses?tripId=${activeTripId}`, {
+        headers: { Authorization: `Bearer ${authToken}` }, isCurrent,
+        onCached: raw => { if (canApply() && Array.isArray(raw)) setExpenses(raw); },
+        onUnavailable: () => { if (isCurrent()) setExpenses([]); },
       });
-      if (!res.ok) {
-        setExpenses([]);
-        return;
-      }
-      const data = await res.json();
-      setExpenses(Array.isArray(data) ? data : []);
-    } catch {
-      setExpenses([]);
-    }
-  }, [activeTripId, backendUrl, costTrackingAllowed, isFollowingMode, offlineReadOnly, userToken]);
+      if (!response.ok) { if (isCurrent()) setExpenses([]); return; }
+      const data = await response.json();
+      if (canApply()) setExpenses(Array.isArray(data) ? data : []);
+    } catch { /* Keep current financial data on transient refresh failure. */ }
+  }, [activeTripId, backendUrl, costTrackingAllowed, isFollowingMode, offlineReadOnly, userToken, tripReadScope]);
 
   const fetchTripPayments = useCallback(async (token?: string, options?: { costTrackingAllowed?: boolean }) => {
     if (offlineReadOnly) return;
     const authToken = token ?? userToken;
-    const canUseCostTracking = options?.costTrackingAllowed ?? costTrackingAllowed;
-    if (!activeTripId || !authToken || isFollowingMode || !canUseCostTracking) {
-      setTripPayments([]);
-      return;
-    }
+    const allowed = options?.costTrackingAllowed ?? costTrackingAllowed;
+    const isCurrent = () => tripReadScopeRef.current === tripReadScope;
+    const canApply = () => isCurrent() && !areScreenReadsPaused(backendUrl, token ?? userToken);
+    if (!activeTripId || !authToken || isFollowingMode || !allowed) { setTripPayments([]); return; }
     try {
-      const res = await fetch(`${backendUrl}/api/payments?tripId=${activeTripId}`, {
-        headers: { Authorization: `Bearer ${authToken}` },
+      const response = await fetch(`${backendUrl}/api/payments?tripId=${activeTripId}`, {
+        headers: { Authorization: `Bearer ${authToken}` }, isCurrent,
+        onCached: raw => { if (canApply() && Array.isArray(raw)) setTripPayments(raw); },
+        onUnavailable: () => { if (isCurrent()) setTripPayments([]); },
       });
-      if (!res.ok) {
-        setTripPayments([]);
-        return;
-      }
-      const data = await res.json();
-      setTripPayments(Array.isArray(data) ? data : []);
-    } catch {
-      setTripPayments([]);
-    }
-  }, [activeTripId, backendUrl, costTrackingAllowed, isFollowingMode, offlineReadOnly, userToken]);
+      if (!response.ok) { if (isCurrent()) setTripPayments([]); return; }
+      const data = await response.json();
+      if (canApply()) setTripPayments(Array.isArray(data) ? data : []);
+    } catch { /* Keep current financial data on transient refresh failure. */ }
+  }, [activeTripId, backendUrl, costTrackingAllowed, isFollowingMode, offlineReadOnly, userToken, tripReadScope]);
 
   const addTripPayment = useCallback(async (draft: {
     payerId: string;
@@ -2365,14 +2372,31 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 
   const refreshPageData = useCallback(async (tokenOverride?: string, pageOverride?: Page) => {
     const authToken = tokenOverride ?? userToken;
-    if (!authToken || offlineReadOnly || refreshInFlightRef.current || requirePasswordSetup) return;
+    if (!authToken || offlineReadOnly || refreshInFlightRef.current || requirePasswordSetup || areScreenReadsPaused(backendUrl, authToken)) return;
     refreshInFlightRef.current = true;
     setIsRefreshing(true);
     try {
+      // Cached content can paint while the account/entitlement check runs. Reuse the
+      // same promises below so a fast response does not cause a second HTTP request.
+      const currentPage = pageOverride ?? activePage;
+      const reads = new Map<string, Promise<void>>();
+      const read = (name: string, action: () => Promise<void>) => {
+        if (!reads.has(name)) reads.set(name, action());
+        return reads.get(name)!;
+      };
+      const readFlights = () => read('flights', () => fetchFlights(authToken));
+      const readLodgings = () => read('lodgings', () => fetchLodgings(authToken));
+      const readTours = () => read('tours', () => fetchTours(authToken));
+      const readCars = () => read('cars', () => fetchCarRentals(authToken));
+      if (['overview', 'blog', 'expenses', 'ledger', 'cost', 'ground-transfers'].includes(currentPage)) {
+        void Promise.all([readFlights(), readLodgings(), readTours(), readCars()]);
+      } else if (currentPage === 'flights') void readFlights();
+      else if (currentPage === 'lodging') void readLodgings();
+      else if (currentPage === 'tours') void readTours();
+      else if (currentPage === 'car') void readCars();
       const account = await loadAccountProfile(authToken);
       if (!account.ok) return;
       const currentCostTrackingAllowed = account.entitlements?.costTracking === true;
-      const currentPage = pageOverride ?? activePage;
       switch (currentPage) {
         case 'home':
         case 'trips':
@@ -2388,10 +2412,10 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           await Promise.all([
             fetchTrips(authToken),
             fetchGroups(),
-            fetchFlights(authToken),
-            fetchLodgings(authToken),
-            fetchTours(authToken),
-            fetchCarRentals(authToken),
+            readFlights(),
+            readLodgings(),
+            readTours(),
+            readCars(),
             fetchExpenses(authToken, { costTrackingAllowed: currentCostTrackingAllowed }),
             fetchTripPayments(authToken, { costTrackingAllowed: currentCostTrackingAllowed }),
             fetchFollowedTrips(authToken),
@@ -2399,19 +2423,19 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           break;
         case 'flights':
         case 'ground-transfers':
-          await Promise.all([fetchFlights(authToken), ...(currentPage === 'ground-transfers' ? [fetchLodgings(authToken), fetchTours(authToken)] : []), fetchExpenses(authToken, { costTrackingAllowed: currentCostTrackingAllowed })]);
+          await Promise.all([readFlights(), ...(currentPage === 'ground-transfers' ? [readLodgings(), readTours()] : []), fetchExpenses(authToken, { costTrackingAllowed: currentCostTrackingAllowed })]);
           break;
         case 'lodging':
-          await Promise.all([fetchLodgings(authToken), fetchExpenses(authToken, { costTrackingAllowed: currentCostTrackingAllowed })]);
+          await Promise.all([readLodgings(), fetchExpenses(authToken, { costTrackingAllowed: currentCostTrackingAllowed })]);
           break;
         case 'packing':
           await fetchTrips(authToken);
           break;
         case 'car':
-          await Promise.all([fetchCarRentals(authToken), fetchExpenses(authToken, { costTrackingAllowed: currentCostTrackingAllowed })]);
+          await Promise.all([readCars(), fetchExpenses(authToken, { costTrackingAllowed: currentCostTrackingAllowed })]);
           break;
         case 'tours':
-          await fetchTours(authToken);
+          await readTours();
           break;
         case 'blog':
           // Trip blog's Phase 2 route map (TripDayMap, reused from overview.tsx's day-detail
@@ -2420,10 +2444,10 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           // these, so the map silently had nothing to plot unless Overview happened to run first
           // in the same session and left the shared state populated.
           await Promise.all([
-            fetchFlights(authToken),
-            fetchLodgings(authToken),
-            fetchTours(authToken),
-            fetchCarRentals(authToken),
+            readFlights(),
+            readLodgings(),
+            readTours(),
+            readCars(),
           ]);
           break;
         case 'expenses':
@@ -2434,10 +2458,10 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           // pages first silently leaves every booking out of the ledger and cost report.
           await Promise.all([
             fetchTrips(authToken),
-            fetchFlights(authToken),
-            fetchLodgings(authToken),
-            fetchTours(authToken),
-            fetchCarRentals(authToken),
+            readFlights(),
+            readLodgings(),
+            readTours(),
+            readCars(),
             fetchExpenses(authToken, { costTrackingAllowed: currentCostTrackingAllowed }),
             fetchTripPayments(authToken, { costTrackingAllowed: currentCostTrackingAllowed }),
           ]);
@@ -2503,6 +2527,11 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     featureAiItineraryGeneration,
     requirePasswordSetup
   ]);
+
+  useEffect(() => {
+    if (!userToken) return;
+    return subscribeScreenReadResume(backendUrl, userToken, () => { void refreshPageData(); });
+  }, [backendUrl, userToken, refreshPageData]);
 
   useEffect(() => {
     if (userToken && !requirePasswordSetup) {
@@ -2859,17 +2888,20 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       return;
     }
     if (offlineReadOnly) return;
+    let current = true;
     const fetchCoveredBy = async () => {
       try {
-        const res = await fetch(`${backendUrl}/api/trips/${activeTripId}/covered-by`, { headers });
-        if (!res.ok) throw new Error('Failed to fetch covering rules.');
+        const res = await fetch(`${backendUrl}/api/trips/${activeTripId}/covered-by`, { headers, isCurrent: () => current,
+          onCached: raw => { if (current && raw && typeof raw === 'object' && !Array.isArray(raw)) setCoveredBy(raw as Record<string, string>); },
+          onUnavailable: () => { if (current) setCoveredBy({}); },
+        });
+        if (!res.ok) { if (current && [401, 402, 403, 404].includes(res.status)) setCoveredBy({}); return; }
         const data = await res.json();
-        setCoveredBy(data || {});
-      } catch (err) {
-        setCoveredBy({});
-      }
+        if (current) setCoveredBy(data || {});
+      } catch { /* Retain the last confirmed covering rules on transient failure. */ }
     };
     fetchCoveredBy();
+    return () => { current = false; };
   }, [userToken, activeTripId, headers, offlineReadOnly]);
 
   const addMemberToGroup = async (groupId: string, type: 'user' | 'relationship') => {
@@ -3602,6 +3634,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           </View>
         ) : null}
       </View>
+      <ScreenCacheStatus />
       {userId && <PendingExpenseRecovery error={pendingExpenses.storageError} getRecoveryData={pendingExpenses.getRecoveryData} repairQueue={pendingExpenses.repairQueue} ownerId={userId} environment={backendUrl} />}
       <OfflineBanner
         status={connection.status}

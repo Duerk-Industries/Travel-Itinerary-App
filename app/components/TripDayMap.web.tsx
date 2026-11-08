@@ -1,3 +1,4 @@
+import { screenFetch as fetch } from '../cache/screenFetch';
 import { useAutomaticMapLocations } from '../hooks/useAutomaticMapLocations';
 import React, { useEffect, useRef, useState } from 'react';
 import TripMap from './TripMap';

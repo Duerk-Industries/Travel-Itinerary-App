@@ -1,3 +1,4 @@
+import { screenFetch as fetch } from '../cache/screenFetch';
 import React, { useEffect, useRef, useState } from 'react';
 import { Image, Linking, Platform, Text, TouchableOpacity, View } from 'react-native';
 import { themeStyle } from '../theme/theme';
