@@ -2,10 +2,27 @@
 
 WanderBunnies is a shared trip-planning application for web, iOS, and Android. It combines a React Native / Expo client with a TypeScript / Express backend so groups can plan trips together, manage transportation and lodging, track shared costs, and collaborate on itineraries.
 
+## Start here
+
+| I need to… | Guide |
+|---|---|
+| Run the app or change environment settings | [Configuration and local setup](docs/configuration.md) |
+| Understand the running application | [Architecture](docs/architecture.md) |
+| Administer users, flags, AI, or imports manually | [Manual administration runbook](docs/operations/manual-administration.md) |
+| Test a release and decide whether to promote it | [Rollout testing checklist](docs/operations/rollout-testing.md) |
+| Deploy, promote, or roll back | [Production deployment guide](docs/production-deployment-guide.md) |
+| Run automated tests | [Test guide](TEST_PLAN.md) |
+| Find a feature-specific guide | [Documentation hub](docs/README.md) |
+
+**Release behavior:** pushes to `main` trigger API and Firebase Hosting production deployments independently of CI. Read the [release paths](docs/production-deployment-guide.md#automatic-deploy-on-push-to-main) before merging. The staged deployment scripts are a separate path.
+
 ## What This Repo Contains
 
 - [`app/`](app) - Expo app for web and native clients
 - [`server/`](server) - Express API, auth, data access, and integrations
+- [`packages/`](packages) - shared domain, messaging, analytics, Plaid transaction, and image-size packages
+- [`functions/`](functions) - Firebase functions and emulator support
+- [`scripts/`](scripts) - deployment, migration, catalog, account, and operational tooling
 - [`docs/README.md`](docs/README.md) - documentation hub for architecture, operations, design, and reference notes
 - [`FAQ.md`](FAQ.md) - GitHub-friendly FAQ landing page
 
@@ -13,28 +30,33 @@ WanderBunnies is a shared trip-planning application for web, iOS, and Android. I
 
 - Shared trips, groups, invites, and follow-trip flows
 - Transfers, lodging, activities, car rentals, expenses, cost reports, and ledger views
-- AI-assisted itinerary generation
+- AI-assisted itinerary generation with configurable provider/model routing
+- Optional document/email import, receipt scanning and bank-transaction review
+- Packing lists, trip blogs, notifications and admin operations (subject to flags and configuration)
 - Google OAuth plus web/email-based authentication flows
 - Web and native support from the same client codebase
 
 ## Quick Start
 
-1. Install workspace dependencies:
-   ```bash
-   npm install
-   ```
-2. Create `server/.env` from `server/.env.example` and fill in your local settings.
-3. Start the API:
-   ```bash
-   npm run dev
-   ```
-4. Start the app:
-   ```bash
-   cd app
-   npm start
-   ```
+Requires Node 20+ and npm (the repository declares npm 10.8.2). Run commands from the repository root.
 
-For deployment and environment setup, use the guides in [`DEPLOYMENT-GCP-FIREBASE.md`](DEPLOYMENT-GCP-FIREBASE.md) and [`docs/README.md`](docs/README.md).
+```sh
+npm ci
+```
+
+Create `server/.env` using the [minimal local configuration](docs/configuration.md#local-setup). The example file includes hosted URLs and optional emulator/HTTPS settings; review it before use. Choose a disposable database for local work.
+
+In separate terminals:
+
+```sh
+npm run dev
+```
+
+```sh
+npm --prefix app run web -- --port 8081
+```
+
+Open `http://localhost:8081`; the API defaults to `http://localhost:4000`. Native builds and environment-loading details are in the [configuration guide](docs/configuration.md).
 
 ## Documentation Map
 
@@ -111,7 +133,10 @@ For deployment and environment setup, use the guides in [`DEPLOYMENT-GCP-FIREBAS
 - App tests: `npm run test:app`
 - Server tests: `npm run test:server`
 - End-to-end tests: `npm run test:e2e`
-- Full test suite: `npm test`
+- App and server Jest suites: `npm test` (E2E is separate)
+- Type checks: `npm run typecheck`
+- [Commands, database variants, and test limitations](TEST_PLAN.md)
+- [Manual rollout checks and release evidence](docs/operations/rollout-testing.md)
 
 ## Notes for Contributors
 

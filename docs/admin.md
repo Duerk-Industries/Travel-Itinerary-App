@@ -1,4 +1,8 @@
-# Admin
+# Admin reference
+
+[README](../README.md) · [Documentation hub](README.md) · [Manual administration runbook](operations/manual-administration.md) · [Rollout testing](operations/rollout-testing.md)
+
+For ordered operator actions, expected results and recovery steps, start with the manual administration runbook. This page describes the available surfaces and contracts. Reviewed against code on 2026-11-08.
 
 ## Access model
 
@@ -6,12 +10,12 @@
 - Admin UI lives under `/admin/*` on web and is only shown to admin users.
 - UI visibility is not authorization. Every admin API still requires server-side RBAC.
 
-Bootstrap admins are granted automatically on first signup/login for:
+Bootstrap admin status is checked on successful authentication and granted if absent for:
 
 - `bryan.duerk@gmail.com`
 - `tristan.duerk@gmail.com`
 
-Email matching is case-insensitive and normalized before comparison.
+Email matching is case-insensitive and normalized before comparison. Bootstrap accounts are also restored to Pro by `ensureAdminBootstrap`; a manual role/tier change to one of these accounts may be reversed at its next authentication.
 
 ## Admin pages
 
@@ -23,7 +27,17 @@ Email matching is case-insensitive and normalized before comparison.
 | User Data | `/admin/user-data` | Aggregate user counts, trip counts, AI usage, token usage, and API-call summaries |
 | Audit Log | `/admin/audit-log` | Review who changed what and when |
 | Billing | `/admin/billing` | Manage Premium pricing, trial, grace period, tax, promotion codes, and checkout |
-| Ingestion Ops | `/admin/ingestion` | Review ingestion volume, stage outcomes, duplicate rate, retries, and estimated LLM cost |
+| Ingestion Ops | Admin panel section | Review ingestion volume, stage outcomes, duplicate rate, retries, and estimated LLM cost |
+| AI Operations | `/admin/ai-ops` | Provider/model routing and AI operational views |
+| Packing Defaults | Admin panel section | Universal packing presets |
+| API Limits | Admin panel section | Configured rate limits and current usage |
+| Cost Estimator | Admin panel section | Projected cost, recorded spend, hosting and break-even |
+| Metrics | Admin panel section | In-process counters and cache behavior |
+| Analytics | Admin panel section | Privacy-suppressed aggregate product reports |
+| Privacy Requests | Admin panel section | Rights-request deadlines and erasure jobs |
+| Itinerary Templates | Admin panel section | Import and manage itinerary templates |
+
+The section inventory is defined in `app/tabs/AdminTab.tsx`; only routes declared in `app/navigationConfig.ts` have dedicated deep links. Open other sections through the Admin panel. The client handles web routes and native section navigation. Changes to roles require a fresh JWT to reliably verify the new session role. The role endpoint prevents self-demotion.
 
 ## Admin bypass rules
 

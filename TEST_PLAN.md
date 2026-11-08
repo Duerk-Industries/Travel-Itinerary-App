@@ -1,49 +1,80 @@
-# Test Plan
+# Test guide
 
-## Unit
+[README](README.md) · [Documentation hub](docs/README.md) · [Manual rollout checklist](docs/operations/rollout-testing.md) · [E2E journeys](docs/e2e-test-plan.md)
 
-- `getLimit(userId, limitKey)` resolves inherited limits by rank.
-- `canUseFeature(userId, featureKey)` respects tier entitlements and feature flags.
-- admin bootstrap grants admin to normalized bootstrap emails.
-- `recordUsage(...)` writes counters and usage events.
-- ingestion normalization converts text, HTML, PDF-like, and image-like payloads into the shared normalized document contract.
-- ingestion extraction honors cache hits by `content_hash + logic_version`.
-- ingestion token-budget circuit breaker dead-letters an over-budget job and creates no parsed items.
-- parsed-item deduplication fingerprints suppress duplicate review items.
-- assignment rules keep assignment atomic and preserve original extracted fields.
+Reviewed against scripts and runner configuration on 2026-11-08. Run commands from the repository root after `npm ci`. This guide documents how to validate a change; it does not claim that every listed check has passed for a particular release.
 
-## Integration
+## Automated checks
 
-- Free tier cannot create a fourth active trip.
-- Premium tier can exceed the Free active-trip cap.
-- Non-admin users cannot create past-ended trips.
-- Admin users can create past-ended trips.
-- Free users cannot access premium-only cost tracking.
-- Successful itinerary generations count toward monthly usage.
-- Failed itinerary generations do not count.
-- Reusing the same itinerary idempotency key does not double-charge usage.
-- Admin search works for email, name, and user ID.
-- Admin user-data endpoint returns trip counts, trip creations, AI usage, token usage, and API-call summaries.
-- Premium users can upload into the ingestion pipeline and see review items.
-- Free users are blocked from ingestion endpoints.
-- replaying the same manual upload does not create duplicate jobs or duplicate review items.
-- edit, assign, and soft delete flows keep review-item state consistent.
-- Gmail dry run and forwarded-mailbox routes remain feature-flag gated.
+| Check | Command | Scope |
+|---|---|---|
+| Root type-check command | `npm run typecheck` | App, server, messaging, domain and analytics |
+| App + server Jest | `npm test` | Runs the sharded app and server suites; excludes Playwright/native device tests |
+| App Jest | `npm run test:app` | Four shards through the shared shard runner |
+| Server Jest | `npm run test:server` | Twelve shards through the shared shard runner |
+| Focused app regression | `npm --prefix app test -- --runInBand useTripsData.test.tsx activityEditForm.test.tsx payerSelection.test.tsx` | Member loading, activity form and payer controls |
+| Focused server regression | `npm --prefix server run test:single -- --runInBand __tests__/group-member-removal.test.ts` | Example targeted integration suite |
+| Backend production build | `npm run build` | TypeScript and runtime asset copy |
+| Web production export | `npm --prefix app run export:web` | Expo web bundle; separate from backend build |
+| Browser journeys | `npm run playwright:install` then `npm run test:e2e` | Chromium against isolated API and Expo servers |
+| Keyboard/selector browser regressions | `npx playwright test --config playwright.mobile-input.config.ts` | Mocked API at phone/desktop widths; separate config |
+| Native launch smoke | `npm run e2e:maestro` | Requires Maestro and a running emulator/device with the app installed |
+| All Maestro flows | `npm run e2e:maestro:all` | Device flows under `.maestro/` |
 
-## E2E
+Use `npm run test:app:all -- --runInBand` or `npm run test:server:all -- --runInBand` for a non-sharded full Jest run. `lint` currently invokes package type checks; it is not a separate comprehensive style/security scan. Inspect [CI](.github/workflows/ci.yml) for the checks run on pull requests. Separate push-triggered production deploy workflows do not wait for CI.
 
-- Admin users can open `/admin/users`, `/admin/tiers`, `/admin/features`, and `/admin/user-data`.
-- Non-admin users cannot use `/api/admin/*` even if they navigate directly.
-- Admin UI remains hidden for non-admin users.
-- Premium users can reach the ingest tab, review parsed items, assign to an existing trip, and delete from the queue.
-- Duplicate matches against assigned items show conflict state before assignment.
+## Database variants
 
-## Manual checks
+Server Jest uses `server/jest.projects.js` and `server/__tests__/jest-setup.ts`. Despite the project display name `firebase`, the bootstrap defaults to **memory/pg-mem** through `JEST_DB_PROVIDER`. Setting only ordinary `DB_PROVIDER` does not select an alternate Jest backend.
 
-- Toggle a feature flag in admin and verify the backend denies access immediately.
-- Change a user's tier in admin and verify limits take effect without redeploy.
-- Verify audit log rows are written for tier changes, role changes, tier edits, and flag edits.
-- Confirm `Retry-After` is returned on ingestion quota exhaustion.
-- Confirm raw source files are removed after successful parse and review persistence.
-- Confirm disabled ingestion flags return `403` and the UI hides the related entry points.
-- Confirm malformed or oversized files fail with user-safe error codes, not raw exception strings.
+For Firestore, start local emulators first (Firestore for adapter tests; Firestore **and Auth** for rule tests) and use:
+
+```sh
+npm --prefix server run test:firestore -- __tests__/group-member-removal.test.ts
+npm --prefix server run test:firestore-rules
+```
+
+The wrapper defaults to emulator `127.0.0.1:8080` and throwaway project `demo-server-tests`; `TEST_FIRESTORE_PROJECT` overrides the project. Firestore-rule tests have their own wrapper. Suites that seed raw SQL need Postgres/memory and cannot simply be assumed to run on Firestore.
+
+For Postgres Jest, set `JEST_DB_PROVIDER=postgres` and a **disposable** `DATABASE_URL` in the test process. Test setup/cleanup writes data. Never use a production database. Memory tests do not cover hosted Firestore indexes, rules, credentials, storage or actual external-provider delivery. Use emulator and isolated deployed checks for changes to those paths.
+
+## Browser test environment
+
+[`playwright.config.ts`](playwright.config.ts) starts its own API on **4011** and Expo frontend on **4173**; do not start regular development servers first. Defaults are two local workers and memory storage. `E2E_MODE=1` skips local dotenv credentials, and mail/provider-delivery notification work is disabled. Test helpers/stubs do not validate live mail, payments or AI providers.
+
+| Variable | Meaning |
+|---|---|
+| `DB_BACKEND` | `memory` (default), `firebase` (running emulator), or `postgres` (disposable database) |
+| `E2E_API_PORT`, `E2E_WEB_PORT` | Change isolated server ports |
+| `E2E_REUSE_SERVERS=1` | Explicit local reuse only; servers must already have the correct E2E settings |
+| `E2E_AUTH_SECRET` | Override isolated signing secret |
+
+Example PowerShell:
+
+```powershell
+$env:DB_BACKEND = 'memory'
+npm run test:e2e -- --workers=1
+```
+
+Failures retain screenshots/traces in `test-results/`. Use `npx playwright show-report` or `npx playwright show-trace <trace.zip>`. See the [E2E plan](docs/e2e-test-plan.md) for journeys and the dedicated mobile-input config. Browser emulation does not replace physical iOS/Android keyboard, deep-link, notification or storage checks.
+
+## What to validate by change
+
+| Change | Required evidence to select |
+|---|---|
+| Membership/selectors | Roster load/failure/trip-switch regression, active/pending/removed members, activity participants + one payer, save/reopen on overview and Activities |
+| Expenses | Splits, coverage, currency totals and rounding; mirrored coverage validation; CSV/report and payer behavior |
+| Authorization/tiers/flags | Ordinary user vs admin; excluded cohort; denial response; no writes on denial; audit log; wait through cache TTL |
+| Schema/adapter | Targeted API tests, both adapters, migration/index/backfill in isolated target environment |
+| AI/imports | Quotas, retry/idempotency/duplicate behavior, invalid inputs, recorded provider/model, review/assign; one controlled provider check where applicable |
+| Billing/privacy | Signed webhook/cleanup behavior and entitlement reconciliation; use subsystem runbooks |
+| Web/native UI | Phone/desktop layout and keyboard/modal behavior; physical devices for native changes |
+| Deployment tooling | `npm --prefix server run test:single -- --runInBand __tests__/deploy __tests__/middleware/canarySafeMode.test.ts`; dry runs and paired artifact/evidence validation |
+
+## Manual rollout testing
+
+Follow the [rollout testing checklist](docs/operations/rollout-testing.md) for prerequisites, ordered actions, expected results, release evidence and rollback decisions. It includes ordinary-user checks, admin changes, participant/payer persistence, multi-user synchronization and native compatibility.
+
+Feature flags are cached for up to 60 seconds; do not use an immediate click as the sole disablement assertion. The general entitlement service checks flags before tier entitlements; integration routes may use additional checks or response codes. Avoid hard-coding mutable tier limits in release expectations: inspect Admin → Tiers and record the tested values.
+
+A successful `/api/healthz` or `scripts/smoke-test.*` only establishes HTTP liveness. It does not establish database readiness outside E2E, successful login, persisted writes or usable external integrations. A release needs recorded functional results as well as script evidence.

@@ -1,5 +1,8 @@
 # E2E Test Plan — Travel Itinerary App
 
+[README](../README.md) · [Configuration](configuration.md) · [Manual administration](operations/manual-administration.md) · [Rollout testing](operations/rollout-testing.md)
+
+
 ## Overview
 
 This document is the living test plan for Playwright end-to-end tests. It covers user-perceived quality dimensions that cannot be validated by Jest unit/integration tests: real browser rendering, cross-tab navigation, user-perceived performance, and multi-user shared state.

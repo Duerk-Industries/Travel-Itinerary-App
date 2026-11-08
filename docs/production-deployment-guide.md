@@ -1,5 +1,8 @@
 # Production Deployment Guide
 
+[README](../README.md) · [Configuration](configuration.md) · [Manual administration](operations/manual-administration.md) · [Rollout testing](operations/rollout-testing.md)
+
+
 This guide covers the scripted Phase 11 deployment path:
 
 - deploy to the isolated test environment
@@ -30,7 +33,7 @@ production**, with no approval gate, no test-environment pass, and no
 canary:
 
 - `.github/workflows/deploy-api.yml` builds the backend straight from the
-  pushed `server/` source (`gcloud run deploy --source .`) and deploys it to
+  pushed source (`gcloud run deploy --source .` after exporting the web client) and deploys it to
   the `travel-itinerary-app` Cloud Run service in `us-east5`, then runs
   `gcloud run services update-traffic ... --to-latest` — 100% of traffic
   moves to the new revision immediately.
@@ -43,11 +46,9 @@ canary:
 
 **Practical implication:** merging or pushing to `main` is itself a
 production deploy action for both the API and the web frontend, regardless
-of whether anyone runs any of the `scripts/deploy-*` commands below. There is
-currently no branch-protection rule wired to block this at the infrastructure
-level — GitHub will warn ("Changes must be made through a pull request") if
-the repo's ruleset requires PRs, but an account with bypass permission can
-still push directly to `main` and both deploys will fire.
+of whether anyone runs any of the `scripts/deploy-*` commands below. Branch-protection rules, environment approvals and bypass permissions are
+remote settings: verify them in GitHub rather than assuming this document
+proves the live protection state.
 
 Use this fast path only when you specifically want an immediate, full-traffic
 release. For anything you want staged through a test environment, a canary

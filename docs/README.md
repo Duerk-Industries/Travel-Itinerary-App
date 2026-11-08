@@ -1,6 +1,20 @@
 # Documentation Hub
 
-This is the main documentation index for the WanderBunnies Travel Itinerary App.
+This is the main documentation index for the WanderBunnies Travel Itinerary App. For every Markdown reference under this documentation tree, use the [complete reference index](reference-index.md).
+
+## Current application and operator guides
+
+Start with these maintained guides. Implementation plans below capture design intent and historical rollout steps; confirm live enablement and outstanding manual work before treating them as completed deployments.
+
+| Need | Guide |
+|---|---|
+| Understand the running system | [Architecture](architecture.md) |
+| Configure local, test and hosted environments | [Configuration](configuration.md) |
+| Administer the application by hand | [Manual administration runbook](operations/manual-administration.md) and [admin reference](admin.md) |
+| Run automated checks | [Test guide](../TEST_PLAN.md) and [browser journeys](e2e-test-plan.md) |
+| Validate and record a release | [Rollout testing checklist](operations/rollout-testing.md) |
+| Deploy, promote and recover | [Production deployment guide](production-deployment-guide.md) |
+| Complete external/manual prerequisites | [Analytics follow-ups](analytics-manual-followups.md), [ingestion rollout](ingestion-rollout.md), [blog enablement](trip-blog-enablement-runbook.md), [ACL backfill](security/firestore-acl-backfill-runbook.md) |
 
 ## Start Here
 
@@ -79,7 +93,18 @@ This is the main documentation index for the WanderBunnies Travel Itinerary App.
 - [Future Attraction Data Sources](data/future-attraction-data-sources.md)
 - [Itinerary Generation Debug Plan](implementation_plans/itinerary-generation-debug-plan.md)
 
-## Architecture, Entitlements, and Roadmap Notes
+## Architecture and feature references
+
+- [Current application architecture](architecture.md)
+- [Activity/lodging import-export architecture](activity-lodging-import-export-architecture.md)
+- [Trip-blog social architecture](trip-blog-social-architecture.md)
+- [Travel-blog architecture](travel-blog-architecture.md)
+- [Itinerary import/export schema](itinerary-import-export-schema.md)
+- [Travel field specification](travel-field-spec.md)
+- [Theme implementation](theme.md)
+- [Operations guides](operations/README.md)
+
+## Entitlements and implementation plans
 
 - [Implementation Plan: AI Trip Assistant](implementation_plans/implementation-plan-ai-assistant.md)
 - [Implementation Plan: Entitlements](implementation_plans/implementation-plan-entitlements.md)
@@ -117,11 +142,12 @@ This is the main documentation index for the WanderBunnies Travel Itinerary App.
 2. [FAQ](../FAQ.md)
 3. [FAQ Index](faq/README.md)
 
-### For deployment work
+### For administration or a release
 
-1. [Deployment Runbook](../DEPLOYMENT-GCP-FIREBASE.md)
-2. [GCP Email Ingest Setup](gcp-email-ingest-setup.md)
-3. [Security / Key Management](security/key-management.md)
+1. [Configuration](configuration.md) and [manual administration](operations/manual-administration.md)
+2. [Automated tests](../TEST_PLAN.md) and [rollout checklist](operations/rollout-testing.md)
+3. [Production deployment and rollback](production-deployment-guide.md)
+4. Relevant subsystem runbook and manual follow-ups from the table above
 
 ### For product and UI work
 

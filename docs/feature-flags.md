@@ -1,5 +1,7 @@
 # Feature Flags
 
+[README](../README.md) · [Configuration](configuration.md) · [Manual flag procedure](operations/manual-administration.md#enable-or-disable-a-feature) · [Rollout testing](operations/rollout-testing.md)
+
 ## Purpose
 
 Feature flags are deployment controls. Tiers are entitlement controls. A flag can enable a code path globally, but a user still needs the correct tier entitlement and must remain within any configured limits.
@@ -9,20 +11,26 @@ Feature flags are deployment controls. Tiers are entitlement controls. A flag ca
 Requests are evaluated in this order:
 
 1. RBAC and authentication
-2. Tier entitlement
-3. Feature flag
+2. Feature flag (including cohort eligibility)
+3. Tier entitlement
 4. Usage-limit check
 
-For admin APIs, RBAC must always pass. For product features, the backend remains authoritative even if the UI hides or shows controls.
+This is the shared `assertCanUseFeature` order; individual routes may add integration-specific checks. For admin APIs, RBAC must always pass. For product features, the backend remains authoritative even if the UI hides or shows controls.
 
 ## Runtime model
 
 - YAML files seed defaults only.
 - Database rows are the runtime truth.
 - Admin edits update the database, not YAML.
-- Current flag scope is a single deployment-wide environment per database.
+- Flags are cached in-process for up to 60 seconds; allow for expiry on every instance when verifying a toggle.
+- Cohort checks can further restrict an enabled flag for a user. Verify intended and excluded users.
+- `STARTUP_FORCE_ENABLE_FEATURE_FLAGS` is an explicit startup override; inspect it when a disabled flag returns after restart.
+- Missing rows are generally fail-open, but rollout-sensitive keys in `FAIL_CLOSED_FLAGS` in `server/src/services/entitlementService.ts` default off. These include age enforcement, analytics collection, several blog/notification controls and assistant actions. Plaid also enforces its own missing-row disablement.
+- Admins bypass tier entitlements, not disabled flags or cohorts.
 
-## Current flags
+## Selected flags
+
+This table is a summary, not the complete inventory. See [`server/config/feature-flags.yaml`](../server/config/feature-flags.yaml), the consuming service, and Admin → Feature Flags for current defaults and live values.
 
 | Flag | Meaning |
 |---|---|

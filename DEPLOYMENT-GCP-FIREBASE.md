@@ -1,5 +1,8 @@
 # Travel Itinerary App — Deployment Runbook (wander-bunnies.com)
 
+[README](README.md) · [Configuration](docs/configuration.md) · [Manual administration](docs/operations/manual-administration.md) · [Rollout testing](docs/operations/rollout-testing.md)
+
+
 Back to the project home: [README](README.md)
 
 Related docs:
